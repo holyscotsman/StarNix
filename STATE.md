@@ -101,7 +101,12 @@
 > **v0.6.21:** title screen uses the no-station nebula (`kbbBg`→`nebulaBg`); menu keeps the station vista. KBB shows `nebulaBg` + `bcmShip`. 200/200; art negative-controlled.
 > </details>
 
-## v0.92.0 — BATCH #5 begins: Exhibits drill (G1)
+## v0.93.0 — ARM unit 1: consumables gone, Simon caps, Shield Cell=recharge, ready-bar (A1/A7/A8/A9)
+
+arm-run 74. NEXT: A2 spread+aim assist, A3 hidden asteroid achievement, then A4/A5 briefings,
+A6 economy, A10 boss patterns. Batch #5 queue in NIGHT_LOG; site map in scratchpad/batch5-map.txt.
+
+> **Earlier this session (v0.92.0):** Exhibits drill
 
 Exam setup gains the 🖼 Exhibits tile (27 screenshot questions, Study-mode drill).
 Batch #5 queue is in NIGHT_LOG (A1-A10, C1-C12, K1-K11, G2-G4); ARM units next once

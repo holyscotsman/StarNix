@@ -241,6 +241,16 @@ var detSector3 = null;   // captured for the determinism probe against window 2
   ok(/BOSS_FLOW = 920/.test(H.ARM_SRC) && /bt \* BOSS_FLOW \* depth/.test(H.ARM_SRC)
      && /bossActive\) drawBossRush\(\)/.test(H.ARM_SRC) && /three static faint shafts/.test(H.ARM_SRC),
      'boss arena rushes upward: BOSS_FLOW streaks behind the world, calm under reduced motion');
+  // (v0.93.0, Batch #5 ARM unit 1) A1/A7/A8/A9 source truths
+  ok(!/shopTab/.test(H.ARM_SRC) && !/Repair Shields/.test(H.ARM_SRC),
+     'A1: Consumables are GONE from the hangar (no tab state, no repair item)');
+  ok(/simonTier === 0 \? 5 : simonTier === 1 \? 6 : 8/.test(H.ARM_SRC),
+     'A7: Simon caps pinned at easy 5 / medium 6 / hard 8');
+  ok(/maxShields = 100;/.test(H.ARM_SRC) && /shieldRegenDelay = 4 \* Math\.pow\(0\.82, lvl\.shieldCell\)/.test(H.ARM_SRC)
+     && !/ds: "\+25 max shields"/.test(H.ARM_SRC),
+     'A8: Shield Cell buys RECHARGE (delay+rate), capacity fixed at 100');
+  ok(/charges >= 1 \? 1 : \(1 - rechargeTimer \/ rechargeTime\)/.test(H.ARM_SRC),
+     'A9: the Charge bar reads weapon-ready (full = can fire)');
   // (v0.91.0) variety: per-run forks vary replays; openers past sector 1 reach the d<=2 pool
   ok((H.ARM_SRC.match(/arm-run-" \+ sector \+ ":" \+ \(runSeq\+\+\)/g) || []).length === 2
      && /if \(s2 > 1\) d = Math\.max\(d, 2\)/.test(H.ARM_SRC),

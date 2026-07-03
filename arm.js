@@ -179,6 +179,7 @@
     var dq = [], dqi = 0, dIn = 0, dLost = 0, dCoins = 0;
     var sectorLost = [];              // collect-fails this attempt (commit on home)
     var reducedMotion = false, extraTime = false, musicOn = true, sfxOn = true, highContrast = false;
+    var shieldRegenDelay = 4, shieldRegenRate = 18;   // (v0.93.0, A8) Shield Cell upgrades these
     var runSeq = 0;   // (v0.91.0) per-mount run counter: "Fly again"/sector replays draw fresh questions
 
     // ---- object pools (no per-frame allocation) ----
@@ -629,7 +630,9 @@
       shipThrust = 300 * Math.pow(1.12, lvl.engine);
       shipTurn = 3.2 * Math.pow(1.10, lvl.maneuver);
       maxCharges = 1 + lvl.capacitor;                       // start 1; Capacitor adds burst capacity
-      maxShields = 100 + 25 * lvl.shieldCell;
+      maxShields = 100;                                     // (v0.93.0, A8) capacity is fixed — Shield Cell now buys RECHARGE
+      shieldRegenDelay = 4 * Math.pow(0.82, lvl.shieldCell);   // 4s → ~1.8s at tier 4
+      shieldRegenRate = 18 * Math.pow(1.18, lvl.shieldCell);   // 18/s → ~35/s at tier 4
       rechargeTime = 0.45 * Math.pow(0.86, lvl.rapid);      // seconds per charge; Rapid Fire shortens it
       bulletSpeed = 540;
       if (charges === undefined) { charges = maxCharges; rechargeTimer = rechargeTime; }
@@ -660,7 +663,9 @@
       sCargo.textContent = held.length + "/" + CORES_PER_SECTOR;
       sCoins.textContent = coins;
       mShield.style.width = clamp(shields / maxShields * 100, 0, 100) + "%";
-      var chargeFrac = (charges >= maxCharges) ? 1 : (charges + (1 - rechargeTimer / rechargeTime)) / maxCharges;
+      // (v0.93.0, A9, Jason) the bar answers ONE question: can I fire? Full = ready,
+      // filling = the next shot charging. (The old math averaged all capacitor slots.)
+      var chargeFrac = charges >= 1 ? 1 : (1 - rechargeTimer / rechargeTime);
       mCharge.style.width = clamp(chargeFrac * 100, 0, 100) + "%";
     }
     function showToast(m) {
@@ -1541,7 +1546,9 @@
     }
     function puzzleSimon(done) {
       panel.className = "arm-panel iris"; clear(panel);
-      var len = clamp(5 + (sector - 1) * 2, 5, 9);   // S3: start 5, ramp to 9 in later sectors (was 3 + challengeLvl)
+      // (v0.93.0, A7, Jason) 9 was too much to hold: caps are easy 5 / medium 6 / hard 8
+      var simonTier = tierOf(sector);
+      var len = simonTier === 0 ? 5 : simonTier === 1 ? 6 : 8;
       activePuzzle = { type: "simon", len: len, probe: function () { return { len: len, playing: playing }; } };
       var seq = []; for (var i = 0; i < len; i++) seq.push(rint(4));
       panel.appendChild(mk("div", "arm-eyebrow e-iris", "⚙ Signal sequence"));
@@ -1841,17 +1848,15 @@
     /* ---------------------------------------------------------------------- */
     /* shop (ported)                                                          */
     /* ---------------------------------------------------------------------- */
-    var shopTab = "upgrades";
+    // (v0.93.0, A1) Consumables removed (Jason) — the hangar sells upgrades only; shields
+    // come back from play (recharge, A8), not from a 20-coin tap.
     function showShop(back) {
       setState("SHOP"); panel.className = "arm-panel iris"; clear(panel);
-      var cons = [
-        { id: "repair", ic: "🛡", nm: "Repair Shields", ds: "Restore shields to maximum", cost: 20, full: shields >= maxShields, buy: function () { shields = maxShields; } },
-      ];
       var ups = [
         { ic: "🚀", nm: "Engine Boost", ds: "+12% thrust", key: "engine" },
         { ic: "🎯", nm: "Maneuvering", ds: "+10% turn rate", key: "maneuver" },
         { ic: "🔋", nm: "Capacitor", ds: "+1 charge (fire bursts)", key: "capacitor" },
-        { ic: "💠", nm: "Shield Cell", ds: "+25 max shields", key: "shieldCell" },
+        { ic: "💠", nm: "Shield Cell", ds: "Faster shield recharge", key: "shieldCell" },   // (v0.93.0, A8) was +25 max shields
         { ic: "⚡", nm: "Rapid Fire", ds: "−14% recharge time", key: "rapid" },
       ];
       var baseCost = { engine: 55, maneuver: 50, capacitor: 55, shieldCell: 65, rapid: 70 };
@@ -1859,13 +1864,9 @@
 
       panel.appendChild(mk("div", "arm-eyebrow e-gold", "⚙ Hangar bay"));
       var h = mk("h2", null, "Outfit your ship "); var bal = mk("span", "arm-balance", coins + " ⬡"); h.appendChild(bal); panel.appendChild(h);
-      var tabs = mk("div", "arm-shoptabs");
-      var tU = btn("arm-act ghost" + (shopTab === "upgrades" ? " sel" : ""), "Upgrades", function () { sfx("click"); shopTab = "upgrades"; showShop(back); });
-      var tC = btn("arm-act ghost" + (shopTab === "consumables" ? " sel" : ""), "Consumables", function () { sfx("click"); shopTab = "consumables"; showShop(back); });
-      tabs.appendChild(tU); tabs.appendChild(tC); panel.appendChild(tabs);
 
       var grid = mk("div", "arm-shopgrid"); panel.appendChild(grid);
-      if (shopTab === "upgrades") {
+      {
         for (var i = 0; i < ups.length; i++) (function (it) {
           var L = lvl[it.key], capped = L >= 4, cost = upCost(it.key), afford = coins >= cost && !capped;
           var item = mk("div", "arm-item");
@@ -1876,21 +1877,10 @@
           for (var p = 0; p < 4; p++) pips.appendChild(mk("span", "arm-pip" + (p < L ? " on" : "")));
           info.appendChild(pips); item.appendChild(info);
           var b = btn("arm-buy", capped ? "MAX" : (cost + " ⬡"), function () {
-            if (coins >= cost && lvl[it.key] < 4) { coins -= cost; lvl[it.key]++; deriveStats(); if (it.key === "capacitor") charges = maxCharges; if (it.key === "shieldCell") shields = maxShields; sfx("correct"); hud(); showShop(back); }
+            if (coins >= cost && lvl[it.key] < 4) { coins -= cost; lvl[it.key]++; deriveStats(); if (it.key === "capacitor") charges = maxCharges; sfx("correct"); hud(); showShop(back); }
           });
           if (!afford) b.disabled = true; item.appendChild(b); grid.appendChild(item);
         })(ups[i]);
-      } else {
-        for (var j = 0; j < cons.length; j++) (function (it) {
-          var afford = coins >= it.cost && !it.full;
-          var item = mk("div", "arm-item");
-          item.appendChild(mk("div", "arm-ic", it.ic));
-          var info = mk("div", "arm-info"); info.appendChild(mk("div", "arm-nm", it.nm)); info.appendChild(mk("div", "arm-ds", it.ds)); item.appendChild(info);
-          var b = btn("arm-buy", it.full ? "FULL" : (it.cost + " ⬡"), function () {
-            if (coins >= it.cost && !it.full) { coins -= it.cost; it.buy(); sfx("correct"); hud(); showShop(back); }
-          });
-          if (!afford) b.disabled = true; item.appendChild(b); grid.appendChild(item);
-        })(cons[j]);
       }
       panel.appendChild(btn("arm-act", "Leave hangar ▸", function () { sfx("click"); back(); }));
     }
@@ -1981,9 +1971,9 @@
         var damp = Math.exp(-DRAG * dt); ship.vx *= damp; ship.vy *= damp; ship.x += ship.vx * dt; ship.y += ship.vy * dt;
         ship.x = clamp(ship.x, R, MAP_W - R); ship.y = clamp(ship.y, R, MAP_H - R);
       }
-      if (charges < maxCharges) { rechargeTimer -= dt; if (rechargeTimer <= 0) { charges++; rechargeTimer += rechargeTime; } }
+      if (charges < maxCharges) { rechargeTimer -= dt; if (rechargeTimer <= 0) { charges++; rechargeTimer += rechargeTime; } if (charges < 1) hud(); }   // (v0.93.0, A9) live bar while empty
       if (invuln > 0) invuln -= dt; if (input.fire) shoot();
-      regenT += dt; if (regenT > 4 && shields < maxShields && shields > 0) { shields = Math.min(maxShields, shields + 18 * dt); hud(); }
+      regenT += dt; if (regenT > shieldRegenDelay && shields < maxShields && shields > 0) { shields = Math.min(maxShields, shields + shieldRegenRate * dt); hud(); }   // (v0.93.0, A8)
 
       var i, j;
       for (i = 0; i < enemies.length; i++) {
