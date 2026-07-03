@@ -272,6 +272,35 @@ function newWindow() {
     ok(false, "bed returns to 'kbb' after the boss flag clears (unreached)");
   }
 
+  // (v0.80.0, JB3) cinematic choreography: a guaranteed-correct answer on a 1-HP enemy must
+  // queue the full attack grammar AND the staged-kill sequence (detonation, quake, banner).
+  if (toQuestion()) {
+    var runF = KBB._test.state().run;
+    runF.battle.enemy.hp = 1;                                    // force the win
+    var qF = runF.battle.question;
+    var ciF = qF.multi ? null : qF.correctIndex;
+    if (ciF == null && qF.correctIndices) ciF = qF.correctIndices[0];
+    var optF = doc.querySelector('.kbb-opt[data-idx="' + ciF + '"]');
+    if (qF.multi && qF.correctIndices) {                          // select ALL correct for multi
+      for (var mi = 0; mi < qF.correctIndices.length; mi++) { var ob2 = doc.querySelector('.kbb-opt[data-idx="' + qF.correctIndices[mi] + '"]'); if (ob2) ob2.click(); }
+    } else if (optF) optF.click();
+    var subF = q('.kbb-submit'); if (subF && !subF.disabled) subF.click();
+    var fxT = (KBB._test.state().fx || []).map(function (f) { return f.type; });
+    function hasFx(t) { return fxT.indexOf(t) >= 0; }
+    ok(hasFx('charge') && hasFx('beam') && hasFx('sparks'),
+       'JB3: attack reads cause->effect (charge telegraph + travelling beam + impact sparks) [' + fxT.join(',') + ']');
+    ok(hasFx('shock') && hasFx('death') && (KBB._test.state().fx || []).some(function (f) { return f.type === 'quake' && f.amt === 0.5; }),
+       'JB3: the kill detonates (shockwave + the heavy 0.5 win-quake + hull breakup)');
+    ok((KBB._test.state().fx || []).some(function (f) { return f.type === 'banner' && /DESTROYED/.test(f.text || ''); }),
+       'JB3: a DESTROYED banner caps the staged kill');
+    V.step(4);
+    var cW = q('.kbb-cont:not(.kbb-submit)'); if (cW) { cW.click(); V.step(2); }
+  } else {
+    ok(false, 'JB3 choreography probe could not reach a question');
+    ok(false, 'JB3 detonation probe unreached');
+    ok(false, 'JB3 banner probe unreached');
+  }
+
   // (v0.78.0, JB2) shop chrome: actions pinned OUTSIDE the scroll region (no scrolling for
   // Reroll / Next battle). Reach a feedback screen, flip the run to shop, Continue renders it.
   if (toQuestion()) {

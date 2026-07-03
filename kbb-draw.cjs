@@ -66,6 +66,28 @@ function nonBlank(cv) { if (!cv || !cv.width) return false; var g = cv.getContex
   })();
   ok(!V.step._err, 'correct-answer FX (hero lunge + impact + win transition) frames do not throw');
   ok(nonBlank(cv), 'scene still paints after the attack');
+
+  // (v0.80.0, JB3) render EVERY cinematic fx type under a real canvas in one burst:
+  // telegraph, bolt, debris, shield dome, heal motes, shockwave, quake, banner, offset flash
+  (function () {
+    var st = KBB._test.state(); if (!st) return;
+    if (!st.fx) st.fx = [];
+    var t0 = st.lastTs || 0;
+    var burst = [
+      { type: 'charge', side: 'player', dur: 180, col: '#1FDDE9' },
+      { type: 'beam', side: 'enemy', dur: 190, col: '#1FDDE9' },
+      { type: 'sparks', side: 'enemy', dur: 620, col: '#FF6B5B', count: 12, seed: 3 },
+      { type: 'dome', side: 'player', dur: 520 },
+      { type: 'motes', side: 'player', dur: 900 },
+      { type: 'shock', side: 'enemy', dur: 700, col: '#FFC857' },
+      { type: 'quake', side: 'enemy', dur: 340, amt: 0.5 },
+      { type: 'banner', side: 'enemy', dur: 1500, text: 'TARGET DESTROYED', col: '#FFC857' },
+      { type: 'flash', side: 'enemy', dur: 240, flashR: 30, dx: -18, dy: -10 }
+    ];
+    for (var bi = 0; bi < burst.length; bi++) { burst[bi].start = t0; st.fx.push(burst[bi]); }
+    V.step(30, 30);
+  })();
+  ok(!V.step._err, 'JB3: all nine cinematic fx types render clean under a real canvas');
   mod.unmount();
 
   // Fresh mount: drive an all-wrong battle to lost (never wins -> stays in battle),

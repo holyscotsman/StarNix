@@ -864,6 +864,15 @@ async function runFrames(n = 6) {
   ok("_applyContrast applies high contrast from a saved profile", w.document.documentElement.getAttribute("data-contrast") === "high");
   SN.core.profile.settings.colorblind = false; shell._applyContrast();
   ok("_applyContrast clears high contrast when unset", !w.document.documentElement.getAttribute("data-contrast"));
+  // JB3 (v0.80.0) — KBB cinematic fx reach the 3D view via the overlay canvas
+  console.log("\nJB3. KBB 3D fx overlay source pins");
+  ok("JB3: a .kbb-fx overlay canvas is created above the 3D view",
+    html.includes("fx.className = 'kbb-fx'") && html.includes(".kbb-fx{position:absolute"));
+  ok("JB3: render3D projects anchors and runs the shared fx pipeline on the overlay",
+    html.includes("fxRenderOverlays(s, ts, { cxL: pxL, cxR: pxR, yShip: pyS, W: T.W / k3 }, fg)"));
+  ok("JB3: the dying hull persists until the core detonation in BOTH render paths",
+    (html.match(/s\.deathAt && ts < s\.deathAt/g) || []).length === 2);
+
   // JB1 (v0.79.0) — Dev Jukebox: one button per library track, exact playback, stop control
   console.log("\nJB1. Dev Jukebox");
   const jbIds = SN.core.audio.trackIds ? SN.core.audio.trackIds() : [];

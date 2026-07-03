@@ -712,6 +712,12 @@ relent: micro-shake amplitude cycles every 40 km (ramp up, drop back), tightly c
 **(JB6) CC boost cadence** — boost every 20 km (gates are 10 km apart → GATES_PER_BOOST 5→2).
 Order: JB4+5+6 (CC bundle) → JB2 → JB1 → JB3. Same DoD per unit.
 
+**ALL SHIPPED**: v0.77.0 (JB4/5/6 CC bundle), v0.78.0 (JB2 layout), v0.79.0 (JB1 Jukebox),
+v0.80.0 (JB3 cinematics). JB3 unearthed a real bug: ALL 2D overlay fx (damage numbers,
+shield rings) had been invisible in browsers since the 3D view shipped — the 3D path only
+consumed lunge/flash. Fixed with a transparent .kbb-fx overlay canvas running the shared
+fx pipeline in projected 3D screen space. That was Jason's "janky" all along.
+
 ---
 
 ## 🛑 STOP — end of the night run (after P2·5) — superseded by ▶️ RUN RESUMED above

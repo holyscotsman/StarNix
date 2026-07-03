@@ -826,6 +826,7 @@
     css.push('.kbb-combat.is-cine{position:absolute;inset:0;z-index:40;border-radius:0;border:none;width:auto;height:auto;grid-column:1 / -1;grid-row:1 / -1;}');   // (P2·3, PLAYTEST A6) abs-pos GRID items resolve inset against their grid AREA — span the whole grid so the cinematic truly goes full-bleed instead of floating over a blank battle panel
     css.push('.kbb-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background:transparent;}');
     css.push('.kbb-3d{position:absolute;inset:0;width:100%;height:100%;display:block;}');
+    css.push('.kbb-fx{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;z-index:3;}');
     css.push('.kbb-cine-cap{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);width:88%;max-width:520px;text-align:center;font-size:14px;font-weight:600;color:#eef;text-shadow:0 0 10px #000;pointer-events:none;z-index:31;}');
     css.push('.kbb-skip{position:absolute;top:10px;right:10px;z-index:32;background:rgba(16,16,24,.7);border:1px solid ' + P.border + ';color:' + P.dim + ';border-radius:9px;padding:6px 12px;font-family:inherit;font-weight:700;font-size:12px;cursor:pointer;}');
     css.push('.kbb-skip:hover{border-color:' + P.aqua + ';color:' + P.text + ';}');
@@ -1303,9 +1304,9 @@
         g.save(); g.translate(x, yy); g.scale(-1, 1); drawShip(g, 0, 0, e.boss ? 3.0 : 2.4, ecol, pulse + (e.boss ? 7 : 0)); g.restore();
       }
     }
-    function fxRenderOverlays(s, ts, L) {
+    function fxRenderOverlays(s, ts, L, gOpt) {
       if (!s.fx || !s.fx.length) return;
-      var g = s.c2d, keep = [];
+      var g = gOpt || s.c2d, keep = [];   // (v0.80.0, JB3) 3D mode hands in its overlay ctx
       for (var i = 0; i < s.fx.length; i++) {
         var f = s.fx[i];
         if (ts < f.start) { keep.push(f); continue; }
@@ -1313,20 +1314,102 @@
         if (p >= 1) continue;
         keep.push(f);
         var cx = (f.side === 'enemy' ? L.cxR : L.cxL) + lungeDx(s, ts, f.side, f.side === 'enemy' ? -1 : 1);
+        // (v0.80.0, JB3) fx may carry dx/dy hull offsets (staged detonations hit different spots)
+        cx += f.dx || 0;
+        var cy = L.yShip + (f.dy || 0);
         if (f.type === 'flash') {
-          var fa = 1 - p, fr = f.flashR || 46;
-          blastRing(g, cx, L.yShip, fr * 0.4 + p * fr, '#FFFFFF', fa * 0.9, 3.5);
-          g.save(); g.globalAlpha = fa * 0.45; g.fillStyle = '#FFFFFF'; g.shadowColor = '#FFFFFF'; g.shadowBlur = 26;
-          g.beginPath(); g.arc(cx, L.yShip, fr * 0.5, 0, 6.283); g.fill(); g.restore(); g.globalAlpha = 1;
+          var fa = 1 - p, fr = f.flashR || 46, fcol = f.col || '#FFFFFF';
+          blastRing(g, cx, cy, fr * 0.4 + p * fr, fcol, fa * 0.9, 3.5);
+          g.save(); g.globalAlpha = fa * 0.45; g.fillStyle = fcol; g.shadowColor = fcol; g.shadowBlur = 26;
+          g.beginPath(); g.arc(cx, cy, fr * 0.5, 0, 6.283); g.fill(); g.restore(); g.globalAlpha = 1;
+        } else if (f.type === 'charge') {
+          // (JB3) attack telegraph: a glow builds on the attacker before the lunge
+          g.save(); g.globalAlpha = p * 0.7; g.fillStyle = f.col || PALETTE.aqua; g.shadowColor = f.col || PALETTE.aqua;
+          g.shadowBlur = 18; g.beginPath(); g.arc(cx, cy, 6 + p * 11, 0, 6.283); g.fill(); g.restore(); g.globalAlpha = 1;
+        } else if (f.type === 'beam') {
+          // (JB3) the shot itself: a glowing bolt travels attacker -> target with a hot trail
+          var srcX = (f.side === 'enemy' ? L.cxL : L.cxR) + lungeDx(s, ts, f.side === 'enemy' ? 'player' : 'enemy', f.side === 'enemy' ? 1 : -1);
+          var ep2 = 1 - (1 - p) * (1 - p);
+          var hx = srcX + (cx - srcX) * ep2, tl = (cx - srcX) * 0.22;
+          g.save(); g.strokeStyle = f.col || PALETTE.aqua; g.shadowColor = f.col || PALETTE.aqua; g.shadowBlur = 12;
+          g.globalAlpha = 0.9 * (1 - p * 0.4); g.lineWidth = 3; g.beginPath(); g.moveTo(hx - tl, cy); g.lineTo(hx, cy); g.stroke();
+          g.globalAlpha = 1; g.fillStyle = '#FFFFFF'; g.beginPath(); g.arc(hx, cy, 3.2, 0, 6.283); g.fill();
+          g.restore(); g.globalAlpha = 1;
+        } else if (f.type === 'sparks') {
+          // (JB3) impact debris: deterministic per-index trajectories (pure math, zero allocation)
+          var n = f.count || 12, sd = f.seed || 1, spread = f.spread || 1;
+          g.save(); g.fillStyle = f.col || PALETTE.peach; g.shadowColor = f.col || PALETTE.peach; g.shadowBlur = 6;
+          for (var k = 0; k < n; k++) {
+            var h1 = Math.sin(k * 127.1 + sd * 311.7) * 43758.5453; h1 -= Math.floor(h1);
+            var h2 = Math.sin(k * 269.5 + sd * 183.3) * 28001.8384; h2 -= Math.floor(h2);
+            var ang = h1 * 6.283, spd = (18 + h2 * 34) * spread;
+            var px2 = cx + Math.cos(ang) * spd * p, py2 = cy + Math.sin(ang) * spd * p + p * p * 16;
+            g.globalAlpha = (1 - p) * (0.5 + h2 * 0.5);
+            g.fillRect(px2 - 1.4, py2 - 1.4, 2.8, 2.8);
+          }
+          g.restore(); g.globalAlpha = 1;
+        } else if (f.type === 'dome') {
+          // (JB3) shield dome: layered hex-shimmer arcs facing the attacker + one ripple
+          var face = (f.side === 'player') ? 0 : Math.PI, R0 = f.r || 28;
+          var shimmer = (1 - p) * (0.55 + 0.45 * Math.sin(p * 18));
+          g.save(); g.strokeStyle = PALETTE.aqua; g.shadowColor = PALETTE.aqua; g.shadowBlur = 10;
+          for (var d2 = 0; d2 < 2; d2++) {
+            g.globalAlpha = shimmer * (d2 ? 0.45 : 0.85); g.lineWidth = d2 ? 1.4 : 2.4;
+            g.beginPath(); g.arc(cx, cy, R0 + d2 * 5 + p * 4, face - 1.22, face + 1.22); g.stroke();
+          }
+          g.globalAlpha = shimmer * 0.6; g.lineWidth = 1;
+          for (var sp2 = -3; sp2 <= 3; sp2++) {
+            var aa = face + sp2 * 0.35, r1 = R0 - 3, r2 = R0 + 8 + p * 4;
+            g.beginPath(); g.moveTo(cx + Math.cos(aa) * r1, cy + Math.sin(aa) * r1);
+            g.lineTo(cx + Math.cos(aa) * r2, cy + Math.sin(aa) * r2); g.stroke();
+          }
+          g.restore(); g.globalAlpha = 1;
+          blastRing(g, cx, cy, 16 + p * 26, PALETTE.aqua, (1 - p) * 0.5, 2);
+        } else if (f.type === 'motes') {
+          // (JB3) repair: mantis motes spiral upward off the hull, alternating dots and + glyphs
+          g.save(); g.fillStyle = PALETTE.mantis; g.shadowColor = PALETTE.mantis; g.shadowBlur = 8;
+          g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '700 10px Montserrat,Arial,sans-serif';
+          for (var mk = 0; mk < 8; mk++) {
+            var mp = p - mk * 0.05; if (mp < 0 || mp > 1) continue;
+            var mx = cx + Math.sin(mp * 5 + mk * 2.2) * (9 + mk), my = cy + 12 - mp * 40;
+            g.globalAlpha = (1 - mp) * 0.9;
+            if (mk % 2) { g.fillStyle = PALETTE.mantis; g.fillText('+', mx, my); }
+            else { g.beginPath(); g.arc(mx, my, 1.8, 0, 6.283); g.fill(); }
+          }
+          g.restore(); g.globalAlpha = 1;
+          g.save(); g.globalAlpha = (1 - p) * 0.18; g.fillStyle = PALETTE.mantis; g.shadowColor = PALETTE.mantis;
+          g.shadowBlur = 24; g.beginPath(); g.arc(cx, cy, 24 + p * 8, 0, 6.283); g.fill(); g.restore(); g.globalAlpha = 1;
+        } else if (f.type === 'shock') {
+          // (JB3) detonation shockwave: hot white leading ring + colored chaser
+          blastRing(g, cx, cy, 12 + p * 74, '#FFFFFF', (1 - p) * 0.85, 3);
+          if (p > 0.12) blastRing(g, cx, cy, 8 + (p - 0.12) * 82, f.col || PALETTE.gold, (1 - p) * 0.7, 2);
+        } else if (f.type === 'quake') {
+          // (JB3) impact-synced shake: ramps the existing canvas jitter exactly when the hit lands
+          s.shakeT = Math.max(s.shakeT || 0, (f.amt || 0.3) * (1 - p));
+        } else if (f.type === 'banner') {
+          // (JB3) kill banner: gold caps slide in with overshoot, hold, fade
+          var W2 = (L && L.W) || s.canvas.clientWidth || 320;
+          var bp = Math.min(1, p * 2.4), c1 = 1.70158, c3 = c1 + 1;
+          var eb = 1 + c3 * Math.pow(bp - 1, 3) + c1 * Math.pow(bp - 1, 2);
+          var bx = W2 / 2 + (1 - eb) * W2 * 0.55;
+          var balpha = p < 0.8 ? 1 : (1 - p) / 0.2;
+          g.save(); g.globalAlpha = balpha * 0.35; g.strokeStyle = f.col || PALETTE.gold; g.lineWidth = 1;
+          g.beginPath(); g.moveTo(bx - 90, cy - 34); g.lineTo(bx + 90, cy - 34); g.stroke();
+          g.beginPath(); g.moveTo(bx - 90, cy - 18); g.lineTo(bx + 90, cy - 18); g.stroke();
+          g.globalAlpha = balpha; g.textAlign = 'center'; g.textBaseline = 'middle';
+          g.fillStyle = f.col || PALETTE.gold; g.shadowColor = f.col || PALETTE.gold; g.shadowBlur = 14;
+          g.font = '800 15px Montserrat,Arial,sans-serif';
+          g.fillText(f.text || 'TARGET DESTROYED', bx, cy - 26);
+          g.restore(); g.globalAlpha = 1;
         } else if (f.type === 'dmg' || f.type === 'heal') {
           var col = f.type === 'heal' ? PALETTE.mantis : (f.big ? PALETTE.gold : PALETTE.peach);
           g.save(); g.globalAlpha = 1 - p; g.textAlign = 'center'; g.textBaseline = 'middle';
           g.shadowColor = 'rgba(0,0,0,.9)'; g.shadowBlur = 4; g.fillStyle = col;
           g.font = '900 ' + (f.big ? 26 : 19) + 'px Montserrat,Arial,sans-serif';
-          g.fillText((f.type === 'heal' ? '+' : '\u2212') + f.amount, cx, L.yShip - 18 - p * 30);
+          g.fillText((f.type === 'heal' ? '+' : '\u2212') + f.amount, cx, cy - 18 - p * 30);
           g.shadowBlur = 0; g.restore(); g.globalAlpha = 1;
         } else if (f.type === 'shield') {
-          blastRing(g, cx, L.yShip, 16 + p * 24, PALETTE.aqua, (1 - p) * 0.8, 3);
+          blastRing(g, cx, cy, 16 + p * 24, PALETTE.aqua, (1 - p) * 0.8, 3);
         } else if (f.type === 'death') {
           var dscale = (f.scale || 1.9) * (1 + p * 0.7);
           g.save(); g.globalAlpha = 1 - p; g.translate(cx, L.yShip); g.scale(-1, 1); g.scale(dscale, dscale);
@@ -1346,9 +1429,11 @@
       drawBelt(g, s, W, H, ts, s.reduced);
       var b = s.run.battle;
       var yShip = Math.round(H * 0.54), cxL = Math.round(W * 0.24), cxR = Math.round(W * 0.78);
-      var sc = clamp(H / 95, 1.6, 3.4), L = { cxL: cxL, cxR: cxR, yShip: yShip };
+      var sc = clamp(H / 95, 1.6, 3.4), L = { cxL: cxL, cxR: cxR, yShip: yShip, W: W };
       drawHeroes(g, s, cxL, yShip, sc, ts, s.reduced);
-      if (b && b.enemy && !b.over) drawEnemy(g, s, b.enemy, cxR, yShip, sc, ts);
+      // (v0.80.0, JB3) keep the dying hull on screen through the staged kill — it breaks up
+      // at the core detonation (s.deathAt), not the instant the winning answer lands
+      if (b && b.enemy && (!b.over || (s.deathAt && ts < s.deathAt))) drawEnemy(g, s, b.enemy, cxR, yShip, sc, ts);
       fxRenderOverlays(s, ts, L);
     }
     // ---- intro cutscene (skippable, replayable). Lifts the combat cell to full-cover, then drops it back. ----
@@ -1494,6 +1579,7 @@
           s.use3D = true;
           if (s.canvas && s.canvas.style) s.canvas.style.display = 'none';
           if (s.threeCanvas) s.threeCanvas.style.display = '';
+          if (s.fxCanvas) s.fxCanvas.style.display = '';
         }
       } catch (e) { teardown3D(s); s.use3D = false; }
     }
@@ -1503,6 +1589,13 @@
       renderer.setPixelRatio(Math.min(2, s.doc.defaultView.devicePixelRatio || 1));
       renderer.setSize(W, H, false);
       var dom = renderer.domElement; dom.className = 'kbb-3d'; dom.style.display = 'none'; s.combat.appendChild(dom);
+      // (v0.80.0, JB3) transparent FX overlay ABOVE the 3D view: the whole 2D cinematic fx
+      // pipeline (numbers, beams, domes, banners) renders here, projected into 3D screen space
+      var fx = s.doc.createElement('canvas'); fx.className = 'kbb-fx';
+      var fpr = Math.min(2, s.doc.defaultView.devicePixelRatio || 1);
+      fx.width = Math.max(1, Math.round(W * fpr)); fx.height = Math.max(1, Math.round(H * fpr));
+      fx.style.display = 'none'; s.combat.appendChild(fx);
+      s.fxCanvas = fx; s.fxCtx = fx.getContext ? fx.getContext('2d') : null; s.fxPr = fpr;
       var scene = new THREE.Scene(); scene.fog = new THREE.FogExp2(0x06060c, 0.06);
       var camera = new THREE.PerspectiveCamera(50, W / Math.max(1, H), 0.1, 100); camera.position.set(0, 0, 6);
       scene.add(new THREE.AmbientLight(0x8888bb, 0.9));
@@ -1537,7 +1630,7 @@
       var enemy = spriteOf(THREE, enemyTexN, 0xffffff); enemy.scale.set(1.9, 1.9, 1.9); enemy.position.set(2.4, 0, 0);
       scene.add(enemy);
       s.threeCanvas = dom;
-      s.three = { THREE: THREE, renderer: renderer, scene: scene, camera: camera, stars: stars, roids: roids, heroes: heroes, enemy: enemy, enemyTexN: enemyTexN, enemyTexB: enemyTexB, created: created, last: 0, enemyBoss: null };
+      s.three = { THREE: THREE, renderer: renderer, scene: scene, camera: camera, stars: stars, roids: roids, heroes: heroes, enemy: enemy, enemyTexN: enemyTexN, enemyTexB: enemyTexB, created: created, last: 0, enemyBoss: null, W: W, H: H, _pv: null };
       return true;
     }
     function render3D(s, ts) {
@@ -1558,7 +1651,7 @@
           T.heroes[i].position.x = h.x + poff * h.lf;
           T.heroes[i].position.y = h.y + Math.sin(ts / 680 + h.ph) * 0.08;
         }
-        var b = s.run.battle, hasEnemy = !!(b && b.enemy && !b.over);
+        var b = s.run.battle, hasEnemy = !!(b && b.enemy && (!b.over || (s.deathAt && ts < s.deathAt)));   // (JB3) hull persists through the staged kill
         T.enemy.visible = hasEnemy;
         if (hasEnemy) {
           var boss = !!b.enemy.boss;
@@ -1570,6 +1663,23 @@
         T.camera.position.x = Math.sin(ts / 4000) * 0.15;
         T.camera.lookAt(0, 0, 0);
         T.renderer.render(T.scene, T.camera);
+        // (v0.80.0, JB3) cinematic fx overlay: project squad/enemy anchors into screen space
+        // and run the SAME 2D fx pipeline on the transparent canvas above the 3D view
+        if (s.fxCtx && s.fxCanvas) {
+          var fg = s.fxCtx;
+          fg.setTransform(1, 0, 0, 1, 0, 0);
+          fg.clearRect(0, 0, s.fxCanvas.width, s.fxCanvas.height);
+          if (s.fx && s.fx.length) {
+            var k3 = Math.max(1, T.W / 320);                      // author-space: fx are sized for the 320-wide 2D arena
+            fg.setTransform(s.fxPr * k3, 0, 0, s.fxPr * k3, 0, 0);
+            var pv = T._pv || (T._pv = new THREE.Vector3());      // cached scratch — no per-frame allocation
+            pv.set(-3, 0, 0); pv.project(T.camera);
+            var pxL = (pv.x * 0.5 + 0.5) * T.W / k3;
+            pv.set(2.4, 0, 0); pv.project(T.camera);
+            var pxR = (pv.x * 0.5 + 0.5) * T.W / k3, pyS = (-pv.y * 0.5 + 0.5) * T.H / k3;
+            fxRenderOverlays(s, ts, { cxL: pxL, cxR: pxR, yShip: pyS, W: T.W / k3 }, fg);
+          }
+        }
         return true;
       } catch (e) { teardown3D(s); s.use3D = false; if (s.canvas && s.canvas.style) s.canvas.style.display = ''; return false; }
     }
@@ -1577,6 +1687,8 @@
       var T = s.three; s.three = null;
       if (s.threeCanvas && s.threeCanvas.parentNode) s.threeCanvas.parentNode.removeChild(s.threeCanvas);
       s.threeCanvas = null;
+      if (s.fxCanvas && s.fxCanvas.parentNode) s.fxCanvas.parentNode.removeChild(s.fxCanvas);
+      s.fxCanvas = null; s.fxCtx = null;
       if (!T) return;
       try {
         var i;
@@ -1893,30 +2005,55 @@
       if (!s.reduced) {
         var en = s.run.battle && s.run.battle.enemy;
         var ecol = en && en.boss ? PALETTE.gold : PALETTE.peach, esc = en && en.boss ? 2.3 : 1.9;
+        // (v0.80.0, JB3) cinematic choreography: telegraph -> lunge -> bolt -> impact, every
+        // beat readable as cause and effect; shakes ride 'quake' fx so they land WITH the hit.
         if (res.correct && res.damage > 0) {
-          pushFx(s, { type: 'lunge', side: 'player', dur: 420 });
-          pushFx(s, { type: 'flash', side: 'enemy', dur: 320, delay: 200, flashR: en && en.boss ? 82 : 66 });
-          pushFx(s, { type: 'dmg', side: 'enemy', amount: res.damage, dur: 760, delay: 200, big: res.win });
+          pushFx(s, { type: 'charge', side: 'player', dur: 180, col: PALETTE.aqua });
+          pushFx(s, { type: 'lunge', side: 'player', dur: 420, delay: 60 });
+          pushFx(s, { type: 'beam', side: 'enemy', dur: 190, delay: 150, col: PALETTE.aqua });
+          pushFx(s, { type: 'flash', side: 'enemy', dur: 320, delay: 320, flashR: en && en.boss ? 82 : 66 });
+          pushFx(s, { type: 'sparks', side: 'enemy', dur: 620, delay: 320, col: ecol, count: 12, seed: 3 });
+          pushFx(s, { type: 'dmg', side: 'enemy', amount: res.damage, dur: 760, delay: 340, big: res.win });
+          if (!res.win) pushFx(s, { type: 'quake', side: 'enemy', dur: 220, delay: 320, amt: 0.16 });
         } else if (res.correct && res.blocked) {
-          pushFx(s, { type: 'lunge', side: 'player', dur: 380 });
-          pushFx(s, { type: 'shield', side: 'enemy', dur: 440, delay: 200 });
+          pushFx(s, { type: 'charge', side: 'player', dur: 180, col: PALETTE.aqua });
+          pushFx(s, { type: 'lunge', side: 'player', dur: 380, delay: 60 });
+          pushFx(s, { type: 'beam', side: 'enemy', dur: 190, delay: 150, col: PALETTE.aqua });
+          pushFx(s, { type: 'dome', side: 'enemy', dur: 520, delay: 320 });
         } else if (res.correct && res.action === 'brace') {
-          pushFx(s, { type: 'shield', side: 'player', dur: 460 });
+          pushFx(s, { type: 'dome', side: 'player', dur: 620 });
         } else if (res.correct && res.action === 'repair') {
-          pushFx(s, { type: 'flash', side: 'player', dur: 360, flashR: 58 });
+          pushFx(s, { type: 'motes', side: 'player', dur: 900 });
+          if (res.healed > 0) pushFx(s, { type: 'heal', side: 'player', amount: res.healed, dur: 760, delay: 180 });
         }
-        if (res.win) pushFx(s, { type: 'death', side: 'enemy', dur: 680, delay: 320, col: ecol, scale: esc });
+        if (res.win) {
+          // staged kill: secondary explosions crawl the hull, then the core detonates
+          s.deathAt = (s.lastTs || 0) + 1080;                    // hull persists until HERE
+          pushFx(s, { type: 'flash', side: 'enemy', dur: 240, delay: 620, flashR: 30, dx: -18, dy: -10 });
+          pushFx(s, { type: 'flash', side: 'enemy', dur: 240, delay: 770, flashR: 26, dx: 16, dy: 9 });
+          pushFx(s, { type: 'flash', side: 'enemy', dur: 240, delay: 920, flashR: 34, dx: 5, dy: -14 });
+          pushFx(s, { type: 'flash', side: 'enemy', dur: 460, delay: 1080, flashR: en && en.boss ? 110 : 88 });
+          pushFx(s, { type: 'shock', side: 'enemy', dur: 700, delay: 1080, col: ecol });
+          pushFx(s, { type: 'sparks', side: 'enemy', dur: 900, delay: 1080, col: ecol, count: 22, seed: 7, spread: 1.7 });
+          pushFx(s, { type: 'quake', side: 'enemy', dur: 340, delay: 1080, amt: 0.5 });
+          pushFx(s, { type: 'death', side: 'enemy', dur: 680, delay: 1100, col: ecol, scale: esc });
+          pushFx(s, { type: 'banner', side: 'enemy', dur: 1500, delay: 1300, text: en && en.boss ? 'BOSS DESTROYED' : 'TARGET DESTROYED', col: PALETTE.gold });
+        }
         if (res.enemyAttacked) {
           var ed = res.correct ? 480 : 90;
           if (s.enemyPanel && s.enemyPanel.classList) { s.enemyPanel.classList.remove('kbb-en-strike'); s.enemyPanel.classList.add('kbb-en-strike'); }   // (v0.48.0) the intent panel STRIKES when its attack lands
-          s.shakeT = s.reduced ? 0 : ((res.toHp == null ? res.incoming : res.toHp) > 0 ? 0.45 : (res.incoming > 0 ? 0.2 : 0));                            // (v0.48.0) impact weight
-          pushFx(s, { type: 'lunge', side: 'enemy', dur: 420, delay: ed });
+          pushFx(s, { type: 'charge', side: 'enemy', dur: 180, delay: ed, col: PALETTE.peach });
+          pushFx(s, { type: 'lunge', side: 'enemy', dur: 420, delay: ed + 60 });
+          pushFx(s, { type: 'beam', side: 'player', dur: 190, delay: ed + 150, col: PALETTE.peach });
           var toHp = (res.toHp == null ? res.incoming : res.toHp);
           if (toHp > 0) {
-            pushFx(s, { type: 'flash', side: 'player', dur: 320, delay: ed + 200, flashR: 48 });
-            pushFx(s, { type: 'dmg', side: 'player', amount: toHp, dur: 760, delay: ed + 200 });
+            pushFx(s, { type: 'flash', side: 'player', dur: 320, delay: ed + 320, flashR: 48 });
+            pushFx(s, { type: 'sparks', side: 'player', dur: 560, delay: ed + 320, col: PALETTE.peach, count: 10, seed: 5 });
+            pushFx(s, { type: 'dmg', side: 'player', amount: toHp, dur: 760, delay: ed + 340 });
+            pushFx(s, { type: 'quake', side: 'player', dur: 300, delay: ed + 320, amt: 0.45 });   // (JB3) shake WHEN the hit lands, not at answer time
           } else if (res.incoming > 0) {
-            pushFx(s, { type: 'shield', side: 'player', dur: 440, delay: ed + 200 });
+            pushFx(s, { type: 'dome', side: 'player', dur: 520, delay: ed + 320 });
+            pushFx(s, { type: 'quake', side: 'player', dur: 200, delay: ed + 320, amt: 0.2 });
           }
         }
       }

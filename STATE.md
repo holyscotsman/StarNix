@@ -101,7 +101,17 @@
 > **v0.6.21:** title screen uses the no-station nebula (`kbbBg`→`nebulaBg`); menu keeps the station vista. KBB shows `nebulaBg` + `bcmShip`. 200/200; art negative-controlled.
 > </details>
 
-## v0.79.0 — Dev Jukebox (JB1 done; JB3 KBB battle FX remains)
+## v0.80.0 — KBB battle cinematics (JB3 done — JASON BATCH #3 COMPLETE)
+
+Full cinematic grammar: charge→beam→sparks/dome/motes, staged kill (hull persists to core
+detonation, shockwave, 0.5 quake, DESTROYED banner). Root cause found & fixed: overlay fx
+(incl. damage numbers) never rendered in the browser's 3D view — new .kbb-fx overlay canvas
+runs the shared pipeline projected into 3D screen space. Gate: verify 432, kbb-run 34,
+kbb-draw 9-type render pin. Controls surgical (one loose pin caught & tightened). Shots 75–82.
+Batch #3 all shipped: v0.77 CC bundle, v0.78 KBB layout, v0.79 Jukebox, v0.80 cinematics.
+Awaiting: Jason's browser QA (v0.42–0.80), kbb* sprites, question dumps.
+
+> **Earlier this session (v0.79.0):** Dev Jukebox
 
 Settings gains Dev · Jukebox: 43 exact-play track buttons in 5 groups, now-line + gold
 active highlight, Stop→menu bed; new audio.trackIds() seam. verify-build 429, audio-smoke
