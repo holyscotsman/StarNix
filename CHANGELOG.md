@@ -6,6 +6,10 @@ Sections per entry: **Added · Changed · Fixed · Removed**. Each line: `<what>
 
 ---
 
+## [0.86.0] - 2026-07-03
+
+- **Pages privacy: app-only deploys (Batch #4, B5).** GitHub Pages was deploy-from-branch, publicly serving the ENTIRE repo — every spec, STATE.md, BROWSER_QA.md, and the question-authoring pipeline (starnix_questions.md) were live URLs. New `.github/workflows/pages.yml` publishes an artifact containing only `index.html` (+.nojekyll), and the repo's Pages config is switched to build_type=workflow (via gh api). Side effect: any bookmarked doc URLs now 404 — intended. Gate: verify-build 438 (+1 pin: the workflow ships app-only, no `cp -r`); negative control (workflow pointed at repo root) failed exactly that pin. Live cutover verified post-push: app serves 200 with the new BUILD_VERSION, STATE.md serves 404.
+
 ## [0.85.0] - 2026-07-03
 
 - **KBB: reduced motion keeps the information + phone layout (Batch #4, B3+B4).** B3: the v0.80 choreography gate suppressed CONTENT along with motion — reduced-motion players lost damage/heal numbers, the DESTROYED banner, and the strike telegraph. New reduced path: static hold-then-fade numbers, a centered no-slide banner, and the enemy-strike panel cue — zero lunge/beam/quake/shock/charge/sparks (pinned). B4: on ≤820px the flex stack now orders combat(1) → questions(2) → enemy(3) → artifacts(4) so every turn's answers sit directly under the battle (was: scroll past the whole artifact column every turn), and the shop's Reroll/Next-battle row is sticky-bottom on phones (CSS order intentionally diverges from DOM order — flagged for the QA pass). Pins: kbb-run 40 (+6: reduced mount honor, static dmg/banner, zero-motion-fx, stack order, sticky actions). Negative control: info pushes gutted + CSS reverted → exactly the 4 targeted pins failed → restored. Playwright at 390×844: combat 105 → questions 367 → enemy 819 → artifacts 942, first option visible without scrolling (shot 85).

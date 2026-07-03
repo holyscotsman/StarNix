@@ -1045,7 +1045,15 @@ async function runFrames(n = 6) {
     shell.showMenu();
     ok("leaving the exam tears it down (no leak)", shell._exam === null && shell.screen === "menu");
 
-    // B1 (v0.84.0): Standard = the real exam's 75 questions; the readiness sim button must
+    // B5 (v0.86.0): Pages must deploy the app-only artifact, never the repo root
+  {
+    let wf = "";
+    try { wf = readFileSync(".github/workflows/pages.yml", "utf8"); } catch (e) {}
+    ok("Pages workflow exists and publishes ONLY index.html (specs/bank stay private)",
+      wf.includes("cp index.html dist/") && wf.includes("upload-pages-artifact") && !wf.includes("cp -r"));
+  }
+
+  // B1 (v0.84.0): Standard = the real exam's 75 questions; the readiness sim button must
     // never launch the whole bank again (it passed no count -> 226 questions, ~6 hours).
     console.log("\nB1/B2. Exam sim length + extra time");
     shell.showExamSetup();

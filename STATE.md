@@ -101,7 +101,13 @@
 > **v0.6.21:** title screen uses the no-station nebula (`kbbBg`→`nebulaBg`); menu keeps the station vista. KBB shows `nebulaBg` + `bcmShip`. 200/200; art negative-controlled.
 > </details>
 
-## v0.85.0 — KBB reduced-motion info + phone stack (B3+B4)
+## v0.86.0 — Pages privacy: app-only deploys (B5)
+
+Pages switched deploy-from-branch → Actions workflow publishing ONLY index.html; repo docs
+and the question bank are no longer public URLs. verify 438. NEXT: L1+L2 due chip + miss
+redrill, L3 optionNotes in games, L4+L5 Leitner gating + longer intervals.
+
+> **Earlier this session (v0.85.0):** KBB reduced-motion info + phone stack
 
 Reduced motion now keeps numbers/banner/strike cue (static, zero motion fx — pinned); phone
 stack reordered combat→questions→enemy→artifacts with sticky shop actions (390×844 verified).
