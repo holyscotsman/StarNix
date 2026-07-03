@@ -173,3 +173,11 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   vs gold gates); swatch selection persists across reload; the standard iris option always available.
   WRONG: a tint bleeding into non-ship UI, a locked swatch selectable, or the color not surviving reload.
   Logic is gate-pinned (K7 + view-smoke); this is the in-game look confirm.
+
+- **QA-E6 — Blitz combo meter (added v0.59.0, browser-blind).** Run a Blitz exam and chain correct answers.
+  CORRECT: after the first correct, an aqua "⚡ 1 chain · ×1.1" chip appears left of the score, growing to
+  ×1.5 at 5+; it pulses briefly on each link (static with Reduced motion ON); a wrong answer or timeout
+  clears it instantly; banked points visibly jump once chained (a fast chained answer can exceed 1000).
+  WRONG: the chip crowding the score/quit on narrow widths, a pulse under reduced motion, or the chip
+  visible in Study/Sim. Math + reset are gate-pinned; this is the fit/feel confirm. Note for Jason: old
+  Blitz bests predate the multiplier — expect them to fall.

@@ -250,3 +250,34 @@ domain later drops below 50%, resolve() reverts the trail to standard on next mo
 deliberate and pinned via resolve, but Jason may prefer earned-forever; one-line change).
 
 Commit: `v0.58.0 — Mastery-gated ship trails`.
+
+---
+
+## v0.59.0 — Unit 8: Blitz combo multiplier
+
+**Shipped:** `comboMult(streak) = 1 + 0.1·min(5, streak)` applied to the NEXT correct answer's
+decayed points; wrong/timeout banks 0 and resets the chain. Aqua meter chip in the exam top
+bar ("⚡ N chain · ×M"), pulse on growth, static under reduced motion (settings flag + CSS
+guard). **Blitz only** — `S.combo`, the meter, and the multiplier are all mode-guarded;
+Study's zero-touch is pinned. Bests: schema untouched (`speedPoints` summed as before);
+perfect chains inflate ≤50%, so pre-combo bests are soft benchmarks now — flagged for Jason
+in QA-E6 (a "bests reset" is his call, not mine).
+
+**Assertion delta:** verify-build 402 → **407** (+5): comboMult boundaries incl. the ×1.5 cap;
+live chain start + meter text; the chained answer scoring ABOVE the 1000 un-multiplied
+ceiling (timing-jitter-proof — only the multiplier can exceed it); wrong-answer reset +
+meter clear; Study untouched. Full gate ALL GREEN, exit 0.
+
+**Negative control:** chain never resets (the exploit) → exactly the reset pin failed
+(406/407). Restored, re-green.
+
+**Punted:** a combo SFX tick (audio is human-gated; would be blind); best-score migration.
+
+Commit: `v0.59.0 — Blitz combo multiplier`.
+
+---
+
+**PHASE 1 COMPLETE: all eight units shipped, v0.52.0 → v0.59.0, gate grown 345 → 407
+verify-build assertions (+ ARM RUN 46, KBB RUN 26, fairness 25, view-smoke +5) — every unit
+green-gated with a bite-proven negative control before commit. Unit 9 (Playwright visual
+playtest) is next, then Phase 2.**

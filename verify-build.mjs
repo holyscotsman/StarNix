@@ -1122,6 +1122,42 @@ async function runFrames(n = 6) {
       h.teardown(); cont.remove();
     }
 
+    // ---- blitz combo multiplier (v0.58.0 unit 8) — Blitz only; Study untouched ----
+    {
+      ok("comboMult pinned: base 1.0, +0.1 per chain link, capped x1.5",
+        EX.comboMult(0) === 1 && Math.abs(EX.comboMult(1) - 1.1) < 1e-9
+        && Math.abs(EX.comboMult(5) - 1.5) < 1e-9 && Math.abs(EX.comboMult(12) - 1.5) < 1e-9);
+      const cont = w.document.createElement("div"); w.document.body.appendChild(cont);
+      const bq = [];
+      for (let i = 0; i < 4; i++) bq.push({ id: "cb" + i, domain: "vms", difficulty: 1, stem: "C" + i, options: ["a", "b", "c", "d"], correctIndex: 0, explanation: "e" });
+      const h = EX.run({ container: cont, questions: bq, rng: erng, audio: { sfx: () => {} }, mastery: { record: () => {} }, reducedMotion: true, onExit: () => {}, onRetry: () => {} });
+      const st = h._state;
+      const clickOpt = (right) => { const q = st.order[st.i]; const ci = q.correctIndex; cont.querySelectorAll(".sx-exam-opt")[right ? ci : (ci + 1) % 4].click(); };
+      clickOpt(true);
+      ok("blitz: first correct starts the chain — meter shows '1 chain · x1.1'",
+        st.combo === 1 && /1 chain/.test(cont.querySelector(".sx-exam-combo").textContent)
+        && /1\.1/.test(cont.querySelector(".sx-exam-combo").textContent));
+      await wait(330);                                   // blitz auto-advance (260 ms reveal)
+      clickOpt(true);
+      ok("blitz: the chained answer scores ABOVE the un-multiplied ceiling (x1.1 applied)",
+        st.combo === 2 && st.results[1].points > EX.MAX_POINTS);
+      await wait(330);
+      clickOpt(false);
+      ok("blitz: a wrong answer banks 0, resets the chain, clears the meter",
+        st.combo === 0 && st.results[2].points === 0 && cont.querySelector(".sx-exam-combo").textContent === "");
+      h.teardown(); cont.remove();
+      // Study is untouched: same bank, study mode — select + confirm a correct answer
+      const cont2 = w.document.createElement("div"); w.document.body.appendChild(cont2);
+      const h2 = EX.run({ container: cont2, mode: "study", questions: bq.slice(0, 2), rng: erng, audio: { sfx: () => {} }, mastery: { record: () => {} }, reducedMotion: true, onExit: () => {}, onRetry: () => {} });
+      const q2 = h2._state.order[0];
+      cont2.querySelectorAll(".sx-exam-opt")[q2.correctIndex].click();
+      cont2.querySelector(".sx-exam-confirm").click();
+      ok("study: correct answers never touch the combo (no chain, no meter, 0 points)",
+        h2._state.combo === 0 && cont2.querySelector(".sx-exam-combo").textContent === ""
+        && h2._state.results[0].points === 0);
+      h2.teardown(); cont2.remove();
+    }
+
     // ---- shell: mode picker renders, Study is default, choice reaches the exam ----
     {
       shell.showExamSetup();

@@ -44,6 +44,10 @@
 
   function windowFor(difficulty) { return (WINDOW_SECS[difficulty] || 40) * 1000; }            // ms
   function pointsAt(elapsedMs, windowMs, max) { max = max || MAX_POINTS; return Math.round(max * clamp(1 - elapsedMs / windowMs, 0, 1)); }
+  // (v0.58.0 unit 8) Blitz combo: the multiplier applied to the NEXT correct answer after
+  // `streak` consecutive corrects. +10% per chain link, capped at x1.5 (5+). Blitz ONLY —
+  // Study/Sim never touch it. Stored bests stay schema-valid (still summed speedPoints).
+  function comboMult(streak) { return 1 + 0.1 * Math.min(5, streak || 0); }
 
   // Shuffle a question's options for display, remapping correctIndex/correctIndices
   // AND the parallel optionNotes so every option carries its own rationale. Keeps
@@ -86,6 +90,12 @@
       ".sx-exam-top{width:100%;max-width:760px;display:flex;align-items:center;gap:12px;margin-bottom:14px;}",
       ".sx-exam-prog{font-size:12.5px;letter-spacing:.04em;color:" + P.dim + ";font-weight:600;}",
       ".sx-exam-score{margin-left:auto;font-size:13px;font-weight:700;color:" + P.gold + ";font-variant-numeric:tabular-nums;}",
+      // (v0.58.0) blitz combo meter — aqua chain chip; pulses on growth, static under reduced motion
+      ".sx-exam-combo{margin-left:auto;font-size:12px;font-weight:700;color:" + P.aqua + ";font-variant-numeric:tabular-nums;}",
+      ".sx-exam-combo.on + .sx-exam-score{margin-left:10px;}",
+      ".sx-exam-combo.pulse{animation:sxComboPulse .45s ease-out 1;}",
+      "@keyframes sxComboPulse{0%{transform:scale(1);}40%{transform:scale(1.25);}100%{transform:scale(1);}}",
+      "@media (prefers-reduced-motion: reduce){.sx-exam-combo.pulse{animation:none;}}",
       ".sx-exam-quit{background:transparent;border:1px solid rgba(255,255,255,.16);color:" + P.dim + ";border-radius:8px;padding:5px 11px;font:600 12px Montserrat,Arial,sans-serif;cursor:pointer;}",
       ".sx-exam-quit:hover{border-color:" + P.peach + ";color:" + P.peach + ";}",
       ".sx-exam-bars{width:100%;max-width:760px;display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}",
@@ -222,6 +232,7 @@
     order = order.map(function (q) { return shuffleOptions(q, rng); });
 
     var S = { running: true, mode: mode, i: 0, view: 0, results: [], score: 0, locked: false,
+      combo: 0,                                        // (v0.58.0) blitz-only consecutive-correct chain
       qStart: null, qWindow: 0, examDone: false, raf: 0, listeners: [], bg: null, multiSel: [],
       selected: null,                                  // study: pending single choice
       drafts: [], flags: [], simEnd: 0 };              // sim: editable answers + review flags + deadline
@@ -252,7 +263,7 @@
     var canvas = el("canvas", "sx-exam-bg"); rootEl.appendChild(canvas);
     var wrap = el("div", "sx-exam-wrap");
     wrap.innerHTML =
-      '<div class="sx-exam-top"><span class="sx-exam-prog"></span><span class="sx-exam-score"></span><button class="sx-exam-quit" type="button">End exam</button></div>' +
+      '<div class="sx-exam-top"><span class="sx-exam-prog"></span><span class="sx-exam-combo"></span><span class="sx-exam-score"></span><button class="sx-exam-quit" type="button">End exam</button></div>' +
       '<div class="sx-exam-bars"><div class="sx-exam-meterlbl"><span class="pts"></span><span class="tmr"></span></div><div class="sx-exam-meter"><i></i></div></div>' +
       '<div class="sx-exam-host"></div>';
     rootEl.appendChild(wrap);
@@ -260,6 +271,15 @@
 
     var progEl = wrap.querySelector(".sx-exam-prog");
     var scoreEl = wrap.querySelector(".sx-exam-score");
+    var comboEl = wrap.querySelector(".sx-exam-combo");
+    // (v0.58.0) blitz combo meter: shows the chain + the multiplier the NEXT correct earns.
+    // Hidden at chain 0 and in Study/Sim. Pulse on growth; reduced-motion stays static.
+    function renderCombo(grew) {
+      if (!comboEl) return;
+      if (S.mode !== "blitz" || S.combo < 1) { comboEl.textContent = ""; comboEl.className = "sx-exam-combo"; return; }
+      comboEl.textContent = "⚡ " + S.combo + " chain · ×" + comboMult(S.combo).toFixed(1);
+      comboEl.className = "sx-exam-combo on" + ((grew && !reducedMotion) ? " pulse" : "");
+    }
     var meterFill = wrap.querySelector(".sx-exam-meter > i");
     var ptsEl = wrap.querySelector(".sx-exam-meterlbl .pts");
     var tmrEl = wrap.querySelector(".sx-exam-meterlbl .tmr");
@@ -450,9 +470,11 @@
       var q = order[idx];
       var correct = gradeAnswer(q, chosen);
       var elapsed = (S.mode === "blitz" && S.qStart != null) ? (nowMs() - S.qStart) : 0;
-      var pts = (S.mode === "blitz" && correct) ? pointsAt(elapsed, S.qWindow, MAX_POINTS) : 0;
+      // (v0.58.0) blitz combo: the chain multiplies the decayed points; wrong/timeout resets it
+      var pts = (S.mode === "blitz" && correct) ? Math.round(pointsAt(elapsed, S.qWindow, MAX_POINTS) * comboMult(S.combo)) : 0;
       S.results[idx] = { q: q, chosen: chosen, correct: correct, points: pts, timeMs: elapsed };
       S.score += pts;
+      if (S.mode === "blitz") { S.combo = correct ? S.combo + 1 : 0; renderCombo(correct); }
       if (mastery && mastery.record) { try { mastery.record(q.id, correct, { game: "EXAM" }); } catch (e) {} }
       if (audio && audio.sfx) { try { audio.sfx(correct ? "correct" : "wrong"); } catch (e) {} }
       scoreEl.textContent = (S.mode === "blitz") ? (S.score + " pts") : scoreEl.textContent;
@@ -637,6 +659,7 @@
     summarize: summarize,
     MAX_POINTS: MAX_POINTS,
     SIM_SECS_PER_Q: SIM_SECS_PER_Q,
+    comboMult: comboMult,
     version: "2.0"
   };
 });
