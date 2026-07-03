@@ -101,7 +101,13 @@
 > **v0.6.21:** title screen uses the no-station nebula (`kbbBg`→`nebulaBg`); menu keeps the station vista. KBB shows `nebulaBg` + `bcmShip`. 200/200; art negative-controlled.
 > </details>
 
-## v0.99.0 — KBB unit 2: rarity curve, fittings, longer rounds (K4/K10/K11)
+## v0.100.0 — KBB unit 3: fly-in/off + charged-laser set piece + SFX (K5/K6) — KBB COMPLETE
+
+kbb-run 62, kbb-draw 16 (now actually gating — it silently never exited nonzero before).
+REMAINING batch #5: CC C1-C12 (map in scratchpad/batch5-map.txt), G2 save/resume, G3 intro,
+G4 full-scan workflow. Browser QA owed for all v0.92+ surface.
+
+> **Earlier this session (v0.99.0):** KBB unit 2
 
 kbb-balance re-tuned GREEN (window 5→7 was the key — escapes were killing 70% players).
 kbb-run 57. REMAINING: K5/K6 (battle choreography + SFX), CC C1-C12, G2 save/resume,

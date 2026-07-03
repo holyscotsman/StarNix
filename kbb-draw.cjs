@@ -30,7 +30,8 @@ function nonBlank(cv) { if (!cv || !cv.width) return false; var g = cv.getContex
   var probe = doc.createElement('canvas'); probe.width = 8; probe.height = 8;
   ok(!!probe.getContext('2d') && typeof probe.getContext('2d').getImageData === 'function', 'jsdom is using a real 2D context (node-canvas)');
 
-  mod.mount(V.root, makeCtx(KBB, { seed: 9, reducedMotion: false }));
+  var ctxRef = makeCtx(KBB, { seed: 9, reducedMotion: false });
+  mod.mount(V.root, ctxRef);
   V.step(2);
   var cv = canvasOf(KBB);
   ok(!!cv && cv.width > 0 && cv.height > 0, 'combat canvas has real pixel dimensions (' + (cv ? cv.width + 'x' + cv.height : 'none') + ')');
@@ -61,7 +62,7 @@ function nonBlank(cv) { if (!cv || !cv.width) return false; var g = cv.getContex
     var qq = st.run.battle.question;
     var b = q(doc, '.kbb-main .kbb-opt[data-idx="' + qq.correctIndex + '"]'); if (b) b.click();
     V.step(16, 24);                            // animate hero lunge + impact ring
-    var cont = q(doc, '.kbb-main .kbb-cont'); if (cont) cont.click();
+    var cont = q(doc, '.kbb-main .kbb-cont:not(.kbb-submit)'); if (cont) cont.click();
     V.step(6);
   })();
   ok(!V.step._err, 'correct-answer FX (hero lunge + impact + win transition) frames do not throw');
@@ -88,6 +89,15 @@ function nonBlank(cv) { if (!cv || !cv.width) return false; var g = cv.getContex
     V.step(30, 30);
   })();
   ok(!V.step._err, 'JB3: all nine cinematic fx types render clean under a real canvas');
+  // (v0.100.0, K6) the sfx fx type FIRES through the audio seam when its beat renders
+  (function () {
+    var st = KBB._test.state(); if (!st || !st.fx) return;
+    var n0 = ctxRef._rec.sfx.length;
+    st.fx.push({ type: 'sfx', name: 'laserfire', side: 'enemy', dur: 60, start: st.lastTs || 0 });
+    V.step(4, 30);
+    ok(ctxRef._rec.sfx.indexOf('laserfire') >= n0 - 1 && ctxRef._rec.sfx.length > n0,
+       'K6: beat-synced sfx fires through ctx.audio when rendered');
+  })();
   mod.unmount();
 
   // Fresh mount: drive an all-wrong battle to lost (never wins -> stays in battle),
@@ -102,18 +112,29 @@ function nonBlank(cv) { if (!cv || !cv.width) return false; var g = cv.getContex
   q(doc2, '.kbb-ht-skip').click();              // ...then the tour over the live battle
   V2.step(6);
   var lost = false, guard = 0;
-  while (guard++ < 16) {
+  while (guard++ < 32) {   // (v0.100.0) leaner squad + softer chip = more turns to reach lost
     var st2 = KBB2._test.state(); if (!st2) break;
     if (st2.run.phase === 'lost') { lost = true; break; }
     var qq2 = st2.run.battle && st2.run.battle.question;
-    if (!qq2) { var c0 = q(doc2, '.kbb-main .kbb-cont'); if (c0) { c0.click(); V2.step(2); continue; } break; }
-    // wrong pick for single AND multi draws (v0.50.0: the provider serves multi every 7th)
-    var wi = qq2.multi ? qq2.correctIndices[0] : (qq2.correctIndex + 1) % qq2.options.length;   // one right index alone grades wrong on multi
-    var ob = q(doc2, '.kbb-main .kbb-opt[data-idx="' + wi + '"]'); if (!ob) break;
-    ob.click();
+    if (!qq2) { var c0 = q(doc2, '.kbb-main .kbb-cont:not(.kbb-submit)'); if (c0) { c0.click(); V2.step(2); continue; } break; }
+    // wrong pick for single AND multi draws. (v0.100.0) multi needs a FULL selection or the
+    // submit button never enables (the old one-right-index pick stalled the driver here).
+    if (qq2.multi) {
+      var need = qq2.correctIndices.length, picked = 0;
+      var okSet = {}; for (var ci3 = 0; ci3 < qq2.correctIndices.length; ci3++) okSet[qq2.correctIndices[ci3]] = true;
+      var firstPick = q(doc2, '.kbb-main .kbb-opt[data-idx="' + qq2.correctIndices[0] + '"]'); if (firstPick) { firstPick.click(); picked++; }
+      for (var oi3 = 0; oi3 < qq2.options.length && picked < need; oi3++) {
+        if (okSet[oi3]) continue;
+        var wOb = q(doc2, '.kbb-main .kbb-opt[data-idx="' + oi3 + '"]'); if (wOb) { wOb.click(); picked++; }
+      }
+    } else {
+      var wi = (qq2.correctIndex + 1) % qq2.options.length;
+      var ob = q(doc2, '.kbb-main .kbb-opt[data-idx="' + wi + '"]'); if (!ob) break;
+      ob.click();
+    }
     var sb2 = q(doc2, '.kbb-submit'); if (sb2 && !sb2.disabled) sb2.click();
     V2.step(12, 24);               // animate the enemy attack each turn
-    var cont = q(doc2, '.kbb-main .kbb-cont'); if (cont) cont.click(); V2.step(2);
+    var cont = q(doc2, '.kbb-main .kbb-cont:not(.kbb-submit)'); if (cont) cont.click(); V2.step(2);
   }
   ok(lost, 'all-wrong battle reaches lost');
   ok(!V2.step._err, 'enemy-attack FX frames do not throw');
@@ -124,5 +145,4 @@ function nonBlank(cv) { if (!cv || !cv.width) return false; var g = cv.getContex
   ok((V.step._err === undefined) && (V2.step._err === undefined), 'ZERO draw-loop exceptions across intro+shop+battle+hero FX+enemy FX+lost+unmount');
 })();
 
-console.log('\n' + 'draw-loop check complete');
-process.exit(0);
+H.summary('KBB DRAW');   // (v0.100.0) exits 1 on fails — reds here used to be invisible to the gate

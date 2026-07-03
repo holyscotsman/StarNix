@@ -1052,6 +1052,7 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
       var s = {
         ctx: ctx, doc: doc, root: root, container: container, run: run,
         reduced: reduced, raf: 0, timers: [], qShownAt: 0, locked: false, paused: false,
+        battleStartAt: 0, heroExitAt: 0, _battleKey: '',   // (v0.100.0, K5) fly-in/fly-off choreography clocks
         canvas: null, c2d: null, onKey: null, best: 0, trailColor: trailColor,
         use3D: false, three: null, _lastCW: 0, _lastCH: 0, _artDirty: false
       };
@@ -1329,8 +1330,20 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
       { dx: -16, dy: -16, scl: 0.74, col: PALETTE.aqua, lead: false, ph: 1.7, key: 'kbbHero2', lf: 0.72 },
       { dx: -18, dy: 18, scl: 0.70, col: PALETTE.mantis, lead: false, ph: 3.1, key: 'kbbHero3', lf: 0.66 }
     ];
+    function battleEase(s, ts) {   // (K5) 0..1 fly-in progress; 1 instantly under reduced motion
+      if (s.reduced) return 1;
+      var fin = Math.min(1, Math.max(0, (ts - s.battleStartAt) / 900));
+      return 1 - Math.pow(1 - fin, 3);
+    }
+    function heroExitDx(s, ts) {   // (K5) accelerating fly-off to the RIGHT after victory
+      if (s.reduced || !s.heroExitAt || ts < s.heroExitAt) return 0;
+      var t2 = (ts - s.heroExitAt) / 1000;
+      return t2 * t2 * 900;
+    }
     function drawHeroes(g, s, cx, y, sc, ts, reduced) {
       var lx = lungeDx(s, ts, 'player', 1);
+      var kIn = battleEase(s, ts);
+      cx = cx - (1 - kIn) * (cx + 90) + heroExitDx(s, ts);   // in from the LEFT, off to the RIGHT
       for (var i = 0; i < HERO_SLOTS.length; i++) {
         var sp = HERO_SLOTS[i];
         var hx = cx + sp.dx * sc + lx * sp.lf;
@@ -1342,8 +1355,9 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
     }
     function drawEnemy(g, s, e, cx, y, sc, ts) {
       var ecol = e.boss ? PALETTE.gold : PALETTE.peach;
-      var x = cx + lungeDx(s, ts, 'enemy', -1), yy = y + (s.reduced ? 0 : Math.sin(ts / 520) * 4);
       var W = s.canvas.clientWidth || 320, H = s.canvas.clientHeight || 188;
+      var kInE = battleEase(s, ts);
+      var x = cx + lungeDx(s, ts, 'enemy', -1) + (1 - kInE) * (W - cx + 90), yy = y + (s.reduced ? 0 : Math.sin(ts / 520) * 4);
       var img = assetImg(s, e.boss ? ASSET_BOSS : ASSET_ENEMY) || assetImg(s, ASSET_LEGACY_SHIP);
       if (img) {
         var px = clamp((e.boss ? 0.5 : 0.42) * H * 1.5, 80, W * 0.44);
@@ -1371,6 +1385,9 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
           blastRing(g, cx, cy, fr * 0.4 + p * fr, fcol, fa * 0.9, 3.5);
           g.save(); g.globalAlpha = fa * 0.45; g.fillStyle = fcol; g.shadowColor = fcol; g.shadowBlur = 26;
           g.beginPath(); g.arc(cx, cy, fr * 0.5, 0, 6.283); g.fill(); g.restore(); g.globalAlpha = 1;
+        } else if (f.type === 'sfx') {
+          // (v0.100.0, K6) beat-synced sound: fires exactly when this fx's start time renders
+          if (!f.done) { f.done = true; try { if (s.ctx.audio && s.ctx.audio.sfx) s.ctx.audio.sfx(f.name); } catch (eS) {} }
         } else if (f.type === 'charge') {
           // (JB3) attack telegraph: a glow builds on the attacker before the lunge
           g.save(); g.globalAlpha = p * 0.7; g.fillStyle = f.col || PALETTE.aqua; g.shadowColor = f.col || PALETTE.aqua;
@@ -1380,8 +1397,8 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
           var srcX = (f.side === 'enemy' ? L.cxL : L.cxR) + lungeDx(s, ts, f.side === 'enemy' ? 'player' : 'enemy', f.side === 'enemy' ? 1 : -1);
           var ep2 = 1 - (1 - p) * (1 - p);
           var hx = srcX + (cx - srcX) * ep2, tl = (cx - srcX) * 0.22;
-          g.save(); g.strokeStyle = f.col || PALETTE.aqua; g.shadowColor = f.col || PALETTE.aqua; g.shadowBlur = 12;
-          g.globalAlpha = 0.9 * (1 - p * 0.4); g.lineWidth = 3; g.beginPath(); g.moveTo(hx - tl, cy); g.lineTo(hx, cy); g.stroke();
+          g.save(); g.strokeStyle = f.col || PALETTE.aqua; g.shadowColor = f.col || PALETTE.aqua; g.shadowBlur = f.thick ? 26 : 12;
+          g.globalAlpha = 0.9 * (1 - p * 0.4); g.lineWidth = f.thick ? 9 : 3; g.beginPath(); g.moveTo(hx - tl, cy); g.lineTo(hx, cy); g.stroke();
           g.globalAlpha = 1; g.fillStyle = '#FFFFFF'; g.beginPath(); g.arc(hx, cy, 3.2, 0, 6.283); g.fill();
           g.restore(); g.globalAlpha = 1;
         } else if (f.type === 'sparks') {
@@ -1695,9 +1712,10 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
         var plunge = fxActive(s, ts, 'lunge', 'player'), elunge = fxActive(s, ts, 'lunge', 'enemy');
         var poff = plunge ? Math.sin((ts - plunge.start) / plunge.dur * Math.PI) * 0.7 : 0;
         var eoff = elunge ? Math.sin((ts - elunge.start) / elunge.dur * Math.PI) * 0.7 : 0;
+        var kIn3 = battleEase(s, ts), exit3 = heroExitDx(s, ts) / 60;   // world units
         for (i = 0; i < T.heroes.length; i++) {
           var h = HERO_3D[i];
-          T.heroes[i].position.x = h.x + poff * h.lf;
+          T.heroes[i].position.x = h.x + poff * h.lf - (1 - kIn3) * 9 + exit3;
           T.heroes[i].position.y = h.y + Math.sin(ts / 680 + h.ph) * 0.08;
         }
         var b = s.run.battle, hasEnemy = !!(b && b.enemy && (!b.over || (s.deathAt && ts < s.deathAt)));   // (JB3) hull persists through the staged kill
@@ -1705,7 +1723,7 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
         if (hasEnemy) {
           var boss = !!b.enemy.boss;
           if (T.enemyBoss !== boss) { T.enemy.material.map = boss ? T.enemyTexB : T.enemyTexN; T.enemy.material.needsUpdate = true; T.enemy.scale.setScalar(boss ? 2.3 : 1.9); T.enemyBoss = boss; }
-          T.enemy.position.x = 2.4 - eoff; T.enemy.position.y = Math.sin(ts / 520) * 0.1;
+          T.enemy.position.x = 2.4 - eoff + (1 - kIn3) * 9; T.enemy.position.y = Math.sin(ts / 520) * 0.1;
           var flash = fxActive(s, ts, 'flash', 'enemy');
           T.enemy.material.color.setScalar(flash ? 1.0 + (1 - (ts - flash.start) / flash.dur) * 1.4 : 1.0);
         }
@@ -1865,6 +1883,15 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
     // BLUE zone: enemy data only. "Incoming attack" (was "Intent") + red pulse alert (task 4).
     function renderEnemy(s) {
       var b = s.run.battle;
+      // (v0.100.0, K5/K6) a NEW battle: reset the fly-in clock, clear any exit flight,
+      // and sound the round-start sting.
+      if (b && b.enemy && !b.over) {
+        var bk = s.run.section + '-' + s.run.round + '-' + (b.enemy.name || '');
+        if (bk !== s._battleKey) {
+          s._battleKey = bk; s.battleStartAt = s.lastTs || 0; s.heroExitAt = 0;
+          try { if (s.ctx.audio && s.ctx.audio.sfx) s.ctx.audio.sfx('collect'); } catch (eRS) {}
+        }
+      }
       // (v0.50.0) boss music: the fixed 'boss' bed (intensity layer) while a boss battle is live,
       // back to the kbb context bed when it isn't. Transition-guarded so playlist rotation only
       // advances on real switches, never per-render.
@@ -2059,13 +2086,20 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
         // (v0.80.0, JB3) cinematic choreography: telegraph -> lunge -> bolt -> impact, every
         // beat readable as cause and effect; shakes ride 'quake' fx so they land WITH the hit.
         if (res.correct && res.damage > 0) {
-          pushFx(s, { type: 'charge', side: 'player', dur: 180, col: PALETTE.aqua });
-          pushFx(s, { type: 'lunge', side: 'player', dur: 420, delay: 60 });
-          pushFx(s, { type: 'beam', side: 'enemy', dur: 190, delay: 150, col: PALETTE.aqua });
-          pushFx(s, { type: 'flash', side: 'enemy', dur: 320, delay: 320, flashR: en && en.boss ? 82 : 66 });
-          pushFx(s, { type: 'sparks', side: 'enemy', dur: 620, delay: 320, col: ecol, count: 12, seed: 3 });
-          pushFx(s, { type: 'dmg', side: 'enemy', amount: res.damage, dur: 760, delay: 340, big: res.win });
-          if (!res.win) pushFx(s, { type: 'quake', side: 'enemy', dur: 220, delay: 320, amt: 0.16 });
+          // (v0.100.0, K6) hero volley ~1.1s: charge -> three-shot volley -> impact
+          pushFx(s, { type: 'charge', side: 'player', dur: 260, col: PALETTE.aqua });
+          pushFx(s, { type: 'lunge', side: 'player', dur: 420, delay: 120 });
+          pushFx(s, { type: 'sfx', name: 'fire', side: 'player', dur: 60, delay: 320 });
+          pushFx(s, { type: 'beam', side: 'enemy', dur: 200, delay: 320, col: PALETTE.aqua });
+          pushFx(s, { type: 'sfx', name: 'fire', side: 'player', dur: 60, delay: 440 });
+          pushFx(s, { type: 'beam', side: 'enemy', dur: 200, delay: 440, col: PALETTE.aqua });
+          pushFx(s, { type: 'sfx', name: 'fire', side: 'player', dur: 60, delay: 560 });
+          pushFx(s, { type: 'beam', side: 'enemy', dur: 200, delay: 560, col: PALETTE.aqua });
+          pushFx(s, { type: 'flash', side: 'enemy', dur: 320, delay: 620, flashR: en && en.boss ? 82 : 66 });
+          pushFx(s, { type: 'sparks', side: 'enemy', dur: 620, delay: 620, col: ecol, count: 12, seed: 3 });
+          pushFx(s, { type: 'sfx', name: 'hit', side: 'enemy', dur: 60, delay: 640 });
+          pushFx(s, { type: 'dmg', side: 'enemy', amount: res.damage, dur: 760, delay: 660, big: res.win });
+          if (!res.win) pushFx(s, { type: 'quake', side: 'enemy', dur: 220, delay: 620, amt: 0.16 });
         } else if (res.correct && res.blocked) {
           pushFx(s, { type: 'charge', side: 'player', dur: 180, col: PALETTE.aqua });
           pushFx(s, { type: 'lunge', side: 'player', dur: 380, delay: 60 });
@@ -2088,23 +2122,32 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
           pushFx(s, { type: 'sparks', side: 'enemy', dur: 900, delay: 1080, col: ecol, count: 22, seed: 7, spread: 1.7 });
           pushFx(s, { type: 'quake', side: 'enemy', dur: 340, delay: 1080, amt: 0.5 });
           pushFx(s, { type: 'death', side: 'enemy', dur: 680, delay: 1100, col: ecol, scale: esc });
+          pushFx(s, { type: 'sfx', name: 'explode', side: 'enemy', dur: 60, delay: 640 });
+          pushFx(s, { type: 'sfx', name: 'explode', side: 'enemy', dur: 60, delay: 1090 });
           pushFx(s, { type: 'banner', side: 'enemy', dur: 1500, delay: 1300, text: en && en.boss ? 'BOSS DESTROYED' : 'TARGET DESTROYED', col: PALETTE.gold });
+          s.heroExitAt = (s.lastTs || 0) + 2900;   // (v0.100.0, K5) after the banner, the squad flies off RIGHT
         }
         if (res.enemyAttacked) {
+          // (v0.100.0, K6, Jason) the enemy attack is a GIANT charged laser, ~2.4s end to end:
+          // long charge glow (with sound) -> thick beam -> impact particles and damage.
           var ed = res.correct ? 480 : 90;
           if (s.enemyPanel && s.enemyPanel.classList) { s.enemyPanel.classList.remove('kbb-en-strike'); s.enemyPanel.classList.add('kbb-en-strike'); }   // (v0.48.0) the intent panel STRIKES when its attack lands
-          pushFx(s, { type: 'charge', side: 'enemy', dur: 180, delay: ed, col: PALETTE.peach });
-          pushFx(s, { type: 'lunge', side: 'enemy', dur: 420, delay: ed + 60 });
-          pushFx(s, { type: 'beam', side: 'player', dur: 190, delay: ed + 150, col: PALETTE.peach });
+          pushFx(s, { type: 'sfx', name: 'lasercharge', side: 'enemy', dur: 60, delay: ed });
+          pushFx(s, { type: 'charge', side: 'enemy', dur: 1100, delay: ed, col: PALETTE.peach });
+          pushFx(s, { type: 'lunge', side: 'enemy', dur: 420, delay: ed + 950 });
+          pushFx(s, { type: 'sfx', name: 'laserfire', side: 'enemy', dur: 60, delay: ed + 1150 });
+          pushFx(s, { type: 'beam', side: 'player', dur: 380, delay: ed + 1150, col: PALETTE.peach, thick: true });
           var toHp = (res.toHp == null ? res.incoming : res.toHp);
           if (toHp > 0) {
-            pushFx(s, { type: 'flash', side: 'player', dur: 320, delay: ed + 320, flashR: 48 });
-            pushFx(s, { type: 'sparks', side: 'player', dur: 560, delay: ed + 320, col: PALETTE.peach, count: 10, seed: 5 });
-            pushFx(s, { type: 'dmg', side: 'player', amount: toHp, dur: 760, delay: ed + 340 });
-            pushFx(s, { type: 'quake', side: 'player', dur: 300, delay: ed + 320, amt: 0.45 });   // (JB3) shake WHEN the hit lands, not at answer time
+            pushFx(s, { type: 'flash', side: 'player', dur: 340, delay: ed + 1500, flashR: 54 });
+            pushFx(s, { type: 'sparks', side: 'player', dur: 620, delay: ed + 1500, col: PALETTE.peach, count: 14, seed: 5 });
+            pushFx(s, { type: 'sfx', name: 'laserhit', side: 'player', dur: 60, delay: ed + 1500 });
+            pushFx(s, { type: 'dmg', side: 'player', amount: toHp, dur: 760, delay: ed + 1520 });
+            pushFx(s, { type: 'quake', side: 'player', dur: 300, delay: ed + 1500, amt: 0.45 });   // shake WHEN the beam lands
           } else if (res.incoming > 0) {
-            pushFx(s, { type: 'dome', side: 'player', dur: 520, delay: ed + 320 });
-            pushFx(s, { type: 'quake', side: 'player', dur: 200, delay: ed + 320, amt: 0.2 });
+            pushFx(s, { type: 'dome', side: 'player', dur: 520, delay: ed + 1500 });
+            pushFx(s, { type: 'sfx', name: 'hit', side: 'player', dur: 60, delay: ed + 1500 });
+            pushFx(s, { type: 'quake', side: 'player', dur: 200, delay: ed + 1500, amt: 0.2 });
           }
         }
       } else {

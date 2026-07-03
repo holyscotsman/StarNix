@@ -229,6 +229,11 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-K12 — Battle choreography + sound (added v0.100.0).** Battle start: squad flies in left,
+  enemy right, with a sting. Enemy attacks: long charge whine → thick beam → crunchy impact (~2.4 s).
+  Hero attacks: snappy three-shot volley (~1.1 s). Victory: detonation booms, banner, then the squad
+  flies off right. EARS: say if any effect is piercing or the mix is off.
+
 - **QA-K11 — KBB balance rework (added v0.99.0).** First shop: overwhelmingly common/uncommon offers
   (64/30/5/1). New "Ship fittings" section: +1 permanent stats, one per visit. First enemy takes two
   correct answers; rounds run longer (7-attack window). Leaner squad (40 HP), smaller heals. Say

@@ -225,6 +225,11 @@ function newWindow() {
   group('UNIT 1: tour blocks answering, Purge gone, DESTROYED state, no timer artifacts, sharp canvas');
   var SRC = H.KBB_SRC;
   ok(/kbb-ht-spot\{pointer-events:none;\}/.test(SRC), 'K2: spotlighted zones are look-only during the tour');
+  ok(/name: 'lasercharge', side: 'enemy', dur: 60, delay: ed \}/.test(SRC) && /dur: 1100, delay: ed, col: PALETTE\.peach/.test(SRC)
+     && /thick: true/.test(SRC),
+     'K6: enemy attack = long charge (1.1s) + THICK beam, sound on the beat');
+  ok(/heroExitDx/.test(SRC) && /battleEase/.test(SRC) && /in from the LEFT, off to the RIGHT/.test(SRC),
+     'K5: fly-in/fly-off choreography present in both draw paths');
   ok(!/purge/i.test(SRC.replace(/Purge cut \(Jason\)/, '')), 'K3: Purge fully removed (defs, roster, use path, view hook)');
   ok(/DESTROYED/.test(SRC) && /b\.over \|\| e\.hp <= 0/.test(SRC), 'K8: enemy panel states DESTROYED after death');
   ok(!/answerMs != null && c\.answerMs <=/.test(SRC) && /hull is at full HP/.test(SRC), 'K9: no time-based artifact effects remain');
@@ -377,6 +382,15 @@ function newWindow() {
        'JB3: the kill detonates (shockwave + the heavy 0.5 win-quake + hull breakup)');
     ok((KBB._test.state().fx || []).some(function (f) { return f.type === 'banner' && /DESTROYED/.test(f.text || ''); }),
        'JB3: a DESTROYED banner caps the staged kill');
+    // (v0.100.0, K5/K6) choreography truths on the same forced win
+    var fxAll = KBB._test.state().fx || [];
+    ok(fxAll.filter(function (f) { return f.type === 'sfx' && f.name === 'fire'; }).length >= 3
+       && fxAll.filter(function (f) { return f.type === 'sfx' && f.name === 'fire'; }).length % 3 === 0
+       && fxAll.some(function (f) { return f.type === 'sfx' && f.name === 'explode'; }),
+       'K6: hero three-shot volleys + detonation sounds queued on the beats');
+    ok(KBB._test.state().heroExitAt > 0, 'K5: victory schedules the squad fly-off');
+    var sSt = KBB._test.state();
+    ok(typeof sSt.battleStartAt === 'number' && sSt._battleKey !== '', 'K5: battle-start clock armed (fly-in ran)');
     V.step(4);
     var cW = q('.kbb-cont:not(.kbb-submit)'); if (cW) { cW.click(); V.step(2); }
   } else {
