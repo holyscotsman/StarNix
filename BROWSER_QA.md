@@ -111,3 +111,13 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
 - **QA-A5 — Death by timeout.** (Added v0.50.0 confirm.) In ARM at 1 shield, let a question timer expire.
   CORRECT: it grades as wrong → damage → the GAME OVER panel (artifact-loss summary) appears. WRONG: a hang on
   the question card. (Code-trace confirmed `timeUp → wrong → damage → gameOver`; this is the eyes-on confirm.)
+  - **⚠ v0.52.0 correction (harness-pinned — read before running this item):** the v0.50.0 trace is NOT what
+    the code does. Question timeouts grade wrong and cost the core but **never call `damage()`** — at 1 shield
+    the step above will NOT produce a game over (that half is now structural, `arm-run.cjs` 46/46: timeout →
+    wrong → mastery false → live Continue → core lost, no hang). The real timeout→GAME OVER paths, also
+    harness-pinned: the **puzzle stability breach chain** (each breach = −14 shields; at 0 the "Ship destroyed"
+    panel appears) and, eyes-on only, the **boss 5 s warp deadline** ("Too slow" → same panel). Revised eyes-on
+    for A5: (a) let a *question* timer expire and confirm the wrong-grade card, no death; (b) let a *puzzle*
+    stability bar drain repeatedly and confirm the GAME OVER panel. **Open design call for Jason:** should a
+    question timeout also damage (as spec 02 v1.3 §"Death by timeout" claims)? Code says no today; changing it
+    is a one-line `damage(n)` in the timeout branch + a spec/QA re-sync.
