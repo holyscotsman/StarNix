@@ -229,6 +229,10 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-K10 — KBB unit 1 (added v0.98.0).** THE BIG ONE: the battle canvas should be SHARP now
+  (was rendering at 320px stretched). Tour: bigger card, and you cannot answer until it's done.
+  No Purge in shops. Kill an enemy: its panel flips to ☠ DESTROYED immediately.
+
 - **QA-A13 — Dreadnought arsenal (added v0.97.0).** Boss fight: peach diamond missiles arc toward
   you — shootable, dodgeable, chunky but slower than shots. Two laser patterns: the familiar single
   beam, and a WALL blast where everything burns except one green-outlined column — get inside it

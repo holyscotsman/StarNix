@@ -101,7 +101,13 @@
 > **v0.6.21:** title screen uses the no-station nebula (`kbbBg`→`nebulaBg`); menu keeps the station vista. KBB shows `nebulaBg` + `bcmShip`. 200/200; art negative-controlled.
 > </details>
 
-## v0.97.0 — ARM unit 5: seekers + dual lasers (A10) — ALL TEN ARM ITEMS SHIPPED
+## v0.98.0 — KBB unit 1: tour, Purge, DESTROYED, blur fix, no timers (K1/K2/K3/K7/K8/K9)
+
+kbb-run 51. The blur root cause: hidden 2D canvas measured 0 → 320px fallback stretched.
+REMAINING: KBB K4/K10/K11 (rarity curve + balance — will re-baseline kbb-balance locked
+targets) and K5/K6 (battle choreography + SFX); CC C1-C12; G2 save/resume; G3 intro; G4 scan.
+
+> **Earlier this session (v0.97.0):** ARM unit 5 (ARM complete)
 
 arm-run 84. ARM done (A1-A10, v0.93-v0.97). REMAINING batch #5: KBB K1-K11 (no map —
 mapper crashed), CC C1-C12 (map in scratchpad/batch5-map.txt), G2 save/resume, G3 intro,

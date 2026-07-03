@@ -80,11 +80,10 @@
     { id: 'shard-burst', name: 'Shard Burst', rarity: 'uncommon', category: 'damage', q5: true,
       description: '+0.4 mult while on a streak of 2+ correct answers.',
       hooks: { modifyDamage: function (c, d) { if (c.streak >= 2) d.mult += 0.4; } } },
-    { id: 'quickdraw-cache', name: 'Quickdraw Cache', rarity: 'uncommon', category: 'damage', q5: true,
-      description: '+0.5 mult for a fast answer (respects extra-time).',
+    { id: 'quickdraw-cache', name: 'Overwatch Cache', rarity: 'uncommon', category: 'damage', q5: true,
+      description: '+0.5 mult while your hull is at full HP.',   // (v0.98.0, K9) no timers in KBB — was fast-answer
       hooks: { modifyDamage: function (c, d) {
-        var thr = CONFIG.speedThresholdMs + (c.run.flags.extraTimeMs || 0);
-        if (c.answerMs != null && c.answerMs <= thr) d.mult += 0.5; } } },
+        if (c.run.squad.hp >= c.run.squad.maxHp) d.mult += 0.5; } } },
     { id: 'erasure-mult', name: 'Erasure Multiplier', rarity: 'rare', category: 'damage',
       description: '+0.5 mult per correct answer this battle (resets each battle).',
       hooks: {
@@ -302,10 +301,9 @@
   var CONSUMABLES = {
     repair: { id: 'repair', name: 'Repair Kit', description: 'Heal HP.' },
     recharge: { id: 'recharge', name: 'Recharge', description: 'Restore shield.' },
-    purge: { id: 'purge', name: 'Purge', description: 'Redraw the current question once, no penalty.' },
     intel: { id: 'intel', name: 'Intel', description: 'Reveal the enemy\u2019s full incoming attack for this battle.' }
   };
-  var CONSUMABLE_IDS = ['repair', 'recharge', 'purge', 'intel'];
+  var CONSUMABLE_IDS = ['repair', 'recharge', 'intel'];   // (v0.98.0, K3) Purge cut (Jason)
 
   // ---- 4. Enemy / boss ----
   function enemyName(section, boss, mechanic) {
@@ -691,10 +689,7 @@
     if (idx < 0) return { ok: false, reason: 'not-owned' };
     if (id === 'repair') { run._consumableAmt = CONFIG.repairHeal; fireSide(run, 'onConsumableUsed', { consumable: id }); run._api.heal(run._consumableAmt); }
     else if (id === 'recharge') { run._consumableAmt = CONFIG.rechargeShield; fireSide(run, 'onConsumableUsed', { consumable: id }); run._api.addShield(run._consumableAmt); }
-    else if (id === 'purge') {
-      if (run.battle && run.battle.question) { run.battle.question = null; run.battle.revealed = []; run.flags.purgeRedraw = true; }
-      fireSide(run, 'onConsumableUsed', { consumable: id });
-    } else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onConsumableUsed', { consumable: id }); }
+else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onConsumableUsed', { consumable: id }); }
     else return { ok: false, reason: 'unknown' };
     run.consumables.splice(idx, 1);
     return { ok: true };
@@ -952,15 +947,17 @@
     css.push('.kbb-ht-sword{transform-box:fill-box;transform-origin:center;}');
     css.push('.kbb-ht-anim .kbb-ht-sword{animation:kbbSword 1.6s ease-in-out .6s infinite;}');
     css.push('.kbb-ht-spot{position:relative;z-index:36;border-radius:12px;outline:2px solid ' + P.aqua + ';outline-offset:2px;box-shadow:0 0 0 4px rgba(31,221,233,.16),0 0 26px rgba(31,221,233,.5);}');
+    css.push('.kbb-ht-spot{pointer-events:none;}');   // (v0.98.0, K2, Jason) look, don't answer — Next drives the tour
     css.push('.kbb-ht-anim .kbb-ht-spot{animation:kbbHtSpot 1.5s ease-in-out infinite;}');
     css.push('@keyframes kbbHtSpot{0%,100%{box-shadow:0 0 0 4px rgba(31,221,233,.14),0 0 22px rgba(31,221,233,.42);}50%{box-shadow:0 0 0 5px rgba(31,221,233,.26),0 0 34px rgba(31,221,233,.66);}}');
     css.push('.kbb-ht-tour{display:block;background:rgba(5,5,11,.62);}');
-    css.push('.kbb-ht-call{position:absolute;left:50%;transform:translateX(-50%);width:min(430px,92%);background:rgba(20,20,29,.97);border:1px solid #34344a;border-radius:14px;padding:15px 17px;box-shadow:0 14px 44px rgba(0,0,0,.55),0 0 30px rgba(120,85,250,.22);}');
+    css.push('.kbb-ht-call{position:absolute;left:50%;transform:translateX(-50%);width:min(540px,94%);background:rgba(20,20,29,.97);border:1px solid #34344a;border-radius:14px;padding:19px 21px;box-shadow:0 14px 44px rgba(0,0,0,.55),0 0 30px rgba(120,85,250,.22);}');   // (v0.98.0, K1) bigger
     css.push('.kbb-ht-call.pos-bottom{bottom:16px;}');
     css.push('.kbb-ht-call.pos-top{top:16px;}');
     css.push('.kbb-ht-anim .kbb-ht-call{animation:kbbHtIn .3s cubic-bezier(.2,.8,.2,1) both;}');
-    css.push('.kbb-ht-call-h{font-size:15px;font-weight:800;color:#F2F2F7;margin-bottom:5px;}');
-    css.push('.kbb-ht-call-x{font-size:13px;line-height:1.46;color:#c9c9d6;}');
+    css.push('.kbb-ht-call-h{font-size:18px;font-weight:800;color:#F2F2F7;margin-bottom:7px;}');
+    css.push('.kbb-ht-call-x{font-size:15px;line-height:1.5;color:#c9c9d6;}');
+    css.push('.kbb-intent.dead{background:rgba(255,200,87,.14);color:' + P.gold + ';border-color:' + P.gold + ';}');
     css.push('.kbb-ht-row{display:flex;align-items:center;gap:10px;margin-top:14px;}');
     css.push('.kbb-ht-dots{display:flex;gap:6px;flex:1;}');
     css.push('.kbb-ht-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.22);}');
@@ -1096,14 +1093,21 @@
     function sizeCanvas(s) {
       var view = s.root.ownerDocument.defaultView;
       var dpr = Math.min(2, (view.devicePixelRatio || 1));
-      var w = s.canvas.clientWidth || 320, h = s.canvas.clientHeight || 188;
+      // (v0.98.0, K7, Jason: "battle area is very blurry") measure the CONTAINER — the 2D
+      // canvas reports clientWidth 0 while hidden in 3D mode, so everything rendered at the
+      // 320px fallback and got stretched to ~620px. The fx overlay resizes with it.
+      var w = (s.combat && s.combat.clientWidth) || s.canvas.clientWidth || 320;
+      var h = (s.combat && s.combat.clientHeight) || s.canvas.clientHeight || 188;
       s.canvas.width = Math.round(w * dpr); s.canvas.height = Math.round(h * dpr);
       if (s.c2d) s.c2d.setTransform(dpr, 0, 0, dpr, 0, 0);
       s._lastCW = w; s._lastCH = h;
-      if (s.three && s.three.renderer) { try { s.three.renderer.setSize(w, h, false); s.three.camera.aspect = w / Math.max(1, h); s.three.camera.updateProjectionMatrix(); } catch (e) {} }
+      if (s.three && s.three.renderer) { try { s.three.renderer.setSize(w, h, false); s.three.camera.aspect = w / Math.max(1, h); s.three.camera.updateProjectionMatrix(); s.three.W = w; s.three.H = h; } catch (e) {} }
+      if (s.fxCanvas) { s.fxCanvas.width = Math.max(1, Math.round(w * dpr)); s.fxCanvas.height = Math.max(1, Math.round(h * dpr)); s.fxPr = dpr; }
     }
     function resizeIfNeeded(s) {
-      var w = s.canvas.clientWidth || 320, h = s.canvas.clientHeight || 188;
+      // (v0.98.0, K7) container-based — the hidden 2D canvas reads 0 in 3D mode
+      var w = (s.combat && s.combat.clientWidth) || s.canvas.clientWidth || 320;
+      var h = (s.combat && s.combat.clientHeight) || s.canvas.clientHeight || 188;
       if (w !== s._lastCW || h !== s._lastCH) sizeCanvas(s);
     }
 
@@ -1592,7 +1596,7 @@
       } catch (e) { teardown3D(s); s.use3D = false; }
     }
     function init3D(s, THREE) {
-      var W = s.canvas.clientWidth || 320, H = s.canvas.clientHeight || 188, created = [];
+      var W = (s.combat && s.combat.clientWidth) || s.canvas.clientWidth || 320, H = (s.combat && s.combat.clientHeight) || s.canvas.clientHeight || 188, created = [];   // (K7) container-based
       var renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
       renderer.setPixelRatio(Math.min(2, s.doc.defaultView.devicePixelRatio || 1));
       renderer.setSize(W, H, false);
@@ -1841,7 +1845,8 @@
       if (!s.enemyText) return;
       var e = b.enemy, ci = currentIntent(s.run);
       var icls = 'kbb-intent', itxt, alert = false;
-      if (e.locked) { icls += ' shield'; itxt = 'Immune \u00B7 lvl 3 Q'; }
+      if (b.over || e.hp <= 0) { icls += ' dead'; itxt = '\u2620 DESTROYED'; }   // (v0.98.0, K8) say what happened
+      else if (e.locked) { icls += ' shield'; itxt = 'Immune \u00B7 lvl 3 Q'; }
       else if (e.shieldUp) { icls += ' shield'; itxt = 'Shield up'; }
       else if (ci === 0) { icls += ' charge'; itxt = 'Charging'; }
       else { itxt = 'Incoming attack \u2694 ' + ci; alert = true; }
@@ -2130,7 +2135,6 @@
     function onUseConsumable(s, cid) {
       if (s.run.phase !== 'battle') return;
       var r = useConsumable(s.run, cid);
-      if (r.ok && cid === 'purge') { drawQuestion(s.run); renderMain(s); }
       renderEnemy(s); renderSquad(s); renderArtifacts(s); renderLog(s);
     }
 

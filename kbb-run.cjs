@@ -189,6 +189,35 @@ function newWindow() {
   })();
 })();
 
+/* ============ KBB UNIT 1 (v0.98.0, K1/K2/K3/K8/K9/K7) ============ */
+(function unit1() {
+  group('UNIT 1: tour blocks answering, Purge gone, DESTROYED state, no timer artifacts, sharp canvas');
+  var SRC = H.KBB_SRC;
+  ok(/kbb-ht-spot\{pointer-events:none;\}/.test(SRC), 'K2: spotlighted zones are look-only during the tour');
+  ok(!/purge/i.test(SRC.replace(/Purge cut \(Jason\)/, '')), 'K3: Purge fully removed (defs, roster, use path, view hook)');
+  ok(/DESTROYED/.test(SRC) && /b\.over \|\| e\.hp <= 0/.test(SRC), 'K8: enemy panel states DESTROYED after death');
+  ok(!/answerMs != null && c\.answerMs <=/.test(SRC) && /hull is at full HP/.test(SRC), 'K9: no time-based artifact effects remain');
+  ok(/s\.combat && s\.combat\.clientWidth\) \|\| s\.canvas\.clientWidth/.test(SRC) && /s\.fxCanvas\.width = Math\.max/.test(SRC),
+     'K7: canvas + 3D renderer + fx overlay size from the container (the blur fix)');
+  ok(/width:min\(540px,94%\)/.test(SRC) && /font-size:18px/.test(SRC), 'K1: tour card + heading enlarged');
+  // behavioral: DESTROYED shows after a forced win
+  var V = newWindow(), doc = V.doc, KBB = V.KBB;
+  V.mod.mount(doc.body, H.makeCtx(KBB, { seed: SEED + 41, reducedMotion: true }));
+  V.step(3);
+  var sk = Array.prototype.slice.call(doc.querySelectorAll('.kbb-skip')).find(function (b) { return /skip/i.test(b.textContent || ''); });
+  if (sk) { sk.click(); V.step(2); }
+  var hts = doc.querySelector('.kbb-ht-skip'); if (hts) { hts.click(); V.step(2); }
+  var run = KBB._test.state().run;
+  run.battle.enemy.hp = 1;
+  var qq = run.battle.question, ci = qq.multi ? qq.correctIndices : [qq.correctIndex];
+  for (var i = 0; i < ci.length; i++) { var o = doc.querySelector('.kbb-opt[data-idx="' + ci[i] + '"]'); if (o) o.click(); }
+  var sub = doc.querySelector('.kbb-submit'); if (sub && !sub.disabled) sub.click();
+  V.step(2);
+  ok(/DESTROYED/.test(doc.querySelector('.kbb-intent') ? doc.querySelector('.kbb-intent').textContent : ''),
+     'K8: panel reads DESTROYED the moment the enemy dies');
+  V.mod.unmount();
+})();
+
 /* ============ REVEAL INTEGRITY (v0.90.0, review) ============ */
 (function revealIntegrity() {
   group('REVEAL: revealOneWrong never rules out a CORRECT option (multi-answer)');
