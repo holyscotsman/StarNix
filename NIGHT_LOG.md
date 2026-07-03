@@ -277,7 +277,41 @@ Commit: `v0.59.0 — Blitz combo multiplier`.
 
 ---
 
-**PHASE 1 COMPLETE: all eight units shipped, v0.52.0 → v0.59.0, gate grown 345 → 407
-verify-build assertions (+ ARM RUN 46, KBB RUN 26, fairness 25, view-smoke +5) — every unit
-green-gated with a bite-proven negative control before commit. Unit 9 (Playwright visual
-playtest) is next, then Phase 2.**
+---
+
+## v0.60.0 — Unit 9: Playwright visual playtest
+
+**Shipped:** Playwright + Chromium (the unit's granted exception); `visual-playtest.mjs`
+drives the built index.html through the shipped test seams; **56 shots** (incl. a second
+CC pass after the first sweep failed to dismiss the how-to card); reviewed against 07 +
+BROWSER_QA into **`PLAYTEST.md`** — ranked, objective vs taste separated, no fixes (Phase-2
+feed per spec). Shots stay local (`playtest-shots/`, 43 MB, gitignored).
+
+**The two headliners (both invisible to jsdom, both objective):**
+- **A1 — the menu doesn't fit 1280×800 and can't scroll**: rank + daily strips (units 2/6)
+  push the NIT exam tile fully off-screen; no `overflow-y` anywhere in the chain. The exam is
+  mouse-unreachable at laptop heights. Gate stayed green because jsdom clicks ignore
+  visibility. Highest-priority Phase-2 fix (one-line overflow + strip compaction).
+- **A2 — CC peaks are QA-C1's literal WRONG**: smooth grey-pink pyramids, no crags, no haze.
+  The v0.47 crag rewrite runs (code-green) but does not land visually in a real renderer.
+Also: A3 doubled daily header (Progress), A4 CC km/speed vs ↻ intro collision, A5 ARM ⚙ vs
+marker ring, A6 KBB cinematic over a blank panel, A7 CC end-cap grey column. Confirms:
+dive-beat planet REAL, rank/daily/achievement/trail-picker/combo surfaces clean, CC walls +
+hit-flash read great, KBB battle screen solid.
+
+**No negative control:** this unit adds no gate assertions (Playwright is a standalone tool,
+not in `npm run check`); the deliverable is reviewed evidence. Gate re-run green 407/407
+(no game-code changes). Version bumped for the tooling + report.
+
+**Punted:** committing the PNGs (43 MB — local only); a force-spawn obstacle capture pass
+(sweeper/arch/gate close-ups never landed in frame — Phase-2 companion if wanted).
+
+Commit: `v0.60.0 — Playwright visual playtest + PLAYTEST.md`.
+
+---
+
+**PHASE 1 COMPLETE: all NINE units shipped, v0.52.0 → v0.60.0, gate grown 345 → 407
+verify-build assertions (+ ARM RUN 46, KBB RUN 26, fairness 25, view-smoke +5) — every
+code unit green-gated with a bite-proven negative control before commit. Phase 2 next;
+top candidates per the rubric: PLAYTEST A1 (menu fold/scroll — mission value: the EXAM is
+unreachable), then A2 (CC peaks), then A3–A7 small visual fixes.**

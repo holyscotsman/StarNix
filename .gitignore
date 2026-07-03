@@ -2,3 +2,4 @@ node_modules/
 *.bak
 .DS_Store
 .claude/settings.local.json
+playtest-shots/
