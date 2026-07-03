@@ -194,3 +194,12 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   option text stay fully readable (the gradient does the work), the nebula reads at the edges, no banding
   on your display, and the Blitz meter/combo chip still pop. WRONG: text contrast suffering anywhere, or
   the photo overpowering the exam. Knob: the two gradient stops in `exam.js` (0.62 / 0.82).
+
+- **QA-A6 — Boss revamp + deeper boss bed (added v0.76.0, browser-blind/deaf).** Dev-skip to the boss.
+  EARS: the boss track should now sit DEEP — no piercing highs (solo lives an octave down, dark triangle
+  arp, sparse tesla). If it's still sharp, name what stings (lead/arp/zaps) — each has its own knob.
+  EYES: the weakpoint you must shoot is UNMISSABLE — rotating gold reticle + rising beacon + activation
+  ping; pending ports are small and dark; the dreadnought sways slowly with flickering engine wash and
+  sweeping running lights; the arena void is near-black (nebula dimmed to 30%). WRONG: any doubt about
+  where to shoot, a static-feeling hull, or ANY screen shake during normal boss flight (shake only on
+  laser hits/blasts). Reduced motion: sway/wash/lights/ping all off, reticle static.

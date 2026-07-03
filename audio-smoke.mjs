@@ -117,6 +117,12 @@ console.log("\n2-minute rotation (v0.70.0, J5):");
   A.nextTrack();
   ok("fixed beds never rotate (boss stays put)", A.state().trackId === "boss");
   ok("rotation cadence pinned at ~2 min per track", SRC.indexOf("ROTATE_SECS = 120") !== -1);
+  // (v0.76.0, Jason: boss too piercing) deepened boss bed: octave-dropped solo, triangle arp, halved tesla
+  ok("boss bed deepened: no 5th-octave notes, triangle arp, tesla halved",
+    /arpWave: "triangle", leadGuitar: true/.test(SRC)
+    && SRC.indexOf('["D4","","","","A3"') !== -1
+    && !/mel: \[\s*\["D5"/.test(SRC)
+    && /teslaSteps: \[0, 8\], kick/.test(SRC));
 }
 
 console.log("\nNode churn (v0.45.0 \u2014 persistent voice chains; only one-shot sources per note):");

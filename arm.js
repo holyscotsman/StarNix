@@ -2181,15 +2181,37 @@
         if (w.dead) {                                 // destroyed: dark broken socket
           c2d.globalAlpha = 0.55; c2d.fillStyle = "#2c2c38"; c2d.strokeStyle = "#15151c"; c2d.lineWidth = 2;
           c2d.beginPath(); c2d.arc(p.x, p.y, boss.wpR * 0.7, 0, TAU); c2d.fill(); c2d.stroke();
-        } else if (isActive) {                        // active target: pulsing gold core + peach HP arc
+        } else if (isActive) {                        // (v0.76.0 revamp) ACTIVE = a full lock-on reticle you cannot miss
+          var t76 = now() / 1000;
           var pulse = 0.55 + 0.45 * Math.sin(boss.flash * 9);
-          c2d.shadowBlur = 22; c2d.shadowColor = COL.gold; c2d.globalAlpha = pulse; c2d.fillStyle = COL.gold;
+          // beacon shaft: a gold quest-marker beam rising from the target
+          var grad = c2d.createLinearGradient(p.x, p.y - 92, p.x, p.y);
+          grad.addColorStop(0, "rgba(255,200,87,0)"); grad.addColorStop(1, "rgba(255,200,87,0.5)");
+          c2d.fillStyle = grad; c2d.fillRect(p.x - 3, p.y - 92, 6, 88);
+          // pulsing gold core
+          c2d.shadowBlur = 26; c2d.shadowColor = COL.gold; c2d.globalAlpha = pulse; c2d.fillStyle = COL.gold;
           c2d.beginPath(); c2d.arc(p.x, p.y, boss.wpR, 0, TAU); c2d.fill();
+          // rotating reticle: outer ring + four corner ticks orbiting the target (RETICLE_R)
+          var RETICLE_R = boss.wpR + 16, rot = reducedMotion ? 0 : t76 * 1.6;
+          c2d.globalAlpha = 0.9; c2d.shadowBlur = 12; c2d.strokeStyle = COL.gold; c2d.lineWidth = 2;
+          c2d.beginPath(); c2d.arc(p.x, p.y, RETICLE_R, 0, TAU); c2d.stroke();
+          c2d.lineWidth = 4;
+          for (var tk = 0; tk < 4; tk++) {
+            var a0 = rot + tk * Math.PI / 2 - 0.28;
+            c2d.beginPath(); c2d.arc(p.x, p.y, RETICLE_R, a0, a0 + 0.56); c2d.stroke();
+          }
+          // lock-on ping: an expanding ring right after this weakpoint activates
+          if (boss.flash < 0.6 && !reducedMotion) {
+            var pk = boss.flash / 0.6;
+            c2d.globalAlpha = 0.55 * (1 - pk); c2d.lineWidth = 2.5;
+            c2d.beginPath(); c2d.arc(p.x, p.y, RETICLE_R + pk * 46, 0, TAU); c2d.stroke();
+          }
+          // HP arc stays the damage read
           c2d.globalAlpha = 1; c2d.shadowBlur = 0; c2d.strokeStyle = COL.peach; c2d.lineWidth = 3;
           c2d.beginPath(); c2d.arc(p.x, p.y, boss.wpR + 8, -Math.PI / 2, -Math.PI / 2 + TAU * (boss.wpHp / boss.wpMax)); c2d.stroke();
-        } else {                                      // pending: dim sealed port
-          c2d.globalAlpha = 0.42; c2d.shadowBlur = 6; c2d.shadowColor = COL.aqua; c2d.fillStyle = "#356068"; c2d.strokeStyle = COL.aqua; c2d.lineWidth = 1.5;
-          c2d.beginPath(); c2d.arc(p.x, p.y, boss.wpR * 0.78, 0, TAU); c2d.fill(); c2d.stroke();
+        } else {                                      // (v0.76.0) pending: recede hard — small, dim, glowless
+          c2d.globalAlpha = 0.26; c2d.fillStyle = "#2c4850"; c2d.strokeStyle = "rgba(31,221,233,0.5)"; c2d.lineWidth = 1;
+          c2d.beginPath(); c2d.arc(p.x, p.y, boss.wpR * 0.5, 0, TAU); c2d.fill(); c2d.stroke();
         }
         c2d.restore();
       }
@@ -2248,9 +2270,33 @@
     }
     function drawBossAt(x, y, scale) {
       c2d.save(); c2d.translate(x, y); c2d.scale(scale || 1, scale || 1);
+      // (v0.76.0 revamp, Jason: "more epic, less static") the dreadnought LIVES now:
+      // a slow menacing hull sway, flickering engine wash at the stern, and running
+      // lights sweeping the hull. All sin-clock driven (no rng draws, no shake).
+      var tE = now() / 1000;
+      if (!reducedMotion) c2d.rotate(Math.sin(tE * 0.42) * 0.02);
+      if (!reducedMotion) {
+        var wash = 0.5 + 0.35 * Math.sin(tE * 11) + 0.15 * Math.sin(tE * 23);
+        c2d.save(); c2d.globalAlpha = 0.28 * wash; c2d.shadowBlur = 24; c2d.shadowColor = COL.peach; c2d.fillStyle = COL.peach;
+        for (var eN = -1; eN <= 1; eN++) {
+          c2d.beginPath(); c2d.ellipse ? c2d.ellipse(eN * 90, -46, 16, 30 + 12 * wash, 0, 0, TAU) : c2d.arc(eN * 90, -46, 18, 0, TAU);
+          c2d.fill();
+        }
+        c2d.restore();
+      }
       if (spriteReady(SPR.boss)) {
         var dw = Math.min(W * 0.62, 460), dh = dw * (SPR.boss.naturalHeight / SPR.boss.naturalWidth);
         c2d.drawImage(SPR.boss, -dw / 2, -dh / 2, dw, dh);     // as-authored: prow points down at the player
+        if (!reducedMotion) {                                  // (v0.76.0) running lights sweep the hull
+          var sw76 = ((now() / 1000) * 0.55) % 1;
+          c2d.shadowBlur = 10; c2d.shadowColor = COL.gold; c2d.fillStyle = COL.gold;
+          for (var rl = 0; rl < 3; rl++) {
+            var lx = ((sw76 + rl / 3) % 1) * dw - dw / 2;
+            c2d.globalAlpha = 0.5 + 0.4 * Math.sin((sw76 + rl / 3) * TAU);
+            c2d.beginPath(); c2d.arc(lx, -dh * 0.18, 3.4, 0, TAU); c2d.fill();
+          }
+          c2d.globalAlpha = 1;
+        }
         c2d.restore(); c2d.shadowBlur = 0; return;
       }
       // vector fallback: a broad dreadnought wedge, wide at the top, prow pointing DOWN
@@ -2302,16 +2348,22 @@
     }
     function drawNebula(camx, camy) {
       if (!c2d || !NEBULA || !c2d.createRadialGradient) return;
+      // (v0.76.0 revamp) boss arenas dim the nebula wash hard — the fight reads against a
+      // near-black void so the dreadnought + gold lock-on own the frame.
+      var nbAlpha = bossActive ? 0.3 : 1;
+      c2d.save(); c2d.globalAlpha = nbAlpha;
       for (var i = 0; i < NEBULA.length; i++) {
         var nb = NEBULA[i];
         if (!nb.grad) {
           var g = c2d.createRadialGradient(0, 0, 0, 0, 0, nb.r);
-          if (!g || !g.addColorStop) return;          // headless mock ctx: skip nebula
+          if (!g || !g.addColorStop) { c2d.restore(); return; }   // headless mock ctx: skip nebula (balance the dim save)
           g.addColorStop(0, nb.c0); g.addColorStop(1, "rgba(0,0,0,0)"); nb.grad = g;
         }
         var x = nb.fx * W - camx * nb.p, y = nb.fy * H - camy * nb.p;
-        c2d.save(); c2d.globalAlpha = nb.a; c2d.translate(x, y); c2d.fillStyle = nb.grad; c2d.fillRect(-nb.r, -nb.r, nb.r * 2, nb.r * 2); c2d.restore();
+        c2d.save(); c2d.globalAlpha = nb.a * nbAlpha; c2d.translate(x, y); c2d.fillStyle = nb.grad; c2d.fillRect(-nb.r, -nb.r, nb.r * 2, nb.r * 2); c2d.restore();
       }
+      c2d.restore();
+
       c2d.globalAlpha = 1;
     }
     function drawSector() {

@@ -121,21 +121,23 @@
     // 6th track (P3): heavy minor boss loop. Designed to play with {intensity:true}
     // for a future KBB boss; nothing auto-plays it (shell drives the other five).
     boss: {
-      bpm: 150, level: 0.52, arpWave: "square", leadGuitar: true,
+      // (v0.76.0, Jason: "too piercing — deeper") the solo dropped a full octave (D4 ceiling,
+      // was A5), the arp swapped square -> triangle (dark hollow tone, no harsh harmonics),
+      // and the tesla stabs halved. Menace now lives in the low mids, not the treble.
+      bpm: 150, level: 0.52, arpWave: "triangle", leadGuitar: true,
       bars: [
         { bass: "D1", arp: ["D3", "F3", "A3", "D4"] },
         { bass: "D1", arp: ["D3", "F3", "Bb3", "D4"] },
         { bass: "C1", arp: ["C3", "Eb3", "G3", "C4"] },
         { bass: "A1", arp: ["A3", "C4", "E4", "A4"] }
       ],
-      // overdriven-guitar solo (D minor) — a soaring line that climbs to a high A and resolves; renders via vGuitarLead
       mel: [
-        ["D5","","","","A4","","D5","","F5","","","","E5","","D5",""],
-        ["F5","","","","D5","","Bb4","","D5","","","","G5","","F5",""],
-        ["Eb5","","","","C5","","G4","","Eb5","","","","D5","","Eb5",""],
-        ["A5","","","","G5","","E5","","C5","","E5","","A4","","",""]
+        ["D4","","","","A3","","D4","","F4","","","","E4","","D4",""],
+        ["F4","","","","D4","","Bb3","","D4","","","","G4","","F4",""],
+        ["Eb4","","","","C4","","G3","","Eb4","","","","D4","","Eb4",""],
+        ["A4","","","","G4","","E4","","C4","","E4","","A3","","",""]
       ],
-      arpSteps: [0, 2, 4, 6, 8, 10, 12, 14], teslaSteps: [0, 4, 8, 12], kick: [0, 4, 8, 12], hat: [2, 6, 10, 14], snare: [4, 12]
+      arpSteps: [0, 2, 4, 6, 8, 10, 12, 14], teslaSteps: [0, 8], kick: [0, 4, 8, 12], hat: [2, 6, 10, 14], snare: [4, 12]
     },
     // ================= (Jason v0.49.0) 40-track library: 4 contexts x 2 genres x 5 =================
     // Upbeat slot 1 per context = the original menu/arm/kbb/cc defs above (unchanged ids).

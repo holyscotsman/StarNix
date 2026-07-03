@@ -687,6 +687,15 @@ half the tunnel; now true radial flow (WARP_FLOW 340, per-star parallax, speed f
 NOTE: Jason's remote README edit (4f5c31a) arrived mid-release — rebased cleanly on top.
 Commit: `v0.75.0 — 120-word caps + hyperdrive flow rework`.
 
+**(v0.76.0):** boss revamp — music deepened (solo -12 semitones, triangle arp, tesla halved;
+ears = Jason) + the lock-on weakpoint read (reticle/beacon/ping, pending ports receded) +
+a living dreadnought (sway/engine wash/running lights, sin-clock only, NO shake) + nebula
+dimmed 30% in arenas. Capture-artifact lesson: canvas toDataURL renders the transparent
+space fill as white — composite over black before judging (shot 71 vs the misleading 70).
+arm-run 63/63 (boss-kill drive runs all new draw code on real canvas); negctrl (reticle
+stripped) bit exactly. Gate 422/422.
+Commit: `v0.76.0 — Boss revamp: lock-on read, living dreadnought, deeper bed`.
+
 ---
 
 ## 🛑 STOP — end of the night run (after P2·5) — superseded by ▶️ RUN RESUMED above
