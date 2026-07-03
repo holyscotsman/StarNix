@@ -203,6 +203,20 @@ if (view) {
       && view._endCap.position.z < -(sim.cfg.DRAW_DIST - 10));
   }
 
+  // (v0.104.0, C10) barrel roll: additive full spin over _bank; reduced motion never spins
+  {
+    view._bank = 0.1; view._rollT = 0;
+    view.startBarrelRoll(1);
+    ok("startBarrelRoll arms the spin", view._rollT === 1 && view._rollDir === 1);
+    let peaked = 0;
+    for (let f = 0; f < 40; f++) { view.render(1 / 60); peaked = Math.max(peaked, Math.abs(view.ship.rotation.z - view._bank)); }
+    ok("the roll sweeps a full turn additively over _bank (peak " + peaked.toFixed(2) + " rad)", peaked > 4.5);
+    const saved = view.reducedMotion; view.reducedMotion = true; view._rollT = 0;
+    view.startBarrelRoll(1);
+    ok("reduced motion: no spin", view._rollT === 0);
+    view.reducedMotion = saved;
+  }
+
   // (v0.77.0, JB5) the speed shake CYCLES per 40 km window: near-max just before a boundary,
   // near-zero right after it (Jason: intensity must relent, not pin at max)
   {

@@ -47,6 +47,42 @@ function runToQuestion(sim, maxSecs, pinShields) {
   return false;
 }
 
+/* ============ C4 (v0.104.0): 90° turns every 250 km ============ */
+(function turns() {
+  group('C4: turn warning, lane check, wall clip on miss');
+  var sim = mkSim(SEED + 81), dt = 1 / 60;
+  ok(CFG.TURN_KM === 250, 'turns every 250 km (TURN_KM)');
+  // fast-forward to just before the first warning
+  sim.scoreDistance = CFG.TURN_KM * 1000 + 5000 - CFG.SCORE_SPEED * CFG.TURN_WARN_S - 50;
+  sim._nextGateScore = sim.scoreDistance + 20000;   // teleported score: skip the gate catch-up storm
+  sim.shields = 5;
+  for (var t = 0; t < 60 && !sim.turnPending; t++) { sim.step(dt); if (sim.phase === 'QUESTION') { sim.answer(0); sim.resumeAfterQuestion(); } }
+  ok(!!sim.turnPending && (sim.turnPending.dir === 'left' || sim.turnPending.dir === 'right'),
+     'warning arms ~' + CFG.TURN_WARN_S + 's ahead (dir ' + (sim.turnPending && sim.turnPending.dir) + ')');
+  // park in the WRONG lane and cross the threshold
+  var wrongLane = sim.turnPending.dir === 'right' ? 0 : 2;
+  sim.player.lane = wrongLane; sim._retarget();
+  var sh0 = sim.shields;
+  for (var t2 = 0; t2 < 60 * CFG.TURN_WARN_S * 2 && sim.turnPending; t2++) { sim.step(dt); if (sim.phase === 'QUESTION') { sim.answer(0); sim.resumeAfterQuestion(); } }
+  var turnEvts = sim.ctx._rec.telemetry.filter(function (e) { return e.t === 'turn'; });
+  ok(!sim.turnPending && sim.turnMade === false && turnEvts.length === 1 && turnEvts[0].made === false && sim.phase === 'RUN',
+     'missing the corner clips the wall (telemetry made:false), run continues');
+  ok(sim._nextTurnScore >= CFG.TURN_KM * 1000 * 2 + 5000, 'next turn armed at +250 km (5 km off the gate grid; boost may autopilot past)');
+  // second turn: made properly (settle any boost FIRST — boost autopilots corners)
+  for (var tb = 0; tb < 60 * 12 && sim.boostActive; tb++) { sim.shields = 5; sim.step(dt); if (sim.phase === 'QUESTION') { sim.answer(0); sim.resumeAfterQuestion(); } }
+  sim.scoreDistance = sim._nextTurnScore - CFG.SCORE_SPEED * CFG.TURN_WARN_S - 50;
+  sim._nextGateScore = sim.scoreDistance + 20000;
+  for (var t3 = 0; t3 < 60 * 15 && !sim.turnPending; t3++) { sim.shields = 5; sim.step(dt); if (sim.phase === 'QUESTION') { sim.answer(0); sim.resumeAfterQuestion(); } }
+  ok(!!sim.turnPending, 'second warning arms (post-boost)');
+  var needLane = sim.turnPending.dir === 'right' ? 2 : 0;
+  sim.player.lane = needLane; sim._retarget();
+  var sh1 = sim.shields;
+  for (var t4 = 0; t4 < 60 * CFG.TURN_WARN_S * 2 && sim.turnPending; t4++) { sim.step(dt); if (sim.phase === 'QUESTION') { sim.answer(0); sim.resumeAfterQuestion(); } }
+  var turnEvts2 = sim.ctx._rec.telemetry.filter(function (e) { return e.t === 'turn'; });
+  ok(!sim.turnPending && sim.turnMade === true && turnEvts2.length === 2 && turnEvts2[1].made === true,
+     'matching lane makes the corner: telemetry made:true, flourish flag set');
+})();
+
 /* ============ C7 (v0.103.0): Boost Mode — locked, centered, doubled, calm road ============ */
 (function boostMode() {
   group('C7: auto-center + steering lock + 2x duration + calm window');

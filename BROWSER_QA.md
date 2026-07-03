@@ -229,6 +229,11 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-C16 — Turns + barrel roll (added v0.104.0).** At ~255 km a gold MOVE LEFT/RIGHT banner
+  flashes ~4 s out: reach the matching outer lane or you clip the wall (one shield). Made corners
+  kick a satisfying roll. Double-tap a direction: two-lane move with a full barrel roll (single
+  taps: normal). Reduced motion: banner static, no spin.
+
 - **QA-C15 — Boost Mode (added v0.103.0).** Hit a boost: ship snaps to center, controls lock, the
   screen hazes with a pulsing BOOST MODE banner, ~6 s of flight, then ~5 s of clear road (side
   walls only) before traffic resumes. Reduced motion: banner static, no blur.

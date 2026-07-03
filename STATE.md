@@ -101,7 +101,12 @@
 > **v0.6.21:** title screen uses the no-station nebula (`kbbBg`→`nebulaBg`); menu keeps the station vista. KBB shows `nebulaBg` + `bcmShip`. 200/200; art negative-controlled.
 > </details>
 
-## v0.103.0 — CC unit 3: Boost Mode rework (C7)
+## v0.104.0 — CC unit 4: 90° turns + barrel roll (C4/C10)
+
+cc-run 55, view-smoke +3. Turn↔boost interplay: overrun corners autopilot; boost cancels
+live warnings. REMAINING: C5/C8/C3 mountains+cinematics, G2 save/resume, G3 intro, G4 scan.
+
+> **Earlier this session (v0.103.0):** CC unit 3 Boost Mode
 
 cc-run 50. REMAINING: C10 barrel roll + C4 90° turns, C5/C8/C3 mountains+cinematics,
 G2 save/resume, G3 intro, G4 full-scan.

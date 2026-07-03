@@ -78,6 +78,8 @@
     // stays dodgeable (literal 500 m/s collision speed would be unreactable). A question gate lands every
     // GATE_KM of scored distance; coins are removed (score is distance only).
     SCORE_SPEED: 500,          // dramatized metres/second the HUD shows + the rate scored distance accrues
+    TURN_KM: 250,              // (v0.104.0, C4) a 90° turn every N scored km; matching lane or you clip the wall
+    TURN_WARN_S: 4,            // seconds of MOVE LEFT/RIGHT warning before the turn hits
     GATE_KM: 10,               // a question gate every 10 km of scored distance
 
     // Boost power-up (04 task 8): every GATES_PER_BOOST gates, the ship blasts forward — invulnerable,
@@ -266,6 +268,9 @@
     this._nextCoinAt = cfg.BASE_GAP * 0.5;
     // (v0.102.0, C9, Jason) squeeze stretches: the canyon narrows to TWO lanes for 1-2 km
     this._squeezeUntil = 0; this._squeezeSide = SIDE_LEFT; this._nextSqueezeAt = 700;
+    // (v0.104.0, C4, Jason) a 90° TURN every 250 km scored: be in the matching lane when it hits
+    this._nextTurnScore = cfg.TURN_KM * 1000 + 5000;   // +5 km off the 10-km gate grid — a corner never lands ON a question
+    this.turnPending = null;                   // { dir: 'left'|'right', atScore } while the warning is up
     this._gateZones = [];                // absolute distances of live gates; obstacle rows keep clear of these (fairness)
 
     this.pending = null;             // { question, power, kind, startedMs }
@@ -321,6 +326,29 @@
     // 04 task 7/8: scored distance accrues at SCORE_SPEED — or covers BOOST_KM over ~BOOST_TIME during a boost
     this.scoreSpeed = this.boostActive ? ((cfg.BOOST_KM + (this._up ? this._up.boostKm : 0)) * 1000 / cfg.BOOST_TIME) : cfg.SCORE_SPEED;
     this.scoreDistance += this.scoreSpeed * dt;
+    // (v0.104.0, C4) turn lifecycle: warn TURN_WARN_S ahead (never during a boost ride),
+    // then require the matching lane the instant the threshold crosses. Miss = wall clip.
+    if (!this.turnPending && !this.boostActive && this.scoreDistance >= this._nextTurnScore - cfg.SCORE_SPEED * cfg.TURN_WARN_S) {
+      if (this.scoreDistance >= this._nextTurnScore) {
+        // a boost overran this corner — boost is autopilot, the turn is flown for you
+        this._nextTurnScore += cfg.TURN_KM * 1000;
+      } else {
+      this.turnPending = { dir: this.rng.next() < 0.5 ? 'left' : 'right', atScore: this._nextTurnScore };
+      // keep the corridor clear through the corner (rows + coins respect gate zones)
+      this._gateZones.push(this.distance + (this._nextTurnScore - this.scoreDistance) * (this.speed / this.scoreSpeed));
+      this._emit && this._emit('turnwarn');
+      }
+    }
+    if (this.turnPending && !this.boostActive && this.scoreDistance >= this.turnPending.atScore) {
+      var needLane = this.turnPending.dir === 'right' ? 2 : 0;
+      var madeIt = this.player.lane === needLane;
+      this.turnMade = madeIt; this.turnDir = this.turnPending.dir;   // view reads these for the yaw flourish
+      if (!madeIt) this._onCrash();                                  // clipped the corner wall — shield cost, run continues
+      this._emit && this._emit(madeIt ? 'turn' : 'turnfail');
+      if (this.ctx.telemetry && typeof this.ctx.telemetry.emit === 'function') this.ctx.telemetry.emit({ t: 'turn', game: 'CC', made: madeIt, dir: this.turnPending.dir });
+      this.turnPending = null;
+      this._nextTurnScore += cfg.TURN_KM * 1000;
+    }
     if (this.boostActive && this.scoreDistance >= this._boostTargetScore) {
       this.boostActive = false;
       this._boostCalmUntil = this.distance + this.cfg.MAX_SPEED * 5;   // (v0.103.0, C7) ~5s of clear road at cruise (boost speed would triple it)
@@ -623,6 +651,8 @@
   // 04 task 8: blast forward — invulnerable, canyon fast-forwards, scored distance covers BOOST_KM over ~BOOST_TIME.
   CCSim.prototype._activateBoost = function () {
     this.boostActive = true;
+    // (v0.104.0, C4) boost is autopilot: a pending corner warning is flown for you
+    if (this.turnPending) { this.turnPending = null; this._nextTurnScore += this.cfg.TURN_KM * 1000; this._emit && this._emit('turnauto'); }
     // (v0.103.0, C7, Jason) the ship auto-centers and steering locks for the ride
     this.player.lane = 1; this._retarget();
     this._boostCalmUntil = 0;                        // set when the boost ENDS (+5s of clear road)
@@ -918,7 +948,7 @@
     // velocity-driven ship bank, eased duck, landing squash/dip. All view-only.
     this._camFX = 0;        // camera x, easing toward a fraction of the player's x
     this._camPX = 0; this._camLatV = 0;   // player-x history + smoothed lateral velocity (camera roll)
-    this._shipPX = 0; this._bank = 0;     // ship bank from smoothed lateral velocity
+    this._shipPX = 0; this._bank = 0; this._rollT = 0; this._rollDir = 1; this._turnKickT = 0; this._turnKickDir = 1; this._turnSeen = undefined;   // (v0.104.0, C10/C4)     // ship bank from smoothed lateral velocity
     this._duckF = 0;                      // eased 0..1 duck factor
     this._wasJump = false; this._landT = 0; this._landDip = 0;   // landing squash + camera dip
 
@@ -1470,6 +1500,12 @@
   // (04 task 2) Speed-driven camera: widen FOV and add a subtle shake as speed ramps, so the velocity
   // READS even though geometry is texture-scrolled. `moving` gates the shake (off during questions/pause).
   // Reduced-motion zeroes the shake. Stub-safe: only writes fov when the camera exposes a numeric fov.
+  // (v0.104.0, C10, Jason) double-tap left/right = a barrel roll into that lane (visual —
+  // the lane moves are the two ordinary taps; reduced motion skips the spin entirely)
+  CCView.prototype.startBarrelRoll = function (dir) {
+    if (this.reducedMotion || this._rollT > 0) return;
+    this._rollT = 1; this._rollDir = dir >= 0 ? 1 : -1;
+  };
   CCView.prototype.applySpeedCamera = function (speed, moving, px, dt) {
     px = px || 0; dt = dt || 0;
     var cam = this.camera; if (!cam) return;
@@ -1630,7 +1666,20 @@
     var squash = 1 - 0.22 * this._landT * this._landT;                        // landing squash only
     this.ship.position.x = p.x;
     this.ship.position.y = 0.6 + p.y - 0.28 * this._duckF + (this._introLift || 0);   // dives toward the deck (was 0.10)
-    this.ship.rotation.z = this._bank;
+    // (v0.104.0, C10) barrel roll: a full additive 2π spin on double-tap — _bank stays
+    // untouched (its feel pins hold); reduced motion never spins. (C4) turn kick: a brief
+    // yaw-flavored roll impulse when a corner resolves.
+    if (this._rollT > 0) {
+      this._rollT = Math.max(0, this._rollT - dt / 0.55);
+      var rk = 1 - this._rollT, rEase = 1 - Math.pow(1 - rk, 3);
+      this.ship.rotation.z = this._bank + this._rollDir * Math.PI * 2 * rEase;
+    } else this.ship.rotation.z = this._bank;
+    if (this.sim.turnMade !== this._turnSeen) {
+      this._turnSeen = this.sim.turnMade;
+      if (!this.reducedMotion) this._turnKickT = 1;
+      this._turnKickDir = this.sim.turnDir === 'right' ? -1 : 1;
+    }
+    if (this._turnKickT > 0) { this._turnKickT = Math.max(0, this._turnKickT - dt / 0.7); this.ship.rotation.z += this._turnKickDir * 0.35 * Math.sin(Math.PI * this._turnKickT); }
     if (this.ship.rotation && typeof this.ship.rotation.x === 'number') this.ship.rotation.x = 0.5 * this._duckF;   // steep dive-under
     this.ship.scale.y = squash;
     this.ship.scale.x = 1 + 0.06 * this._duckF + 0.12 * this._landT;
@@ -1846,9 +1895,15 @@
       }
 
       // ---- input ----
+      var lastTapDir = 0, lastTapAt = 0;   // (v0.104.0, C10) double-tap window
+      function tapMove(dir) {
+        var now2 = Date.now();
+        if (dir === lastTapDir && now2 - lastTapAt < 260 && view && view.startBarrelRoll) view.startBarrelRoll(dir);
+        lastTapDir = dir; lastTapAt = now2;
+      }
       var actions = {
-        left: function () { sim.moveLeft(); flashKey(el.kLeft); },
-        right: function () { sim.moveRight(); flashKey(el.kRight); },
+        left: function () { sim.moveLeft(); tapMove(-1); flashKey(el.kLeft); },
+        right: function () { sim.moveRight(); tapMove(1); flashKey(el.kRight); },
         jump: function () { sim.jump(); flashKey(el.kJump); },                       // instant (swipe): normal jump, no hang
         jumpPress: function () { sim.jump(); sim.holdJump(); flashKey(el.kJump); },   // (Jason) press-and-hold (keyboard/button): extends at the apex
         jumpRelease: function () { sim.releaseJump(); },
@@ -2075,6 +2130,13 @@
         if (spd !== hudCache.dist) { hudCache.dist = spd; el.dist.textContent = sim.boostActive ? 'BOOST \u26A1' : spd + ' m/s'; }
         var bOn = !!sim.boostActive;
         if (hudCache.boostOvr !== bOn) { hudCache.boostOvr = bOn; el.boostOvr.style.display = bOn ? 'flex' : 'none'; }   // (v0.103.0, C7)
+        var tp = sim.turnPending ? sim.turnPending.dir : '';
+        if (hudCache.turn !== tp) {
+          hudCache.turn = tp;
+          el.turnBanner.style.display = tp ? 'block' : 'none';
+          el.turnBanner.textContent = tp === 'left' ? '\u25C0 MOVE LEFT' : tp === 'right' ? 'MOVE RIGHT \u25B6' : '';
+          el.turnBanner.className = 'cc-turn-banner' + (tp ? ' on' : '');
+        }
         var cl = sim.coinScore | 0;
         if (el.cells && cl !== hudCache.cells) { hudCache.cells = cl; el.cells.textContent = '\u2b21 ' + cl; }   // (J9)
         var bk = buffStr(sim.buffs);
@@ -2297,6 +2359,7 @@
     var hud = ce('div', 'cc-hud'); root.appendChild(hud);
     // (v0.103.0, C7, Jason) unmistakable Boost Mode: haze veil + banner; steering is locked sim-side
     var boostOvr = ce('div', 'cc-boost-ovr'); boostOvr.innerHTML = '<span>BOOST MODE</span>'; root.appendChild(boostOvr);
+    var turnBanner = ce('div', 'cc-turn-banner'); root.appendChild(turnBanner);   // (v0.104.0, C4)
     var shieldWrap = ce('div', 'cc-shieldwrap'); var slabel = ce('span', 'cc-lbl'); slabel.textContent = 'Shields';
     var shieldPips = ce('div', 'cc-pips'); shieldWrap.appendChild(slabel); shieldWrap.appendChild(shieldPips); hud.appendChild(shieldWrap);
     var score = ce('div', 'cc-score'); hud.appendChild(score);
@@ -2337,7 +2400,7 @@
 
     return { root: root, canvas: canvas, fallback: fallback, hud: hud, shieldPips: shieldPips, score: score, dist: dist, buffs: buffs,
       kLeft: kLeft, kRight: kRight, kJump: kJump, kDuck: kDuck, replay: replay,
-      overlay: overlay, qStem: qStem, qOpts: qOpts, qFeedback: qFeedback, qTimer: qTimer, cells: cells, boostOvr: boostOvr,
+      overlay: overlay, qStem: qStem, qOpts: qOpts, qFeedback: qFeedback, qTimer: qTimer, cells: cells, boostOvr: boostOvr, turnBanner: turnBanner,
       intro: intro, introCap: introCap, introEyebrow: introEyebrow, introSkip: introSkip,
       gameover: gameover, ovrTitle: ovrTitle, ovrStats: ovrStats, ovrCells: ovrCells, garagePanel: garagePanel, btnGarage: btnGarage, btnRestart: btnRestart, btnExit: btnExit };
   }
@@ -2445,6 +2508,9 @@
     '.cc-howto{position:absolute;inset:0;z-index:14;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(5,5,11,.84);backdrop-filter:blur(4px);pointer-events:auto;}' +
     '.cc-howto-panel{width:min(460px,94%);background:rgba(20,20,29,.97);border:1px solid #34344a;border-radius:16px;padding:22px;box-shadow:0 0 40px rgba(120,85,250,.28);}' +
     '.cc-howto-eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#1FDDE9;margin-bottom:6px;}' +
+    '.cc-turn-banner{position:absolute;top:38%;left:50%;transform:translateX(-50%);display:none;font-size:26px;font-weight:800;letter-spacing:.22em;color:#FFC857;text-shadow:0 0 18px rgba(255,200,87,.8);pointer-events:none;z-index:8;animation:ccTurnFlash 0.4s step-end infinite;}' +
+    '@keyframes ccTurnFlash{0%{opacity:1;}50%{opacity:.45;}}' +
+    '@media (prefers-reduced-motion: reduce){.cc-turn-banner{animation:none;}}' +
     '.cc-boost-ovr{position:absolute;inset:0;display:none;align-items:center;justify-content:center;pointer-events:none;z-index:7;background:radial-gradient(ellipse at center, rgba(31,221,233,.06) 30%, rgba(31,221,233,.18) 100%);backdrop-filter:blur(1.5px);}' +
     '.cc-boost-ovr span{font-size:34px;font-weight:800;letter-spacing:.3em;color:#1FDDE9;text-shadow:0 0 24px rgba(31,221,233,.8);animation:ccBoostPulse 0.5s ease-in-out infinite alternate;}' +
     '@keyframes ccBoostPulse{from{opacity:.75;}to{opacity:1;}}' +

@@ -1875,6 +1875,8 @@ async function runFrames(n = 6) {
 
   // JB4 (v0.77.0): the CC crash screen says so + surfaces the Garage
   console.log("\nJB4. CC crash screen source pins");
+  ok("C4/C10 (v0.104.0): turn banner + barrel roll shipped",
+    html.includes("cc-turn-banner") && html.includes("TURN_KM: 250") && html.includes("startBarrelRoll"));
   ok("C7 (v0.103.0): Boost Mode overlay shipped (haze veil + banner + reduced-motion opt-out)",
     html.includes("cc-boost-ovr") && html.includes("BOOST MODE") && html.includes("ccBoostPulse"));
   ok("JB4: game over says SHIP DOWN and auto-opens the Garage",
