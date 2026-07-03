@@ -6,6 +6,10 @@ Sections per entry: **Added · Changed · Fixed · Removed**. Each line: `<what>
 
 ---
 
+## [0.94.0] - 2026-07-03
+
+- **ARM unit 2 (Batch #5: A2+A3).** A2: Rapid Fire tiers now loosen the barrel slightly (deterministic runRng jitter, ±0.015 rad per tier) and every shot carries a whisper of aim assist — 10% of the angle error toward the nearest threat (enemies in the field, the ACTIVE weakpoint in the boss arena), capped at ~3°, only when already roughly on-target (<0.35 rad). Allocation-free target scan. A3: new HIDDEN one-time achievement "Belt sweeper" (☄️, 150 XP) — destroy every asteroid in a single non-boss sector; ARM sets profile.armBeltCleared via ctx.persistence when the belt empties (fragments included — they join the same array), and the core's next evaluate pass awards it. Hidden achievements render as ❓ "Hidden achievement / Keep playing to discover it" until earned. Pins: verify-build 457 (LIST re-pinned 12→13, hidden-tile no-leak, flag→award, reveal-after-earn; the award pin first assumed ===1 and was corrected — evaluate stores clock.now()), arm-run 76 (+2 source truths). Controls: full-snap assist + belt hook removed + hidden rendering flattened → each pin fell → restored.
+
 ## [0.93.0] - 2026-07-03
 
 - **ARM unit 1 (Batch #5: A1, A7, A8, A9).** A1: Consumables removed — the hangar sells upgrades only (the 20-coin shield refill undercut the recharge loop). A7: Simon Says caps at easy 5 / medium 6 / hard 8 (was ramp-to-9). A8: Shield Cell no longer buys +25 max shields — it buys shield RECHARGE (delay 4s→~1.8s, rate 18/s→~35/s across tiers; capacity fixed at 100, which also keeps boss-laser percentage damage honest). A9: the Charge bar now answers "can I fire?" — full when a shot is ready, filling toward the next shot when not (the old math averaged all capacitor slots, reading 40% while the weapon was ready), and the recharge tick repaints it live. Pins: arm-run 74 (+4 source truths; one pin self-caught matching its own comment and was tightened). Control: all four reverted → exactly the 4 pins failed → restored.

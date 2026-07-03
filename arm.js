@@ -1922,6 +1922,18 @@
       on(sw, "click", function () { var nv = !sw.classList.contains("on"); sw.classList.toggle("on", nv); sfx("click"); onChange(nv); });
       r.appendChild(sw); return r;
     }
+    // (v0.94.0, A3) hidden one-time achievement: every asteroid in the sector destroyed.
+    // ARM only sets the profile flag (contract-clean via ctx.persistence); the core's
+    // evaluate pass awards "Belt sweeper" at the next natural trigger (answer/run end).
+    var beltClearedSent = false;
+    function markBeltCleared() {
+      if (beltClearedSent) return; beltClearedSent = true;
+      try {
+        if (PERS && PERS.load && PERS.save) {
+          PERS.load().then(function (p) { if (!p.armBeltCleared) { p.armBeltCleared = true; return PERS.save(p); } }).catch(function () {});
+        }
+      } catch (e) {}
+    }
     function persistSetting(k, v) {
       try {
         if (PERS && PERS.load && PERS.save) {
@@ -2035,6 +2047,7 @@
                 }
               }
               asteroids[i] = asteroids[asteroids.length - 1]; asteroids.pop();
+              if (!bossActive && asteroids.length === 0) markBeltCleared();   // (v0.94.0, A3) hidden achievement seam
             }
             break;
           }
@@ -2075,12 +2088,25 @@
     }
     function damage(n) { shields -= n; invuln = 0.7; regenT = 0; sfx("hit"); burst(ship.x, ship.y, COL.aqua, 6); hud(); if (shields <= 0) { shields = 0; gameOver(); } }
     function updateParticles(dt) { for (var i = 0; i < particles.length; i++) { var p = particles[i]; if (!p.active) continue; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.96; p.vy *= 0.96; p.life -= dt; if (p.life <= 0) p.active = false; } }
+    var AIM_ASSIST = 0.1;   // (v0.94.0, A2, Jason) whisper-level: 10% of the angle error, capped at ~3 degrees
     function shoot() {
       if (charges < 1) return;                                  // only gate: a ready charge (always regenerates)
       charges--;
       if (charges === maxCharges - 1) rechargeTimer = rechargeTime;  // just left full -> start the recharge clock
       var R = shipR();
-      spawnBullet(ship.x + Math.cos(ship.angle) * R, ship.y + Math.sin(ship.angle) * R, Math.cos(ship.angle) * bulletSpeed + ship.vx, Math.sin(ship.angle) * bulletSpeed + ship.vy, 1.2);
+      // (v0.94.0, A2) Rapid Fire tiers loosen the barrel a touch (deterministic via runRng),
+      // and every shot drifts a whisper toward the nearest threat — enemies in the field,
+      // the active weakpoint in the boss arena. Allocation-free scan per 01 §13.
+      var ang = ship.angle + ((lvl.rapid > 0 && runRng) ? (runRng.next() - 0.5) * 0.03 * lvl.rapid : 0);
+      var tx = 0, ty = 0, hasT = false, bd = 1e18;
+      if (bossActive && boss && boss.active) { var wpA = wpPos(boss.wpActive); tx = wpA.x; ty = wpA.y; hasT = true; }
+      else { for (var ei = 0; ei < enemies.length; ei++) { var en2 = enemies[ei]; var ddx = en2.x - ship.x, ddy = en2.y - ship.y, dd = ddx * ddx + ddy * ddy; if (dd < bd) { bd = dd; tx = en2.x; ty = en2.y; hasT = true; } } }
+      if (hasT) {
+        var ta = Math.atan2(ty - ship.y, tx - ship.x);
+        var dA = Math.atan2(Math.sin(ta - ang), Math.cos(ta - ang));
+        if (Math.abs(dA) < 0.35) ang += Math.max(-0.05, Math.min(0.05, dA * AIM_ASSIST));
+      }
+      spawnBullet(ship.x + Math.cos(ang) * R, ship.y + Math.sin(ang) * R, Math.cos(ang) * bulletSpeed + ship.vx, Math.sin(ang) * bulletSpeed + ship.vy, 1.2);
       sfx("fire"); hud();
     }
     function updateHome(dt) {

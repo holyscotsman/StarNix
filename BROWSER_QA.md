@@ -229,6 +229,11 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-A10 — Spread + assist + hidden achievement (added v0.94.0).** With Rapid Fire tiers, volleys
+  fan very slightly; shots near a target drift subtly onto it (should feel generous, never magnetic).
+  Clear every asteroid in one sector: next answer pops a hidden achievement toast (Belt sweeper);
+  before earning it, the Progress grid shows a ❓ mystery tile.
+
 - **QA-A9 — ARM unit 1 (added v0.93.0).** Hangar: upgrades only, no Consumables tab. Simon: max 5
   pads early sectors, 6 mid, 8 late. Shield Cell tiers make shields come back noticeably sooner/faster
   (capacity stays 100). The Charge bar: full exactly when you can fire; watch it refill between shots.

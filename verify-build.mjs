@@ -1532,9 +1532,27 @@ async function runFrames(n = 6) {
   console.log("\nK5. Achievements (predicates / streaks / one-shot unlocks / Progress panel)");
   {
     const core = SN.core, A = SN.achievements, X = SN.xp;
-    ok("achievements API exposed: 12 defs with id/name/desc/icon/xp/check", !!A && Array.isArray(A.LIST) && A.LIST.length === 12
+    ok("achievements API exposed: 13 defs with id/name/desc/icon/xp/check", !!A && Array.isArray(A.LIST) && A.LIST.length === 13
       && A.LIST.every(d => d.id && d.name && d.desc && d.icon && d.xp > 0 && typeof d.check === "function")
-      && new Set(A.LIST.map(d => d.id)).size === 12);
+      && new Set(A.LIST.map(d => d.id)).size === 13);
+    // A3 (v0.94.0): the hidden Belt sweeper — mystery tile until earned, awarded off the flag
+    {
+      const bs = A.LIST.find(d => d.id === "belt-sweeper");
+      ok("belt-sweeper def exists, hidden, one-shot check on profile.armBeltCleared",
+        !!bs && bs.hidden === true && bs.check({ profile: { armBeltCleared: true } }) === true
+        && bs.check({ profile: {} }) === false);
+      delete SN.core.profile.achievements["belt-sweeper"]; delete SN.core.profile.armBeltCleared;
+      shell.showStats();
+      const mysteryTiles = [...w.document.querySelectorAll(".sx-ach-tile")].filter(t => /Hidden achievement/.test(t.textContent));
+      ok("locked hidden achievement renders as a mystery tile (no name/desc leak)",
+        mysteryTiles.length === 1 && !/Belt sweeper/.test(w.document.querySelector(".sx-ach")?.textContent || ""));
+      SN.core.profile.armBeltCleared = true;
+      A.evaluate(SN.core.profile);
+      ok("setting the ARM flag + evaluate awards Belt sweeper", !!SN.core.profile.achievements["belt-sweeper"]);
+      shell.showStats();
+      ok("earned hidden achievement reveals itself", /Belt sweeper/.test(w.document.querySelector(".sx-ach")?.textContent || ""));
+      shell.showMenu();
+    }
     const by = {}; A.LIST.forEach(d => { by[d.id] = d; });
 
     // pure predicate pins (crafted snapshots — no live state)
@@ -1622,7 +1640,7 @@ async function runFrames(n = 6) {
       const unlocked = Object.keys(core.profile.achievements).length;
       const cnt = w.document.querySelector(".sx-ach-count");
       ok("Progress panel: 12 tiles, unlocked ones marked .got, count line matches",
-        tiles.length === 12 && got.length === unlocked && !!cnt && cnt.textContent === unlocked + " / 12");
+        tiles.length === 13 && got.length === unlocked && !!cnt && cnt.textContent === unlocked + " / 13");
       const gotNames = Array.prototype.map.call(got, t => t.querySelector(".sx-ach-name").textContent);
       ok("unlocked tiles include the live unlocks from this section",
         gotNames.indexOf("Hot streak") >= 0 && gotNames.indexOf("Station restored") >= 0 && gotNames.indexOf("Sim certified") >= 0);

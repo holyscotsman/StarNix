@@ -24,7 +24,7 @@
   var CORE_VERSION = "1.1.0";              // internal contract version (changes rarely)
   // User-facing playable-build stamp. BUMP THIS (and the date) on every delivered index.html so the
   // version shown in-game tells us exactly which build is being played/tested. Shown by the shell.
-  var BUILD_VERSION = "0.93.0";
+  var BUILD_VERSION = "0.94.0";
   var BUILD_DATE = "2026-07-03";
   var BUILD_LABEL = "v" + BUILD_VERSION + " \u00b7 " + BUILD_DATE;
   var SCHEMA_VERSION = 1;
@@ -367,7 +367,11 @@
     { id: "archivist",        icon: "🏛", xp: 200, name: "Archivist",        desc: "Master 25 questions.",
       check: function (s) { var m = s.profile && s.profile.mastery; if (!m) return false; var n = 0; for (var k in m) { if (m[k] && m[k].bucket >= MASTERED_BUCKET) { n++; if (n >= 25) return true; } } return false; } },
     { id: "commander",        icon: "⭐", xp: 250, name: "Commander",        desc: "Reach the rank of Commander.",
-      check: function (s) { var p = s.profile; return !!(p && rankFor(p.xp).index >= 6); } }
+      check: function (s) { var p = s.profile; return !!(p && rankFor(p.xp).index >= 6); } },
+    // (v0.94.0, A3, Jason) HIDDEN until earned — ARM sets profile.armBeltCleared when a
+    // sector's asteroid belt is fully destroyed; one-time like every achievement here.
+    { id: "belt-sweeper",     icon: "☄️", xp: 150, name: "Belt sweeper",     desc: "Destroy every asteroid in a single sector.", hidden: true,
+      check: function (s) { var p = s.profile; return !!(p && p.armBeltCleared); } }
   ];
   var achOnUnlock = null;   // shell-settable: function (newlyUnlockedDefs[]) — toast surface
   function evaluateAchievements(profile) {

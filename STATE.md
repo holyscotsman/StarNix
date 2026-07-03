@@ -101,7 +101,13 @@
 > **v0.6.21:** title screen uses the no-station nebula (`kbbBg`→`nebulaBg`); menu keeps the station vista. KBB shows `nebulaBg` + `bcmShip`. 200/200; art negative-controlled.
 > </details>
 
-## v0.93.0 — ARM unit 1: consumables gone, Simon caps, Shield Cell=recharge, ready-bar (A1/A7/A8/A9)
+## v0.94.0 — ARM unit 2: spread + aim assist, hidden Belt sweeper (A2/A3)
+
+verify 457 (ach list now 13, hidden rendering pinned), arm-run 76. NEXT: A4/A5 briefings,
+A6 economy+cadence, A10 boss patterns; then KBB units (K-map needed — mapper crashed),
+CC units, G2 save/resume, G3 intro, G4 full scan.
+
+> **Earlier this session (v0.93.0):** ARM unit 1
 
 arm-run 74. NEXT: A2 spread+aim assist, A3 hidden asteroid achievement, then A4/A5 briefings,
 A6 economy, A10 boss patterns. Batch #5 queue in NIGHT_LOG; site map in scratchpad/batch5-map.txt.

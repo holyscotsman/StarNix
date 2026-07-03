@@ -241,6 +241,12 @@ var detSector3 = null;   // captured for the determinism probe against window 2
   ok(/BOSS_FLOW = 920/.test(H.ARM_SRC) && /bt \* BOSS_FLOW \* depth/.test(H.ARM_SRC)
      && /bossActive\) drawBossRush\(\)/.test(H.ARM_SRC) && /three static faint shafts/.test(H.ARM_SRC),
      'boss arena rushes upward: BOSS_FLOW streaks behind the world, calm under reduced motion');
+  // (v0.94.0, A2/A3) spread + aim assist + belt-cleared seam
+  ok(/AIM_ASSIST = 0\.1;/.test(H.ARM_SRC) && /runRng\.next\(\) - 0\.5\) \* 0\.03 \* lvl\.rapid/.test(H.ARM_SRC)
+     && /Math\.max\(-0\.05, Math\.min\(0\.05, dA \* AIM_ASSIST\)\)/.test(H.ARM_SRC),
+     'A2: rapid-fire spread (runRng) + capped whisper aim assist');
+  ok(/asteroids\.length === 0\) markBeltCleared\(\)/.test(H.ARM_SRC) && /p\.armBeltCleared = true/.test(H.ARM_SRC),
+     'A3: belt-cleared flag fires when the last asteroid dies (non-boss)');
   // (v0.93.0, Batch #5 ARM unit 1) A1/A7/A8/A9 source truths
   ok(!/shopTab/.test(H.ARM_SRC) && !/Repair Shields/.test(H.ARM_SRC),
      'A1: Consumables are GONE from the hangar (no tab state, no repair item)');

@@ -899,10 +899,11 @@
         var d = list[i], has = !!un[d.id];
         if (has) got++;
         var tile = el("div", "sx-ach-tile" + (has ? " got" : ""));
-        tile.appendChild(el("span", "sx-ach-ic", d.icon));
+        var hid = d.hidden && !has;   // (v0.94.0, A3) hidden achievements stay a mystery until earned
+        tile.appendChild(el("span", "sx-ach-ic", hid ? "\u2753" : d.icon));
         var body = el("span", "sx-ach-body");
-        body.appendChild(el("span", "sx-ach-name", d.name));
-        body.appendChild(el("span", "sx-ach-desc", d.desc));
+        body.appendChild(el("span", "sx-ach-name", hid ? "Hidden achievement" : d.name));
+        body.appendChild(el("span", "sx-ach-desc", hid ? "Keep playing to discover it." : d.desc));
         tile.appendChild(body);
         tile.appendChild(el("span", "sx-ach-xp", (has ? "✓ " : "") + "+" + d.xp + " XP"));
         tile.title = has ? "Unlocked" : "Locked";
