@@ -1894,6 +1894,15 @@
       var cfg = CONFIG;
       var rng = (ctx.rng && typeof ctx.rng.fork === 'function') ? ctx.rng.fork('CC') : (ctx.rng || makeFallbackRng(Date.now()));
       var sim = new CCSim({ ctx: ctx, rng: rng });
+      try { if (window.CC) window.CC._lastSim = sim; } catch (eLS) {}   // (v0.106.0, G2) test seam
+      // (v0.106.0, G2) Resume: pick the run back up at the checkpointed gate
+      if (ctx.resumeData && ctx.resumeData.scoreDistance) {
+        var rz = ctx.resumeData;
+        sim.scoreDistance = rz.scoreDistance; sim.shields = Math.max(1, rz.shields | 0);
+        sim.coinScore = rz.coinScore | 0; sim._gatesPassed = rz.gatesPassed | 0;
+        if (rz.nextTurnScore) sim._nextTurnScore = rz.nextTurnScore;
+        sim._nextGateScore = sim.scoreDistance + sim.cfg.GATE_KM * 1000;
+      }
 
       // settings (apply async; defaults until loaded)
       var settings = { reducedMotion: false, music: true, sfx: true };
@@ -2069,7 +2078,18 @@
         cont.addEventListener('click', function () {
           el.overlay.style.display = 'none';
           if (sim.phase === PHASE_OVER) showOver();
-          else { sim.resumeAfterQuestion(); resume(); }
+          else {
+            sim.resumeAfterQuestion(); resume();
+            // (v0.106.0, G2) each survived gate is the checkpoint
+            try {
+              var P4 = ctx.persistence;
+              if (P4 && P4.load && P4.save) {
+                var snap = { scoreDistance: sim.scoreDistance, shields: sim.shields, coinScore: sim.coinScore, gatesPassed: sim._gatesPassed, nextTurnScore: sim._nextTurnScore,
+                  label: (sim.scoreDistance / 1000).toFixed(1) + ' km \u00b7 ' + sim.shields + ' shields \u00b7 ' + sim.coinScore + ' cells' };
+                P4.load().then(function (p) { p.saves = p.saves || {}; p.saves.CC = snap; return P4.save(p); }).catch(function () {});
+              }
+            } catch (eSv) {}
+          }
         });
         // (v0.88.0, L3) per-option rationale for the actual wrong pick
         var noteEl3 = null, qn3 = res.question, ch3 = res.chosen;
@@ -2089,6 +2109,7 @@
 
       // ---- game over ----
       function showOver() {
+        try { var P5 = ctx.persistence; if (P5 && P5.load && P5.save) P5.load().then(function (p) { if (p.saves && p.saves.CC) { delete p.saves.CC; return P5.save(p); } }).catch(function () {}); } catch (eCl) {}   // (v0.106.0, G2)
         var banked = sim.coinScore | 0;                        // (v0.73.0, J9) cells earned this run
         if (ctx.persistence && typeof ctx.persistence.load === 'function') {
           Promise.resolve(ctx.persistence.load()).then(function (prof) {

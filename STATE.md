@@ -101,7 +101,12 @@
 > **v0.6.21:** title screen uses the no-station nebula (`kbbBg`→`nebulaBg`); menu keeps the station vista. KBB shows `nebulaBg` + `bcmShip`. 200/200; art negative-controlled.
 > </details>
 
-## v0.105.0 — CC unit 5: passing mountains, textured ridge, flybys (C5/C8/C3) — CC COMPLETE
+## v0.106.0 — Save & Resume for all three games (G2)
+
+Checkpoints: ARM sector / KBB shop-exit / CC gate; shell chooser (Resume / New game);
+ctx.resumeData additive key. REMAINING batch #5: G3 intro cinematic, G4 full-scan workflow.
+
+> **Earlier this session (v0.105.0):** CC complete
 
 view-smoke +2. Batch #5 game items ALL DONE (ARM 10, KBB 11, CC 12). REMAINING: G2
 save/resume, G3 intro cinematic, G4 full-scan workflow. Browser QA owed v0.92–v0.105.

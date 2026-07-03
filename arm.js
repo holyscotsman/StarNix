@@ -332,6 +332,14 @@
       COL = paletteFrom(THEME, highContrast);
       TRAIL = SET.shipTrailColor || COL.aqua;      // (v0.57.0 unit 7) mastery cosmetic: shell-resolved hex, falls back to the stock aqua
       reducedMotion = !!SET.reducedMotion; extraTime = !!SET.extraTime;
+      // (v0.106.0, G2) Resume: restore the checkpoint and open at that sector's briefing
+      if (ctx.resumeData && ctx.resumeData.sector) {
+        var rz = ctx.resumeData;
+        sector = rz.sector; coins = rz.coins | 0; stationBuild = rz.stationBuild | 0;
+        if (rz.lvl) for (var rk2 in lvl) { if (Object.prototype.hasOwnProperty.call(rz.lvl, rk2)) lvl[rk2] = rz.lvl[rk2] | 0; }
+        if (rz.usedIds && rz.usedIds.length) usedIds = rz.usedIds.slice();
+        deriveStats(); resumePending = true;
+      }
       musicOn = SET.music !== false; sfxOn = SET.sfx !== false;
 
       domain = pickDomain();
@@ -868,7 +876,22 @@
     /* ---------------------------------------------------------------------- */
     /* flow                                                                   */
     /* ---------------------------------------------------------------------- */
+    var resumePending = false;   // (v0.106.0, G2) set at mount when ctx.resumeData restored
     function newRun() {
+      if (resumePending) {
+        // (G2) Resume: state was restored at mount — keep it, refill the tanks, skip the
+        // intro cutscene, open at the checkpointed sector's briefing.
+        resumePending = false;
+        disarmPuzzleTimer(); puzzleCore = null; puzzleDoneFlag = false;
+        charges = undefined; shields = undefined; deriveStats(); charges = maxCharges; shields = maxShields; rechargeTimer = rechargeTime;
+        held = []; sectorLost = [];
+        runRng = RNG.fork("arm-run-" + sector + ":" + (runSeq++));
+        makeStars();
+        drawCoreQuestions();
+        briefCore = -1; briefMode = "TEACH"; briefRepeat = 0; ship.x = ENTRY_X; ship.y = ENTRY_Y; ship.vx = ship.vy = 0; ship.angle = -Math.PI / 2;
+        showBriefing();
+        return;
+      }
       sector = 1; coins = 0;
       disarmPuzzleTimer(); puzzleCore = null; puzzleDoneFlag = false;
       lvl.engine = lvl.maneuver = lvl.capacitor = lvl.shieldCell = lvl.rapid = 0;
@@ -1351,8 +1374,20 @@
       ]));
       panel.appendChild(btn("arm-act", "⚙ Dock — open Hangar", function () { sfx("click"); showShop(sectorClear); }));
     }
+    // (v0.106.0, G2) checkpoint helpers — profile.saves.ARM via ctx.persistence
+    function saveCheckpoint() {
+      try {
+        if (!(PERS && PERS.load && PERS.save)) return;
+        var snap = { sector: sector, coins: coins, lvl: { engine: lvl.engine, maneuver: lvl.maneuver, capacitor: lvl.capacitor, shieldCell: lvl.shieldCell, rapid: lvl.rapid }, stationBuild: stationBuild, usedIds: usedIds.slice(0, 400), label: 'Sector ' + sector + ' of ' + SECTORS + ' \u00b7 ' + coins + ' \u2b21 \u00b7 station ' + stationBuild + '/' + TOTAL };
+        PERS.load().then(function (p) { p.saves = p.saves || {}; p.saves.ARM = snap; return PERS.save(p); }).catch(function () {});
+      } catch (eSv) {}
+    }
+    function clearCheckpoint() {
+      try { if (PERS && PERS.load && PERS.save) PERS.load().then(function (p) { if (p.saves && p.saves.ARM) { delete p.saves.ARM; return PERS.save(p); } }).catch(function () {}); } catch (eCl) {}
+    }
     function nextSector() {
       sector++;
+      saveCheckpoint();   // (G2) the sector boundary IS the checkpoint
       runRng = RNG.fork("arm-run-" + sector + ":" + (runSeq++));   // deterministic per sector; usedIds keeps no-reuse across the run; (v0.91.0) runSeq varies replays
       drawCoreQuestions();                        // fresh cores (excluding usedIds), harder band, sector-aware briefing
       briefCore = -1; briefMode = "TEACH"; briefRepeat = 0;
@@ -1383,6 +1418,7 @@
       newRun();
     }
     function gameOver() {
+      clearCheckpoint();   // (v0.106.0, G2) a dead run is not resumable
       shakeAmt = 0;   // (v0.69.0, J1) the death panel must not inherit boss shake
       setState("GAMEOVER"); sfx("explode");
       burst(ship.x, ship.y, COL.peach, 40); burst(ship.x, ship.y, COL.gold, 24); deathTimer = 1.1;

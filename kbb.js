@@ -1044,6 +1044,15 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
       try { reduced = (ctx && ctx.settings && ctx.settings.reducedMotion) || (doc.defaultView.matchMedia && doc.defaultView.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) {}
 
       var run = createRun(ctx, {});   // (v0.68.0, J6) straight into an EASY first battle — no pre-run shop; the first shop comes after battle 1
+      // (v0.106.0, G2) Resume: rebuild the checkpointed run — section/round/squad/artifacts.
+      if (ctx.resumeData && ctx.resumeData.section) {
+        var rz = ctx.resumeData;
+        run.section = rz.section; run.round = rz.round;
+        if (rz.squad) for (var rk3 in rz.squad) { if (Object.prototype.hasOwnProperty.call(rz.squad, rk3)) run.squad[rk3] = rz.squad[rk3]; }
+        if (rz.artifacts) for (var ra3 = 0; ra3 < rz.artifacts.length; ra3++) { try { equipArtifact(run, rz.artifacts[ra3], false); } catch (eEq) {} }
+        if (rz.consumables) run.consumables = rz.consumables.slice(0, CONFIG.consumableCap);
+        run.battle = null; startBattle(run);   // open ON the checkpointed round's battle
+      }
       var container = el(doc, 'div', 'kbb-root' + (reduced ? ' kbb-reduced' : ''));
       root.appendChild(container);
 
@@ -1984,6 +1993,7 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
     // YELLOW stays clear; lost is a full-cover modal so no panel bleeds behind it.
     function renderLost(s) {
       saveBest(s); clearLost(s);
+      try { var P3 = s.ctx.persistence; if (P3 && P3.load && P3.save) P3.load().then(function (p) { if (p.saves && p.saves.KBB) { delete p.saves.KBB; return P3.save(p); } }).catch(function () {}); } catch (eCl) {}   // (v0.106.0, G2)
       var d = s.doc, ov = el(d, 'div', 'kbb-lost'); s.lostEl = ov;
       var card = el(d, 'div', 'kbb-lost-card');
       card.appendChild(el(d, 'div', 'kbb-big', 'Run over'));
@@ -2312,6 +2322,19 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
     function onLeaveShop(s) {
       s.ui.replaceOffer = -1;
       if (s.run._preRun) { startDungeon(s.run); } else { leaveShop(s.run); }
+      // (v0.106.0, G2) the shop exit is the checkpoint: section/round/squad/artifacts
+      try {
+        var P2 = s.ctx.persistence;
+        if (P2 && P2.load && P2.save) {
+          var rq = s.run.squad;
+          var snap = { section: s.run.section, round: s.run.round,
+            squad: { hp: rq.hp, maxHp: rq.maxHp, shield: rq.shield, startShield: rq.startShield || 0, basePower: rq.basePower, block: rq.block, healPower: rq.healPower, coins: rq.coins },
+            artifacts: rq.artifacts.map(function (ai) { return ai.def.id; }),
+            consumables: s.run.consumables.slice(),
+            label: 'Depth ' + s.run.section + '-' + s.run.round + ' \u00b7 ' + rq.artifacts.length + ' artifacts \u00b7 ' + rq.coins + 'c' };
+          P2.load().then(function (p) { p.saves = p.saves || {}; p.saves.KBB = snap; return P2.save(p); }).catch(function () {});
+        }
+      } catch (eSv) {}
       drawQuestion(s.run); renderAll(s);
     }
 

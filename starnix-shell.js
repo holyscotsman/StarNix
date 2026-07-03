@@ -1082,9 +1082,35 @@
   /* =================================================================== *
    * mount / unmount a game  (strict lifecycle)
    * =================================================================== */
-  Shell.prototype.enterGame = function (id) {
+  // (v0.106.0, G2, Jason) per-game checkpoints: entering a game with a saved run offers
+  // Resume or New Game. Games write profile.saves[id] at their natural boundaries (sector /
+  // round / gate) via ctx.persistence and clear it on game over; Resume hands the snapshot
+  // back through the additive ctx.resumeData key (01 §9a additive rule).
+  Shell.prototype.enterGame = function (id, resumeChoice) {
     var module = StarNix.getGame(id);
     if (!module) { this._toast("Game " + id + " not registered."); return; }
+    var self0 = this, core0 = StarNix.core;
+    var save = null;
+    try { save = core0.profile && core0.profile.saves && core0.profile.saves[id]; } catch (e0) {}
+    if (save && resumeChoice === undefined) {
+      this._clearScreen(); this.screen = "resume:" + id;
+      var rs = el("div", "sx-screen sx-panelwrap");
+      var rp = el("div", "sx-panel");
+      rp.appendChild(el("div", "sx-eyebrow", GAME_META[id].title));
+      rp.appendChild(el("h2", "sx-h2", "A run is waiting"));
+      rp.appendChild(el("div", "sx-note", save.label || "Saved progress found."));
+      var row = el("div", "sx-row");
+      var bR = el("button", "sx-btn sx-btn-iris", "\u25B6 Resume");
+      var bN = el("button", "sx-btn sx-btn-ghost", "New game (discards the save)");
+      this._on(bR, "click", function () { self0.enterGame(id, true); });
+      this._on(bN, "click", function () {
+        try { delete core0.profile.saves[id]; if (core0.persistence && core0.persistence.save) core0.persistence.save(core0.profile); } catch (e1) {}
+        self0.enterGame(id, false);
+      });
+      row.appendChild(bR); row.appendChild(bN); rp.appendChild(row);
+      rs.appendChild(rp); this.stage.appendChild(rs);
+      return;
+    }
     this._clearScreen();
     this.screen = "game:" + id;
     this.lastGameId = id;
@@ -1112,6 +1138,7 @@
     });
 
     var ctx = StarNix.makeContext(id);
+    if (resumeChoice === true && save) ctx.resumeData = save;   // (v0.106.0, G2)
     // Menu-return handshake (ARM 02 §D3 / CC): optional callback a game may call
     // from its own debrief to return to the shell menu. The ← Menu bar above
     // does the same via exitGame(); this just lets a game request it in-code.

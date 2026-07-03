@@ -293,7 +293,7 @@ var detSector3 = null;   // captured for the determinism probe against window 2
   ok(/charges >= 1 \? 1 : \(1 - rechargeTimer \/ rechargeTime\)/.test(H.ARM_SRC),
      'A9: the Charge bar reads weapon-ready (full = can fire)');
   // (v0.91.0) variety: per-run forks vary replays; openers past sector 1 reach the d<=2 pool
-  ok((H.ARM_SRC.match(/arm-run-" \+ sector \+ ":" \+ \(runSeq\+\+\)/g) || []).length === 2
+  ok((H.ARM_SRC.match(/arm-run-" \+ sector \+ ":" \+ \(runSeq\+\+\)/g) || []).length === 3
      && /if \(s2 > 1\) d = Math\.max\(d, 2\)/.test(H.ARM_SRC),
      'VARIETY: both run forks salt runSeq (fresh questions on Fly again/replays) + opener band floor 2 past sector 1');
   ok(/arm-exhibit-warn/.test(H.ARM_SRC) && /q\.image\) panel\.appendChild/.test(H.ARM_SRC),
