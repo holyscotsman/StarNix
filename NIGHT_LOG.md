@@ -401,6 +401,35 @@ Commit: `v0.63.0 — PLAYTEST cleanup sweep (A4–A7)`.
 
 ---
 
+## Phase 2 · iteration 4 — MINI-SPEC (before build)
+
+**What:** debt-list item — `cc-run.cjs` engine-harness parity (the ARM/KBB pattern's missing
+third leg). CCSim is renderer-free, so this drives the REAL sim class headlessly: full-run
+integration (spawn cadence honoring gate-clear zones, live collisions per obstacle type
+including the sweeper's phase-honest lane, gate question flow → shields ±, boost every 5
+gates, buffs, crash → game over, distance scoring), seeded + deterministic.
+**Why (rubric):** mission value 4/5 — CC took tonight's biggest mechanical changes (sweeper,
+peaks, end-cap) with only invariant-level fairness coverage; this is the safety net for every
+later CC touch, same argument that put the ARM harness FIRST in Phase 1. Verifiability 5/5;
+blast radius 5/5 (new .cjs + one package.json line); size 3/5.
+**Planned assertions (≥14):** reset state; spawn cadence + row gaps ≥ MIN_GAP; gate spawn on
+scored distance + obstacle clearing near gates; per-type live collision truths (wall hits
+grounded/every lane, arch hits standing, narrow hits sealed lane only, sweeper hits ONLY its
+live lane and never a jumper); question right → +1 shield (cap), wrong → −2 → 0 → game over;
+boost triggers on the 5th gate + grants invulnerability + covers scored km; crash costs a
+shield + i-frames block chained hits; score = floored scored metres; same-seed determinism.
+**Negative control:** flip the sweeper's live-phase collision to ignore phase (hit any lane)
+→ exactly the sweeper live-lane pin fails.
+
+**RESULT (v0.64.0):** shipped, 26/26, wired into the gate after arm-run. One honest harness
+lesson: the probe player never dodges, so chip damage killed it before the first 10 km gate —
+travel legs now pin shields and graded deltas measure off the pin. Negctrl (phase-blind
+sweeper) failed exactly the live-lane pin. Full gate 412/412 + CC RUN 26/26.
+ALL THREE GAMES now have engine run-through harnesses.
+Commit: `v0.64.0 — cc-run.cjs engine harness parity`.
+
+---
+
 **PHASE 1 COMPLETE: all NINE units shipped, v0.52.0 → v0.60.0, gate grown 345 → 407
 verify-build assertions (+ ARM RUN 46, KBB RUN 26, fairness 25, view-smoke +5) — every
 code unit green-gated with a bite-proven negative control before commit. Phase 2 next;
