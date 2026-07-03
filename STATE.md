@@ -101,7 +101,13 @@
 > **v0.6.21:** title screen uses the no-station nebula (`kbbBg`→`nebulaBg`); menu keeps the station vista. KBB shows `nebulaBg` + `bcmShip`. 200/200; art negative-controlled.
 > </details>
 
-## v0.96.0 — ARM unit 4: economy + cadence (A6) — bosses 3/6/9/12, 8 half-effect tiers, halved income
+## v0.97.0 — ARM unit 5: seekers + dual lasers (A10) — ALL TEN ARM ITEMS SHIPPED
+
+arm-run 84. ARM done (A1-A10, v0.93-v0.97). REMAINING batch #5: KBB K1-K11 (no map —
+mapper crashed), CC C1-C12 (map in scratchpad/batch5-map.txt), G2 save/resume, G3 intro,
+G4 full-scan workflow. Boss visuals (missiles/wall laser) are browser-blind — QA-A13.
+
+> **Earlier this session (v0.96.0):** ARM economy + cadence
 
 arm-run 80, verify 458. REMAINING in batch #5: A10 boss patterns (missiles + dual lasers),
 KBB K1-K11 (map needed — mapper crashed; kbb.js knowledge is fresh though), CC C1-C12,

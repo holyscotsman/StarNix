@@ -241,6 +241,26 @@ var detSector3 = null;   // captured for the determinism probe against window 2
   ok(/BOSS_FLOW = 920/.test(H.ARM_SRC) && /bt \* BOSS_FLOW \* depth/.test(H.ARM_SRC)
      && /bossActive\) drawBossRush\(\)/.test(H.ARM_SRC) && /three static faint shafts/.test(H.ARM_SRC),
      'boss arena rushes upward: BOSS_FLOW streaks behind the world, calm under reduced motion');
+  // (v0.97.0, A10) boss arsenal: seekers + dual lasers
+  ok(/MISSILE_SPEED = 130, MISSILE_TURN = 1\.7, MISSILE_R = 10/.test(H.ARM_SRC)
+     && /boss\.laserMode = runRng\.next\(\) < 0\.6 \? "beam" : "wall"/.test(H.ARM_SRC)
+     && /Math\.abs\(ship\.x - boss\.gapX\) >= GAP_HALF/.test(H.ARM_SRC),
+     'A10: seeking missiles (slower/larger/shootable) + wall laser with ONE safe column');
+  (function () {
+    // behavioral: drive the boss with a forced missile — it must steer toward the ship,
+    // die to a player bullet, and never linger past its life.
+    var st = T.setupBossSector();
+    ok(st.enabled === true, 'A10 probe: boss sector armed (sector 3)');
+    T.spawnMissileAt(600, 160);
+    var m0 = T.missileInfo();
+    T.step(0.5);
+    var m1 = T.missileInfo();
+    ok(m0.active === 1 && m1.active === 1 && m1.distToShip < m0.distToShip,
+       'A10: missile steers toward the ship (' + Math.round(m0.distToShip) + ' -> ' + Math.round(m1.distToShip) + ')');
+    T.shootAtMissile();
+    for (var fs = 0; fs < 30 && T.missileInfo().active > 0; fs++) T.step(1 / 60);
+    ok(T.missileInfo().active === 0, 'A10: a player bullet detonates the seeker');
+  })();
   // (v0.96.0, A6) economy + cadence sources
   ok(/sec % 3 === 0/.test(H.ARM_SRC) && /MAX_TIER = 8/.test(H.ARM_SRC)
      && /baseCost = \{ engine: 120, maneuver: 110, capacitor: 130, shieldCell: 130, rapid: 140 \}/.test(H.ARM_SRC)

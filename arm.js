@@ -182,7 +182,7 @@
     var runSeq = 0;   // (v0.91.0) per-mount run counter: "Fly again"/sector replays draw fresh questions
 
     // ---- object pools (no per-frame allocation) ----
-    var bullets = [], ebullets = [], particles = [];
+    var bullets = [], ebullets = [], missiles = [], particles = [];
 
     // ---- panel interaction handles (also used by the test seam) ----
     var pendingQuestion = null;       // { choose(i), proceed(), correctIndex }
@@ -592,10 +592,11 @@
     /* pools                                                                  */
     /* ---------------------------------------------------------------------- */
     function initPools() {
-      bullets.length = 0; ebullets.length = 0; particles.length = 0;
+      bullets.length = 0; ebullets.length = 0; particles.length = 0; missiles.length = 0;
       var i;
       for (i = 0; i < 64; i++) bullets.push({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0 });
       for (i = 0; i < 96; i++) ebullets.push({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0 });
+      for (i = 0; i < 16; i++) missiles.push({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, ang: 0 });   // (v0.97.0, A10) seekers
       for (i = 0; i < 320; i++) particles.push({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, col: "#fff", sz: 1 });
     }
     function spawnBullet(x, y, vx, vy, life) {
@@ -614,6 +615,7 @@
       var i;
       for (i = 0; i < bullets.length; i++) bullets[i].active = false;
       for (i = 0; i < ebullets.length; i++) ebullets[i].active = false;
+      for (i = 0; i < missiles.length; i++) missiles[i].active = false;
     }
     function clearParticles() { for (var i = 0; i < particles.length; i++) particles[i].active = false; }
     function burst(x, y, col, n) {
@@ -815,6 +817,7 @@
           wps: makeWeakpoints(), wpActive: 0,
           dying: false, deathT: 0, flash: 0, shootCD: 1.6,
           laserCD: rnd(3.5, 6), laserState: "none", laserT: 0, laserX: W / 2, laserY: 98,
+          laserMode: "beam", gapX: W / 2, missileCD: 6,   // (v0.97.0, A10) seekers + wall-mode fields
           exCD: 0, warpDeadline: 0, ph1: false, ph2: false };
         setBanner("\u2620 BCM Dreadnought \u2014 destroy the glowing weakpoints \u00B7 catch the cores they drop \u00B7 dodge the laser beam");
       } else { boss = null; }
@@ -1126,7 +1129,7 @@
         core.qOpen = false; afterResolve();
       });
     }
-    function clearActiveEBullets() { for (var i = 0; i < ebullets.length; i++) ebullets[i].active = false; }
+    function clearActiveEBullets() { for (var i = 0; i < ebullets.length; i++) ebullets[i].active = false; for (var j = 0; j < missiles.length; j++) missiles[j].active = false; }
     function afterResolve() {
       hud(); invuln = 1.5;   // collect-beat i-frames (ship blinks) so a freshly-spawned wave can't insta-kill on resume
       var activeN = 0;
@@ -1167,7 +1170,7 @@
       setBanner("\u2756 Weakpoint destroyed \u2014 a core broke loose! Fly under it to catch it.");
       showToast("Core freed \u2014 catch it");
     }
-    var LASER_CHARGE = 1.3, LASER_FIRE = 0.55, LASER_HALF = 34;   // S4 boss laser: charge time, beam time, beam half-width
+    var LASER_CHARGE = 1.3, LASER_FIRE = 0.55, LASER_HALF = 34, GAP_HALF = 64;   // (v0.97.0, A10) wall-mode safe half-width   // S4 boss laser: charge time, beam time, beam half-width
     // (v0.82.0, Jason) all 5 weakpoints sit on the PROW — the front of the ship, facing the
     // player below (prow points down, so front = positive oy). Arrow formation down the nose;
     // ox stays inside the vector-fallback wedge taper at each oy so both hull renderings work.
@@ -1210,7 +1213,18 @@
           var src = randomLiveWp(), bang = Math.atan2(ship.y - src.y, ship.x - src.x), bsp = 215;
           spawnEBullet(src.x, src.y, Math.cos(bang) * bsp, Math.sin(bang) * bsp, 6); sfx("laser");
         }
+        // (v0.97.0, A10, Jason) seeking missiles: slower and larger than shots — shoot them
+        // down or fly around them. Cadence via runRng; steering is a capped turn toward the ship.
+        boss.missileCD -= dt;
+        if (boss.missileCD <= 0) {
+          boss.missileCD = rnd(5, 8);
+          var msrc = randomLiveWp(), ma = Math.atan2(ship.y - msrc.y, ship.x - msrc.x);
+          var mm = null;
+          for (var mi0 = 0; mi0 < missiles.length; mi0++) { if (!missiles[mi0].active) { mm = missiles[mi0]; break; } }
+          if (mm) { mm.active = true; mm.x = msrc.x; mm.y = msrc.y; mm.ang = ma; mm.vx = Math.cos(ma) * MISSILE_SPEED; mm.vy = Math.sin(ma) * MISSILE_SPEED; mm.life = 9; sfx("lasercharge"); }
+        }
       }
+      updateMissiles(dt);
       if (!boss.active) return;                      // active weakpoint sealed while a shed core is unresolved
       var ap = wpPos(boss.wpActive);                 // only the ACTIVE weakpoint takes damage; body + other points pass through
       for (var j = 0; j < bullets.length; j++) {
@@ -1222,17 +1236,60 @@
         }
       }
     }
+    var MISSILE_SPEED = 130, MISSILE_TURN = 1.7, MISSILE_R = 10;   // (v0.97.0, A10) slower + larger than shots (215/3px)
+    function updateMissiles(dt) {
+      for (var i = 0; i < missiles.length; i++) {
+        var m = missiles[i]; if (!m.active) continue;
+        m.life -= dt; if (m.life <= 0) { m.active = false; continue; }
+        var want = Math.atan2(ship.y - m.y, ship.x - m.x);
+        var dA = Math.atan2(Math.sin(want - m.ang), Math.cos(want - m.ang));
+        m.ang += Math.max(-MISSILE_TURN * dt, Math.min(MISSILE_TURN * dt, dA));
+        m.vx = Math.cos(m.ang) * MISSILE_SPEED; m.vy = Math.sin(m.ang) * MISSILE_SPEED;
+        m.x += m.vx * dt; m.y += m.vy * dt;
+        var killed = false;
+        for (var j = 0; j < bullets.length; j++) {          // shootable: any player bullet detonates it
+          var pb = bullets[j]; if (!pb.active) continue;
+          if (dist2(m.x, m.y, pb.x, pb.y) < MISSILE_R + 3) { pb.active = false; killed = true; break; }
+        }
+        if (killed) { m.active = false; burst(m.x, m.y, COL.peach, 12); sfx("explode"); continue; }
+        if (invuln <= 0 && dist2(m.x, m.y, ship.x, ship.y) < MISSILE_R + shipR()) {
+          m.active = false; burst(m.x, m.y, COL.peach, 14); damage(22); sfx("explode");
+        }
+      }
+    }
+    function drawMissiles() {
+      if (!c2d) return;
+      for (var i = 0; i < missiles.length; i++) {
+        var m = missiles[i]; if (!m.active) continue;
+        c2d.save(); c2d.translate(m.x, m.y); c2d.rotate(m.ang);
+        c2d.shadowBlur = 14; c2d.shadowColor = COL.peach; c2d.fillStyle = COL.peach; c2d.strokeStyle = "#ffd9d2"; c2d.lineWidth = 1.5;
+        c2d.beginPath(); c2d.moveTo(MISSILE_R + 4, 0); c2d.lineTo(-MISSILE_R * 0.7, -MISSILE_R * 0.62); c2d.lineTo(-MISSILE_R * 0.35, 0); c2d.lineTo(-MISSILE_R * 0.7, MISSILE_R * 0.62); c2d.closePath(); c2d.fill(); c2d.stroke();
+        if (!reducedMotion) { c2d.globalAlpha = 0.6 + 0.4 * Math.sin(now() / 40); c2d.fillStyle = COL.gold; c2d.beginPath(); c2d.arc(-MISSILE_R * 0.8, 0, 3, 0, TAU); c2d.fill(); }
+        c2d.restore();
+      }
+      c2d.shadowBlur = 0; c2d.globalAlpha = 1;
+    }
     function updateBossLaser(dt) {
       if (boss.laserState === "none") {
         boss.laserCD -= dt;
-        if (boss.laserCD <= 0) { var lp = randomLiveWp(); boss.laserState = "charge"; boss.laserT = 0; boss.laserX = lp.x; boss.laserY = lp.y; sfx("lasercharge"); }
+        if (boss.laserCD <= 0) {
+          var lp = randomLiveWp(); boss.laserState = "charge"; boss.laserT = 0; boss.laserX = lp.x; boss.laserY = lp.y;
+          // (v0.97.0, A10, Jason) two beam types: the classic single beam to sidestep, or the
+          // WALL — the whole channel gets blasted except one safe column you must reach.
+          boss.laserMode = runRng.next() < 0.6 ? "beam" : "wall";
+          if (boss.laserMode === "wall") { var BAw = bossArena(); boss.gapX = BAw.x + BAw.w * (0.18 + runRng.next() * 0.64); }
+          sfx("lasercharge");
+        }
       } else if (boss.laserState === "charge") {
         boss.laserT += dt;
-        if (boss.laserT >= LASER_CHARGE) { boss.laserState = "fire"; boss.laserT = 0; shakeAmt = 16; sfx("laserfire"); }
-      } else {                                        // firing: wide downward beam + sustained shake; a hit costs 75% shields + a louder boom
+        if (boss.laserT >= LASER_CHARGE * (boss.laserMode === "wall" ? 1.5 : 1)) { boss.laserState = "fire"; boss.laserT = 0; shakeAmt = 16; sfx("laserfire"); }
+      } else {                                        // firing: sustained shake; a hit costs 75% shields + a louder boom
         boss.laserT += dt;
         if (shakeAmt < 9) shakeAmt = 9;
-        if (Math.abs(ship.x - boss.laserX) < LASER_HALF && ship.y > boss.laserY && invuln <= 0) { damage(maxShields * 0.75); sfx("laserhit"); shakeAmt = 20; }
+        var lHit = boss.laserMode === "wall"
+          ? Math.abs(ship.x - boss.gapX) >= GAP_HALF                      // wall: safe ONLY in the gap
+          : (Math.abs(ship.x - boss.laserX) < LASER_HALF && ship.y > boss.laserY);
+        if (lHit && invuln <= 0) { damage(maxShields * 0.75); sfx("laserhit"); shakeAmt = 20; }
         if (boss.laserT >= LASER_FIRE) { boss.laserState = "none"; boss.laserCD = rnd(4, 7); }
       }
     }
@@ -2252,6 +2309,25 @@
     }
     function drawBossLaser() {
       if (!c2d || !boss || boss.dying) return;
+      if (boss.laserState === "charge" && boss.laserMode === "wall") {   // (A10) inverse telegraph: everything burns EXCEPT the safe column
+        var kw = boss.laserT / (LASER_CHARGE * 1.5), BAd = bossArena();
+        c2d.save();
+        c2d.globalAlpha = 0.06 + 0.16 * kw; c2d.fillStyle = COL.peach;
+        c2d.fillRect(BAd.x, 0, Math.max(0, boss.gapX - GAP_HALF - BAd.x), H);
+        c2d.fillRect(boss.gapX + GAP_HALF, 0, Math.max(0, BAd.x + BAd.w - (boss.gapX + GAP_HALF)), H);
+        c2d.globalAlpha = 0.25 + 0.45 * kw; c2d.strokeStyle = COL.mantis; c2d.lineWidth = 2;
+        c2d.strokeRect(boss.gapX - GAP_HALF, 0, GAP_HALF * 2, H);        // the safe lane, outlined in green
+        c2d.restore(); return;
+      }
+      if (boss.laserState === "fire" && boss.laserMode === "wall") {
+        var BAf = bossArena();
+        c2d.save(); c2d.shadowBlur = 26; c2d.shadowColor = COL.peach; c2d.globalAlpha = 0.85; c2d.fillStyle = COL.peach;
+        c2d.fillRect(BAf.x, 0, Math.max(0, boss.gapX - GAP_HALF - BAf.x), H);
+        c2d.fillRect(boss.gapX + GAP_HALF, 0, Math.max(0, BAf.x + BAf.w - (boss.gapX + GAP_HALF)), H);
+        c2d.globalAlpha = 1; c2d.fillStyle = "#fff";
+        c2d.fillRect(BAf.x, 0, Math.max(0, boss.gapX - GAP_HALF - BAf.x) * 0.0 + 0, 0);   // core kept simple: peach wall only
+        c2d.restore(); return;
+      }
       if (boss.laserState === "charge") {             // buildup: a widening warning beam + a growing orb at the muzzle
         var k = boss.laserT / LASER_CHARGE;
         c2d.save();
@@ -2451,7 +2527,7 @@
       for (i = 0; i < enemies.length; i++) drawEnemy(enemies[i]);
       if (bossActive && boss) {
         drawBossAt(boss.x, boss.y, boss.dying ? (1 + boss.deathT * 0.35) : 1);
-        drawBossLaser();
+        drawBossLaser(); drawMissiles();
         if (!boss.dying) drawWeakpoints();
       }
       drawParticles();
@@ -2702,6 +2778,9 @@
         bossEnabled: function () { return bossActive; },
         bossInfo: function () { var dead = 0; if (boss && boss.wps) for (var i = 0; i < boss.wps.length; i++) if (boss.wps[i].dead) dead++; return { active: !!(boss && boss.active), wpHp: boss ? boss.wpHp : 0, wpMax: boss ? boss.wpMax : 0, queue: bossQueue.length, dying: !!(boss && boss.dying), cores: cores.length, wpDead: dead, wpActive: boss ? boss.wpActive : 0, wpCount: boss && boss.wps ? boss.wps.length : 0 }; },
         hitWeakpoint: function (n) { var k = 0; while (k++ < (n || 1)) { if (!boss || !boss.active || boss.dying) break; if (--boss.wpHp <= 0) shedCore(); } },
+        spawnMissileAt: function (x, y) { var mm = null; for (var i = 0; i < missiles.length; i++) { if (!missiles[i].active) { mm = missiles[i]; break; } } if (mm) { mm.active = true; mm.x = x; mm.y = y; mm.ang = 0; mm.vx = MISSILE_SPEED; mm.vy = 0; mm.life = 9; } },
+        missileInfo: function () { var n = 0, d = -1; for (var i = 0; i < missiles.length; i++) { if (missiles[i].active) { n++; d = Math.sqrt((missiles[i].x - ship.x) * (missiles[i].x - ship.x) + (missiles[i].y - ship.y) * (missiles[i].y - ship.y)); } } return { active: n, distToShip: d }; },
+        shootAtMissile: function () { for (var i = 0; i < missiles.length; i++) { if (missiles[i].active) { spawnBullet(missiles[i].x - 30, missiles[i].y, 300, 0, 1.0); return true; } } return false; },
         setupBossSector: function () { sector = 3; usedIds = []; held = []; sectorLost = []; runRng = RNG.fork("arm-boss-test"); ship.x = ENTRY_X; ship.y = ENTRY_Y; ship.vx = ship.vy = 0; drawCoreQuestions(); buildSectorWorld(); setState("SECTOR"); return { enabled: bossActive, queue: bossQueue.length, cores: cores.length }; },
         solvePuzzle: function () { var d = pendingPuzzleDone; if (d) { pendingPuzzleDone = null; d(); return true; } return false; },
         openPuzzleAt: function (idx, type) { var c = cores[idx]; if (c) { if (type) c.puzType = type; else c.puzType = c.puzType || c.ch.type; openPuzzle(c); return puzzleCore && (puzzleCore.puzType || puzzleCore.ch.type); } return null; },

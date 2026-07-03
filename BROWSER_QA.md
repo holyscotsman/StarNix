@@ -229,6 +229,11 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-A13 — Dreadnought arsenal (added v0.97.0).** Boss fight: peach diamond missiles arc toward
+  you — shootable, dodgeable, chunky but slower than shots. Two laser patterns: the familiar single
+  beam, and a WALL blast where everything burns except one green-outlined column — get inside it
+  before the charge (longer telegraph) completes. Say if the wall frequency (40%) feels wrong.
+
 - **QA-A12 — Economy + cadence (added v0.96.0).** Sector 3 is now the first Dreadnought (two
   regulars before every boss). Hangar: 8 pips per upgrade, each tier subtler; after a full-clear
   sector you should afford ONE upgrade (occasionally two). Say if the squeeze feels wrong — knobs
