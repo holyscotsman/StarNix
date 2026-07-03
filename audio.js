@@ -1395,6 +1395,7 @@
     getMusicGenre: getMusicGenre,
     nextTrack: nextTrack,           // (v0.70.0, J5) rotate now — the 2-min timer's tick, exposed as a seam
     isReady: isReady,
+    trackIds: function () { return Object.keys(TRACKS); },  // (v0.79.0, JB1) full library listing for the Jukebox
     state: state,
     analyser: function () { return analyser; }, // read-only diagnostics tap (null before ensure)
     context: function () { return AC; },          // read-only AudioContext handle

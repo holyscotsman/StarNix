@@ -99,8 +99,9 @@ async function runFrames(n = 6) {
   SN.core.audio = {
     ensure() {}, setMusic(on) { calls.push("music:" + on); }, setSfx() {},
     sfx(n) { calls.push("sfx:" + n); },
-    playTrack(id) { calls.push("track:" + id); },
-    isReady() { return true; }, state() { return {}; }
+    playTrack(id, opts) { calls.push("track:" + id); this._last = { id: id, exact: !!(opts && opts.exact) }; },
+    isReady() { return true; }, state() { return { trackId: this._last ? this._last.id : null }; },
+    trackIds() { return realAudio.trackIds ? realAudio.trackIds() : []; }   // JB1: delegate to the real library
   };
 
   console.log("\nB2. Cold-open cinematic (P2 — all beats render, exits to menu)");
@@ -863,6 +864,25 @@ async function runFrames(n = 6) {
   ok("_applyContrast applies high contrast from a saved profile", w.document.documentElement.getAttribute("data-contrast") === "high");
   SN.core.profile.settings.colorblind = false; shell._applyContrast();
   ok("_applyContrast clears high contrast when unset", !w.document.documentElement.getAttribute("data-contrast"));
+  // JB1 (v0.79.0) — Dev Jukebox: one button per library track, exact playback, stop control
+  console.log("\nJB1. Dev Jukebox");
+  const jbIds = SN.core.audio.trackIds ? SN.core.audio.trackIds() : [];
+  ok("audio.trackIds() lists the full library (>= 43 tracks, got " + jbIds.length + ")", jbIds.length >= 43);
+  const jbBtns = w.document.querySelectorAll(".sx-jukebox .sx-jb-btn");
+  ok("Jukebox renders one button per track (" + jbBtns.length + ")", jbBtns.length > 0 && jbBtns.length === jbIds.length);
+  const jbTarget = [...jbBtns].find(n => n.textContent === "kbb_ch_3");
+  ok("rotation-only variants are individually reachable (kbb_ch_3 button exists)", !!jbTarget);
+  if (jbTarget) {
+    jbTarget.click();
+    ok("clicking a Jukebox button plays EXACTLY that track (exact:true, no playlist resolution)",
+      SN.core.audio.state().trackId === "kbb_ch_3" && SN.core.audio._last.exact === true);
+    ok("the playing button is highlighted + now-line updates", jbTarget.classList.contains("on")
+      && /kbb_ch_3/.test(w.document.querySelector(".sx-jb-now").textContent || ""));
+    const jbStop = [...w.document.querySelectorAll(".sx-jukebox .sx-btn")].find(n => /stop/i.test(n.textContent || ""));
+    jbStop.click();
+    ok("Stop returns to the menu bed", /^menu/.test(SN.core.audio.state().trackId || ""));
+  } else { ok("jukebox click probe (unreached)", false); ok("jukebox highlight probe (unreached)", false); ok("jukebox stop probe (unreached)", false); }
+
   let slideThrew = false;
   try { ranges[1].value = "50"; ranges[1].dispatchEvent(new w.Event("input", { bubbles: true })); } catch (e) { slideThrew = true; }
   ok("adjusting a volume slider does not throw", !slideThrew);

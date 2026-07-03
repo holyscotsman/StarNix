@@ -6,6 +6,10 @@ Sections per entry: **Added · Changed · Fixed · Removed**. Each line: `<what>
 
 ---
 
+## [0.79.0] - 2026-07-03
+
+- **Dev Jukebox (Jason batch #3, JB1).** Settings gains a "Dev · Jukebox" section: one button per library track (43 — the 40-track playlist library plus the fixed cinematic/exam/boss beds), grouped Fixed beds / Menu / ARM / KBB / CC, playing via `playTrack(id, {exact:true})` so rotation-only variants are individually auditionable; gold highlight + ♪ now-line track the active pick, and a Stop button returns to the menu bed (leaving Settings also self-cleans since showMenu replays it). New additive audio seam: `audio.trackIds()`. Pins: audio-smoke +11 (library enumeration incl. sentinels), verify-build 429 (+6: button-per-track, exact-flag playback through the stub, highlight/now-line, stop; audio stub extended with stateful `_last` + trackIds delegation). Negative control: seam removed + exact dropped → audio-smoke crashes loudly, verify-build fails exactly the JB1 pins → restored; the one vacuously-passing pin (0===0) hardened to require >0. Playwright shot 74.
+
 ## [0.78.0] - 2026-07-03
 
 - **KBB layout rework (Jason batch #3, JB2).** The left panel now renders 5 always-visible artifact SLOTS (Slot N — empty as dashed invites; a purchase fills its slot with the full card: category color bar, name, rarity badge, description) — the dead space under the old tiny tile row is gone. The shop panel is restructured so **Reroll and Next battle never scroll away**: `.kbb-main.is-shop` is a flex column with the Resupply header pinned top, a `.kbb-shop-scroll` region for wares, and a `.kbb-shop-actions` row pinned bottom (border-top separator); mobile falls back to natural document flow. Pins: kbb-run 31 (+3: 5-empty-slots at mount, pinned action row is a direct child outside the scroll, Reroll+Next live in it). Negative control: slots reverted to filled-only + actions re-nested in the scroll → exactly the 3 new pins failed → restored. Playwright verified (shots 72–73): actions row bottom 774 < panel bottom 788 at 1280×800.

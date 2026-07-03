@@ -274,5 +274,14 @@ ok("setMusic / setSfx / setMasterVolume clean", !te); if (te) errs.push(te);
 ok("state() reports an active track", !!A.state().trackId);
 
 if (errs.length) console.log("\nERRORS:\n" + errs.map((e) => (e && e.stack) || String(e)).join("\n\n"));
+
+// JB1 (v0.79.0): the Jukebox seam — the full library is enumerable and every id is playable-exact
+{
+  const ids = A.trackIds();
+  ok("trackIds() lists the full library (got " + ids.length + ")", ids.length >= 43);
+  for (const must of ["cinematic", "exam", "boss", "menu", "arm", "kbb", "cc", "kbb_ch_3", "cc_up_5", "arm_ch_1"])
+    ok("library includes '" + must + "'", ids.includes(must));
+}
+
 console.log("\n" + (fails ? ("AUDIO SMOKE: " + fails + " FAIL") : "AUDIO SMOKE: ALL GREEN"));
 process.exit(fails ? 1 : 0);

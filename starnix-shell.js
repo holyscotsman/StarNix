@@ -946,6 +946,53 @@
     });
   };
 
+  /* (v0.79.0, JB1) Dev Jukebox: audition any track in the library, one click each.
+   * playTrack(id, {exact:true}) bypasses playlist resolution so EVERY id is reachable,
+   * including rotation-only variants. Leaving Settings self-cleans: showMenu replays
+   * the menu bed. Grouped fixed-beds-first, then per-context playlists. */
+  Shell.prototype._buildJukebox = function (host) {
+    var self = this, audio = StarNix.core.audio;
+    var ids = (audio.trackIds ? audio.trackIds() : []).slice();
+    if (!ids.length) { host.appendChild(el("div", "sx-note", "No tracks in this build.")); return; }
+    var groups = [
+      { label: "Fixed beds", test: function (id) { return !/^(menu|arm|kbb|cc)(_|$)/.test(id); } },
+      { label: "Menu", test: function (id) { return /^menu(_|$)/.test(id); } },
+      { label: "ARM", test: function (id) { return /^arm(_|$)/.test(id); } },
+      { label: "KBB", test: function (id) { return /^kbb(_|$)/.test(id); } },
+      { label: "CC", test: function (id) { return /^cc(_|$)/.test(id); } }
+    ];
+    var now = el("div", "sx-jb-now", "\u266a not auditioning \u2014 pick a track");
+    host.appendChild(now);
+    var allBtns = [];
+    function play(id, btn) {
+      try { audio.ensure(); audio.playTrack(id, { exact: true }); } catch (e) {}
+      for (var i = 0; i < allBtns.length; i++) allBtns[i].classList.remove("on");
+      btn.classList.add("on");
+      now.textContent = "\u266a " + id;
+    }
+    for (var g = 0; g < groups.length; g++) {
+      var members = ids.filter(groups[g].test); members.sort();
+      if (!members.length) continue;
+      host.appendChild(el("div", "sx-jb-group", groups[g].label));
+      var grid = el("div", "sx-jb-grid");
+      for (var i = 0; i < members.length; i++) {
+        (function (id) {
+          var b = el("button", "sx-jb-btn", id);
+          self._on(b, "click", function () { play(id, b); });
+          allBtns.push(b); grid.appendChild(b);
+        })(members[i]);
+      }
+      host.appendChild(grid);
+    }
+    var stop = el("button", "sx-btn sx-btn-ghost", "\u25a0 Stop \u2014 back to menu bed");
+    this._on(stop, "click", function () {
+      try { audio.playTrack("menu"); } catch (e) {}
+      for (var i = 0; i < allBtns.length; i++) allBtns[i].classList.remove("on");
+      now.textContent = "\u266a not auditioning \u2014 pick a track";
+    });
+    host.appendChild(stop);
+  };
+
   Shell.prototype.showSettings = function () {
     this._clearScreen();
     this.screen = "settings";
@@ -959,6 +1006,7 @@
       + '<div class="sx-seclabel">Display &amp; input</div><div class="sx-toggles"></div>'
       + '<div class="sx-seclabel">Ship trail</div><div class="sx-trails"></div>'
       + '<div class="sx-seclabel">Data</div><div class="sx-data"></div>'
+      + '<div class="sx-seclabel">Dev \u00b7 Jukebox</div><div class="sx-jukebox"></div>'
       + '<div class="sx-row"></div></div>';
     var sliderBox = s.querySelector(".sx-sliders");
     var box = s.querySelector(".sx-toggles");
@@ -967,6 +1015,7 @@
     this._buildVolumeSliders(sliderBox);
     this._buildToggles(box);
     this._buildTrailPicker(s.querySelector(".sx-trails"));
+    this._buildJukebox(s.querySelector(".sx-jukebox"));   // (v0.79.0, JB1)
 
     // ---- reset progress (two-tap confirm; persists a fresh profile, then reloads) ----
     var resetBtn = el("button", "sx-btn sx-btn-danger", "Reset all progress");
@@ -1283,6 +1332,12 @@
       ".sx-stat.due .sx-stat-val{color:var(--aqua);}",
       ".sx-toggles{display:flex;flex-direction:column;gap:4px;margin:10px 0;}",
       ".sx-seclabel{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--aqua);margin:16px 0 4px;}",
+      ".sx-jb-now{font-size:12px;color:var(--gold);margin:4px 0 6px;font-weight:700;}",
+      ".sx-jb-group{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim,#8b8ba0);margin:10px 0 4px;}",
+      ".sx-jb-grid{display:flex;flex-wrap:wrap;gap:6px;}",
+      ".sx-jb-btn{font-family:inherit;font-size:11px;font-weight:600;padding:6px 10px;border-radius:8px;border:1px solid rgba(120,85,250,.4);background:rgba(28,28,40,.65);color:var(--ink,#EDEDF7);cursor:pointer;}",
+      ".sx-jb-btn:hover{border-color:var(--aqua);}",
+      ".sx-jb-btn.on{border-color:var(--gold);color:var(--gold);box-shadow:0 0 10px rgba(255,200,87,.35);}",
       ".sx-sliders{display:flex;flex-direction:column;gap:6px;margin:4px 0;}",
       ".sx-slider{display:grid;grid-template-columns:1fr auto;align-items:center;gap:6px 10px;padding:8px 4px;}",
       ".sx-slider-label{font-size:14px;color:var(--text);}",

@@ -101,7 +101,14 @@
 > **v0.6.21:** title screen uses the no-station nebula (`kbbBg`→`nebulaBg`); menu keeps the station vista. KBB shows `nebulaBg` + `bcmShip`. 200/200; art negative-controlled.
 > </details>
 
-## v0.78.0 — KBB layout (JB2 done; JB1 Jukebox + JB3 battle FX remain)
+## v0.79.0 — Dev Jukebox (JB1 done; JB3 KBB battle FX remains)
+
+Settings gains Dev · Jukebox: 43 exact-play track buttons in 5 groups, now-line + gold
+active highlight, Stop→menu bed; new audio.trackIds() seam. verify-build 429, audio-smoke
++11, control clean, Playwright shot 74. NEXT: JB3 — KBB battle cinematics (procedural FX
+for win/shield/heal/impact; sprites arrive later).
+
+> **Earlier this session (v0.78.0):** KBB 5-slot left panel + pinned shop actions
 
 Left panel = 5 always-visible artifact slot cards (empty dashed → filled card on buy); shop
 actions (Reroll/Next battle) pinned outside the scroll. kbb-run 31, control clean, Playwright
