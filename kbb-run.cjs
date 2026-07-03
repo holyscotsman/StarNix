@@ -200,16 +200,18 @@ function newWindow() {
   function q(sel) { return doc.querySelector(sel); }
   function clickText(sel, t) { var e = Array.prototype.slice.call(doc.querySelectorAll(sel)); for (var i = 0; i < e.length; i++) { if ((e[i].textContent || '').toLowerCase().indexOf(t) >= 0) { e[i].click(); return true; } } return false; }
 
-  // how-to-play (Skip) -> cinematic (Skip \u25B6, NOT the '\u21BB intro' replay button) -> pre-run shop
-  clickText('.kbb-ht-skip', 'skip') || clickText('.kbb-btn', 'next');
-  V.step(3);
+  // (v0.68.0, J6) NEW flow: cinematic FIRST -> live easy battle -> how-to tour over POPULATED
+  // panels (the old order spotlighted empty zones = Jason's "blank boxes"); no pre-run shop.
+  ok(KBB._test.state().run.phase === 'battle', 'mount opens straight into the first battle (no pre-run shop \u2014 J6)');
   var cineSkip = Array.prototype.slice.call(doc.querySelectorAll('.kbb-skip')).find(function (b) { return /skip/i.test(b.textContent || ''); });
   if (cineSkip) { cineSkip.click(); V.step(2); }
   var cineGone = !Array.prototype.slice.call(doc.querySelectorAll('.kbb-skip')).some(function (b) { return /skip/i.test(b.textContent || ''); });
   ok(cineGone, 'intro cinematic ends via Skip (replay button may remain)');
-  clickText('.kbb-btn', 'start run');
-  V.step(3);
-  ok(doc.querySelectorAll('.kbb-opt').length > 0, 'Start run reaches a battle question');
+  ok(!!q('.kbb-howto') && doc.querySelectorAll('.kbb-opt').length > 0,
+     'how-to tour opens OVER the live battle (spotlighted zones are populated \u2014 the blank-box fix)');
+  clickText('.kbb-ht-skip', 'skip');
+  V.step(2);
+  ok(!q('.kbb-howto') && doc.querySelectorAll('.kbb-opt').length > 0, 'skipping the tour leaves the live first battle ready');
   ok(doc.querySelectorAll('.kbb-action').length === 3 && !!q('.kbb-act-hint'), 'action row + hint render');
   ok(ctx._rec.tracks.some(function (t) { return t.id === 'kbb'; }), "mount plays the 'kbb' bed");
 
@@ -227,7 +229,10 @@ function newWindow() {
   }
   // answer across battles until the enemy's counter fires the strike telegraph
   var struck = false, answered = 0;
-  for (var round = 0; round < 10 && !struck; round++) {
+  // (v0.68.0) J6's no-preshop opening shifted the run RNG stream — a first-turn wrong answer
+  // can fire the strike immediately, so keep answering until BOTH goals are met (they're
+  // independent properties: >=2 answered turns AND the telegraph observed).
+  for (var round = 0; round < 10 && (!struck || answered < 2); round++) {
     if (!toQuestion()) break;
     q('.kbb-opt:not(:disabled)').click();
     var sub = q('.kbb-submit'); if (sub && !sub.disabled) sub.click();

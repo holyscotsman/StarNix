@@ -604,32 +604,27 @@ async function runFrames(n = 6) {
   ok("KBB mounted its UI (.kbb-root)", !!w.document.querySelector(".kbb-root"));
   ok("KBB rendered a scene canvas (.kbb-canvas)", !!w.document.querySelector(".kbb-canvas"));
   // (Session 2 rebuild: the combat zone is a code-generated looping Kuiper-Belt + sprite-billboard ships in the RED grid cell, not a full-bleed CSS nebula on .kbb-root. Art usage is covered by the KBB module harness.)
-  // 1) How to play shows first, before the cinematic
-  ok("KBB shows How to play first (.kbb-howto)", !!w.document.querySelector(".kbb-howto"));
-  ok("KBB cinematic not started yet (no Skip button)", !Array.from(w.document.querySelectorAll(".kbb-skip")).some(b => /skip/i.test(b.textContent || "")));
-  // how-to is now a multi-step screen walkthrough: an intro card, then a spotlight + callout per zone
-  { const nextBtn = w.document.querySelector(".kbb-howto .kbb-ht-next"); ok("How to play opens on the intro step (Next button)", !!nextBtn && /next/i.test(nextBtn.textContent || "")); if (nextBtn) nextBtn.dispatchEvent(new w.Event("click", { bubbles: true })); }
-  ok("Next advances the walkthrough to a zone callout (.kbb-ht-call)", !!w.document.querySelector(".kbb-howto .kbb-ht-call"));
-  ok("the walkthrough spotlights a real screen zone (.kbb-ht-spot)", !!w.document.querySelector(".kbb-ht-spot"));
-  { const skip = w.document.querySelector(".kbb-howto .kbb-ht-skip"); ok("the walkthrough offers Skip", !!skip); if (skip) skip.dispatchEvent(new w.Event("click", { bubbles: true })); }
-  await wait(10);
-  // 2) Cinematic plays after the walkthrough
-  ok("KBB cinematic plays after How to play (.kbb-skip present)", !!w.document.querySelector(".kbb-skip"));
-  ok("How to play cleared (.kbb-howto gone)", !w.document.querySelector(".kbb-howto"));
-  ok("Skip clears the zone spotlight too", !w.document.querySelector(".kbb-ht-spot"));
+  // (v0.68.0, J6) NEW opening: cinematic FIRST -> live easy battle -> how-to tour over
+  // POPULATED zones (the old how-to-first order spotlighted empty panels = "blank boxes").
+  ok("J6: KBB opens on the cinematic (Skip present), NOT the how-to", !!w.document.querySelector(".kbb-skip") && !w.document.querySelector(".kbb-howto"));
   { const e = await runFrames(3); ok("KBB intro loop runs without error", e.length === 0); }
   const kbbSkip = Array.from(w.document.querySelectorAll(".kbb-skip")).find(b => /skip/i.test(b.textContent || ""));
   if (kbbSkip) kbbSkip.dispatchEvent(new w.Event("click", { bubbles: true }));
   await wait(10);
-  // 3) Pre-run loadout shop (no battle yet)
   ok("intro cleared after skip (Skip button gone)", !Array.from(w.document.querySelectorAll(".kbb-skip")).some(b => /skip/i.test(b.textContent || "")));
-  const startBtn = Array.from(w.document.querySelectorAll(".kbb-btn")).find(b => /start run/i.test(b.textContent || ""));
-  ok("KBB opens the pre-run shop with a Start run button (#24)", !!startBtn);
-  ok("no battle options shown in the pre-run shop", w.document.querySelectorAll(".kbb-opt").length === 0);
-  // 4) Start -> first battle is round 1 (must NOT skip a round)
-  if (startBtn) startBtn.dispatchEvent(new w.Event("click", { bubbles: true }));
+  ok("J6: no pre-run shop — the first battle is LIVE under the tour",
+    w.document.querySelectorAll(".kbb-opt").length > 0 && !Array.from(w.document.querySelectorAll(".kbb-btn")).some(b => /start run/i.test(b.textContent || "")));
+  ok("J6: the how-to tour rides on top of the populated battle", !!w.document.querySelector(".kbb-howto"));
+  { const nextBtn = w.document.querySelector(".kbb-howto .kbb-ht-next"); ok("How to play opens on the intro step (Next button)", !!nextBtn && /next/i.test(nextBtn.textContent || "")); if (nextBtn) nextBtn.dispatchEvent(new w.Event("click", { bubbles: true })); }
+  ok("Next advances the walkthrough to a zone callout (.kbb-ht-call)", !!w.document.querySelector(".kbb-howto .kbb-ht-call"));
+  { const spot = w.document.querySelector(".kbb-ht-spot");
+    ok("the walkthrough spotlights a real screen zone (.kbb-ht-spot)", !!spot);
+    ok("J6 blank-box fix: the spotlighted zone has CONTENT", !!spot && spot.textContent.trim().length > 0); }
+  { const skip = w.document.querySelector(".kbb-howto .kbb-ht-skip"); ok("the walkthrough offers Skip", !!skip); if (skip) skip.dispatchEvent(new w.Event("click", { bubbles: true })); }
   await wait(10);
-  ok("Start run begins the dungeon -> answer options (.kbb-opt)", w.document.querySelectorAll(".kbb-opt").length > 0);
+  ok("How to play cleared (.kbb-howto gone)", !w.document.querySelector(".kbb-howto"));
+  ok("Skip clears the zone spotlight too", !w.document.querySelector(".kbb-ht-spot"));
+  ok("the live first battle offers answer options (.kbb-opt)", w.document.querySelectorAll(".kbb-opt").length > 0);
   ok("battle question sits in the question cell (.kbb-main, YELLOW zone)", !!w.document.querySelector(".kbb-main") && w.document.querySelectorAll(".kbb-opt").length > 0);
   ok("player health rings present (green HP + blue shield)", !!w.document.querySelector(".kbb-ring-pl .arc.hp") && !!w.document.querySelector(".kbb-ring-pl .arc.shield"));
   ok("enemy health ring present", !!w.document.querySelector(".kbb-ring-en .arc.ehp"));
@@ -647,12 +642,10 @@ async function runFrames(n = 6) {
   calls.length = 0;
   shell.enterGame("KBB");
   await wait(10);
-  // advance through the #24 opening: how-to -> cinematic -> pre-run shop -> start
-  { const sk0 = w.document.querySelector(".kbb-howto .kbb-ht-skip"); if (sk0) sk0.dispatchEvent(new w.Event("click", { bubbles: true })); }
-  await wait(10);
+  // (v0.68.0, J6) advance through the NEW opening: cinematic -> live battle + tour -> skip tour
   { const sk = Array.from(w.document.querySelectorAll(".kbb-skip")).find(b => /skip/i.test(b.textContent || "")); if (sk) sk.dispatchEvent(new w.Event("click", { bubbles: true })); }
   await wait(10);
-  { const sb = Array.from(w.document.querySelectorAll(".kbb-btn")).find(b => /start run/i.test(b.textContent || "")); if (sb) sb.dispatchEvent(new w.Event("click", { bubbles: true })); }
+  { const sk0 = w.document.querySelector(".kbb-howto .kbb-ht-skip"); if (sk0) sk0.dispatchEvent(new w.Event("click", { bubbles: true })); }
   await wait(10);
   const opts = w.document.querySelectorAll(".kbb-opt");
   ok("KBB has clickable options", opts.length > 0);
@@ -783,9 +776,14 @@ async function runFrames(n = 6) {
     const gbtns = Array.from(w.document.querySelectorAll(".sx-genre-btn"));
     ok("pause menu offers the Upbeat/Chill music-style toggle (v0.49.0)", !!w.document.querySelector(".sx-genre-row") && gbtns.length === 2);
     const chillBtn = gbtns.find(b => /chill/i.test(b.textContent || ""));
+    calls.length = 0;
     if (chillBtn) chillBtn.dispatchEvent(new w.Event("click", { bubbles: true }));
     const st49 = w.StarNix.core.profile.settings;
     ok("picking Chill persists settings.musicGenre", st49.musicGenre === "chill");
+    // (v0.68.0, J3) the swap itself must RESOLVE: the old code fed playTrack the UPPERCASE
+    // game id, which audio.js silently ignored — the whole toggle was audibly dead.
+    ok("J3 fix: picking Chill queues the lowercase context bed (no dead 'track:ARM' call)",
+      calls.indexOf("track:arm") !== -1 && calls.indexOf("track:ARM") === -1);
     ok("Chill button paints active (sx-btn-primary)", chillBtn && /sx-btn-primary/.test(chillBtn.className));
     const upBtn = gbtns.find(b => /upbeat/i.test(b.textContent || ""));
     if (upBtn) upBtn.dispatchEvent(new w.Event("click", { bubbles: true }));

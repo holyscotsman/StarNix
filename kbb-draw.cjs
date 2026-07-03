@@ -35,22 +35,22 @@ function nonBlank(cv) { if (!cv || !cv.width) return false; var g = cv.getContex
   var cv = canvasOf(KBB);
   ok(!!cv && cv.width > 0 && cv.height > 0, 'combat canvas has real pixel dimensions (' + (cv ? cv.width + 'x' + cv.height : 'none') + ')');
 
-  // intro cutscene now actually draws (c2d real -> drawIntro runs and advances)
-  q(doc, '.kbb-ht-skip').click();                 // (v0.50.0) how-to gained pages — use its Skip
+  // (v0.68.0, J6) cinematic FIRST at mount (no how-to gate, no pre-run shop)
   V.step(20, 60);                              // ~1.2s of intro frames
   ok(!V.step._err, 'intro cutscene frames do not throw');
   ok(nonBlank(cv), 'intro paints the canvas');
-  cineSkip(doc).click();                        // end intro -> pre-run shop (skip button, not the replay)
+  cineSkip(doc).click();                        // end intro -> LIVE first battle with the how-to tour over it
 
   V.step(10);
-  ok(!V.step._err, 'pre-run shop frames do not throw');
-  ok(nonBlank(cv), 'belt backdrop paints in shop');
+  ok(!V.step._err, 'live battle + how-to overlay frames do not throw');
+  ok(nonBlank(cv), 'belt backdrop paints under the how-to tour');
+  q(doc, '.kbb-ht-skip').click();               // (J6) the tour rides on top of the populated battle
+  V.step(4);
 
-  // enter battle
+  // battle is already live (straight-to-battle opening)
   var s = KBB._test.state(), sid = null;
   for (var i = 0; i < KBB.ARTIFACTS.length; i++) { if (KBB.isSellable(KBB.ARTIFACTS[i])) { sid = KBB.ARTIFACTS[i].id; break; } }
   KBB.equipArtifact(s.run, sid);
-  clickText(q(doc, '.kbb-main'), 'button', 'Start run');
   V.step(12);
   ok(!V.step._err, 'battle frames (heroes + enemy + belt) do not throw');
   ok(nonBlank(cv), 'battle scene paints');
@@ -75,9 +75,9 @@ function nonBlank(cv) { if (!cv || !cv.width) return false; var g = cv.getContex
   mod2.mount(V2.root, makeCtx(KBB2, { seed: 4, reducedMotion: false }));
   V2.step(2);
   var cv2 = canvasOf(KBB2);
-  q(doc2, '.kbb-ht-skip').click();
-  cineSkip(doc2).click();
-  clickText(q(doc2, '.kbb-main'), 'button', 'Start run');   // pre-run shop -> first battle
+  cineSkip(doc2).click();                       // (v0.68.0, J6) cinematic first...
+  V2.step(2);
+  q(doc2, '.kbb-ht-skip').click();              // ...then the tour over the live battle
   V2.step(6);
   var lost = false, guard = 0;
   while (guard++ < 16) {

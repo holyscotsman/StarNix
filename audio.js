@@ -1310,7 +1310,11 @@
   function setMusicGenre(g) { GENRE = (g === "chill") ? "chill" : "upbeat"; }
   function getMusicGenre() { return GENRE; }
   function resolveTrack(id) {
-    var pl = PLAYLISTS[id]; if (!pl) return id;                    // fixed ids (exam/cinematic/boss) pass through
+    // (v0.68.0, J3 defense) tolerate caller-case drift: context ids are lowercase by contract,
+    // but a stray "ARM" must resolve, not silently vanish at the TRACKS lookup downstream.
+    var pl = PLAYLISTS[id];
+    if (!pl && PLAYLISTS[String(id).toLowerCase()]) { id = String(id).toLowerCase(); pl = PLAYLISTS[id]; }
+    if (!pl) return id;                    // fixed ids (exam/cinematic/boss) pass through
     var list = pl[GENRE] || pl.upbeat, key = id + ":" + GENRE;
     var i = plIdx[key] || 0; plIdx[key] = (i + 1) % list.length;
     return TRACKS[list[i]] ? list[i] : id;                          // def missing -> fall back to the context def

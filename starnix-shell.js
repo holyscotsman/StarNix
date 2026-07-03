@@ -1077,7 +1077,10 @@
         st.musicGenre = g; paintGenre();
         try { if (core.persistence && core.persistence.save) core.persistence.save(core.profile); } catch (e) {}
         try { if (core.audio.setMusicGenre) core.audio.setMusicGenre(g); } catch (e) {}
-        try { if (self.lastGameId) core.audio.playTrack(self.lastGameId); } catch (e) {}
+        // (v0.68.0, J3 fix) lastGameId is UPPERCASE ("ARM") but track/playlist ids are lowercase —
+        // playTrack("ARM") hit `if (!def) return` and the whole genre toggle was a silent no-op.
+        // Resolve through GAME_META like enterGame does.
+        try { if (self.lastGameId) core.audio.playTrack((GAME_META[self.lastGameId] && GAME_META[self.lastGameId].track) || String(self.lastGameId).toLowerCase()); } catch (e) {}
       }
       this._on(gUp, "click", function () { pickGenre("upbeat"); });
       this._on(gCh, "click", function () { pickGenre("chill"); });

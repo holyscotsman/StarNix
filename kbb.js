@@ -988,7 +988,7 @@
       var reduced = false;
       try { reduced = (ctx && ctx.settings && ctx.settings.reducedMotion) || (doc.defaultView.matchMedia && doc.defaultView.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) {}
 
-      var run = createRun(ctx, { preRunShop: true });   // open in the loadout shop, not the first battle
+      var run = createRun(ctx, {});   // (v0.68.0, J6) straight into an EASY first battle — no pre-run shop; the first shop comes after battle 1
       var container = el(doc, 'div', 'kbb-root' + (reduced ? ' kbb-reduced' : ''));
       root.appendChild(container);
 
@@ -1060,8 +1060,12 @@
       loop(s);
       renderTop(s);
       // flow: How to Play -> cinematic -> pre-run shop (Start begins the dungeon run). 3D inits after the intro.
-      showHowTo(s, function () {
-        playIntro(s, function () { renderAll(s); maybeInit3D(s); });
+      // (v0.68.0, J6) cinematic FIRST, then the live battle renders, THEN the how-to tour —
+      // its zone spotlights used to land on EMPTY panels (Jason's "blank boxes") because the
+      // tour ran before anything existed. Now every spotlighted zone is populated.
+      playIntro(s, function () {
+        renderAll(s); maybeInit3D(s);
+        showHowTo(s, function () {});
       });
 
       if (ctx.audio && ctx.audio.playTrack) { try { ctx.audio.playTrack('kbb'); } catch (e) {} }
@@ -1780,7 +1784,7 @@
     }
     function restart(s) {
       s.ui.replaceOffer = -1; clearLost(s); hideTip(s);
-      s.run = createRun(s.ctx, { preRunShop: true });
+      s.run = createRun(s.ctx, {});   // (v0.68.0, J6) restarts skip the loadout shop too — consistent straight-to-battle opening
       renderAll(s);
     }
 

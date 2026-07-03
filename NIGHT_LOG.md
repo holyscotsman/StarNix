@@ -570,6 +570,36 @@ Commit: `v0.67.0 — Spec re-sync: 02_v1_4 + 01_v1_5`.
 
 ---
 
+## 🎮 JASON'S PLAYTEST FEEDBACK BATCH (2026-07-03, after v0.67.0) — the new queue
+
+Nine items, triaged: **BUGS** — (J3) Chill-music toggle does nothing in any game; (J6a) KBB
+how-to shows blank boxes; (J1b) ARM screen shake "went absolutely nuts" after the boss fight.
+**POLISH** — (J1a) ARM movement shake causes headaches (reduce/kill); (J2) end boss music the
+moment the boss is destroyed; (J4) CC duck animation looks bad (rework; sprite swap possible
+if needed — his call on art); (J7) Vega briefing display ≤150 words; (J8) all right/wrong
+explanations display ≤150 words (screenshot: a wall of text) — **display caps + expanders,
+NEVER edits to authored bank content (learning integrity)**. **FEATURES** — (J5) per-game
+music rotation: ~2 min per track, 5 upbeat + 5 chill per game, random-next on song end
+(the 40-track library exists; in-place rotation doesn't); (J6b) KBB flow: no first-round
+shop → straight into an EASY battle with the how-to shown there, cinematic kept; (J9) CC
+shop: collectible points during flight + pricey persistent ship upgrades.
+Order: bugs → polish → features, one gated unit each, same DoD as the night run.
+
+**J3 + J6 SHIPPED (v0.68.0):** Chill toggle was dead everywhere — `playTrack("ARM")` (uppercase
+game id) is silently ignored by audio.js; the v0.49 pins verified persistence but never that
+the swap call resolved (that blind spot now has its own pin). KBB blank boxes = the tour
+spotlighting panels that hadn't rendered yet; Jason's flow rework fixes it structurally:
+cinematic → easy first battle (no pre-run shop, restarts included) → tour over populated
+zones (live-Chromium-verified by the hunt agent). Balance seams untouched (kbb-balance
+passes its own preRunShop opts; targets re-green). Two negctrls, each biting exactly its
+pins. Gate 415/415. Commit: `v0.68.0 — J3 Chill-toggle fix + J6 KBB flow/blank-box fix`.
+**Hunt intel banked for J1 (next):** plain-flight motion = camera lead 0.35 swoop + ±2.6°
+counter-roll; the "nuts" shake = `shakeAmt` NEVER resets and its decay only runs while
+`bossActive` — frozen 11–18 px jitter leaks into HOME/next sectors/game-over/new runs; the
+jitter also ignores reducedMotion (01 §12 violation).
+
+---
+
 ## 🛑 STOP — end of the night run (after P2·5) — superseded by ▶️ RUN RESUMED above
 
 **Why stopped:** the remaining candidate pool no longer meets the rubric at acceptable risk:
