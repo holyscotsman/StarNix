@@ -101,7 +101,13 @@
 > **v0.6.21:** title screen uses the no-station nebula (`kbbBg`→`nebulaBg`); menu keeps the station vista. KBB shows `nebulaBg` + `bcmShip`. 200/200; art negative-controlled.
 > </details>
 
-## v0.84.0 — Batch #4 begins: exam sim honesty + extra time (B1+B2)
+## v0.85.0 — KBB reduced-motion info + phone stack (B3+B4)
+
+Reduced motion now keeps numbers/banner/strike cue (static, zero motion fx — pinned); phone
+stack reordered combat→questions→enemy→artifacts with sticky shop actions (390×844 verified).
+kbb-run 40. NEXT: B5 Pages privacy, then L1+L2, L3, L4+L5.
+
+> **Earlier this session (v0.84.0):** exam sim honesty + extra time
 
 Sim button no longer launches the whole 226-q bank (75 now); Standard tile 65→75 (real exam
 length); extra-time setting stretches Blitz windows + sim clock 1.6× (points fraction-based,

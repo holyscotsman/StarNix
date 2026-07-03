@@ -229,6 +229,12 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-K9 — Reduced-motion info + phone stack (added v0.85.0).** Reduced motion ON in KBB: damage/heal
+  numbers and the DESTROYED banner still appear (static, no slide/shake/beams). On a phone: the question
+  panel sits directly under the battle view (no scrolling past artifacts each turn), and in the shop
+  Reroll/Next battle stay pinned at the screen bottom while wares scroll. NOTE: tab order still follows
+  DOM order (artifacts before questions) — flag if that bothers keyboard play on desktop-narrow windows.
+
 - **QA-E8 — Sim length + extra time (added v0.84.0).** Progress → readiness "take a sim": it must
   launch 75 questions, not the whole bank. Exam setup: Standard says 75. Settings → Extra time ON:
   Blitz decay bars run visibly slower (1.6×) and the sim clock starts at 3:12:00-ish for 75 q... 

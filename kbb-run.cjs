@@ -332,4 +332,42 @@ function newWindow() {
   V.step(3);   // any stray RAF after unmount would throw into step's generation
 })();
 
+/* ============ REDUCED-MOTION INFO (v0.85.0, B3) ============ */
+(function reducedInfo() {
+  group('REDUCED MOTION: information survives, motion does not');
+  var V = newWindow(), doc = V.doc, KBB = V.KBB;
+  V.mod.mount(doc.body, H.makeCtx(KBB, { seed: SEED + 9, reducedMotion: true }));
+  V.step(3);
+  function q(sel) { return doc.querySelector(sel); }
+  var sk = Array.prototype.slice.call(doc.querySelectorAll('.kbb-skip')).find(function (b) { return /skip/i.test(b.textContent || ''); });
+  if (sk) { sk.click(); V.step(2); }
+  var hts = q('.kbb-ht-skip'); if (hts) { hts.click(); V.step(2); }
+  var st = KBB._test.state();
+  ok(st && st.reduced === true, 'mount honors ctx reducedMotion');
+  var run = st.run;
+  run.battle.enemy.hp = 1;
+  var qq = run.battle.question;
+  var ci = qq.multi ? qq.correctIndices : [qq.correctIndex];
+  for (var i = 0; i < ci.length; i++) { var o = doc.querySelector('.kbb-opt[data-idx="' + ci[i] + '"]'); if (o) o.click(); }
+  var sub = q('.kbb-submit'); if (sub && !sub.disabled) sub.click();
+  var types = (KBB._test.state().fx || []).map(function (f) { return f.type; });
+  var fx = KBB._test.state().fx || [];
+  ok(fx.some(function (f) { return f.type === 'dmg' && f.static; }), 'B3: damage number still shows (static) [' + types.join(',') + ']');
+  ok(fx.some(function (f) { return f.type === 'banner' && f.static; }), 'B3: DESTROYED banner still shows (static, centered)');
+  ok(!fx.some(function (f) { return /^(lunge|beam|quake|shock|charge|sparks)$/.test(f.type); }),
+     'B3: zero motion fx under reduced motion (no lunge/beam/quake/shock/charge/sparks)');
+  V.mod.unmount();
+})();
+
+/* ============ PHONE STACK (v0.85.0, B4) — source pins ============ */
+(function phoneStack() {
+  group('PHONE: question panel under combat, sticky shop actions');
+  var SRC = H.KBB_SRC;
+  ok(/\.kbb-main\{overflow:visible;order:2;\}/.test(SRC) && /\.kbb-combat\{height:250px;flex:none;order:1;\}/.test(SRC)
+     && /\.kbb-leftcol\{min-height:0;order:4;\}/.test(SRC),
+     'B4: <=820px stack order is combat(1) -> questions(2) -> enemy(3) -> artifacts(4)');
+  ok(/\.kbb-shop-actions\{position:sticky;bottom:0/.test(SRC),
+     'B4: shop actions are sticky-bottom on phones too');
+})();
+
 H.summary('KBB RUN');

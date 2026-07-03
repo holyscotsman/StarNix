@@ -963,7 +963,10 @@
     css.push('.kbb-ht-skip{background:transparent;border:none;color:' + P.dim + ';font-weight:700;font-size:12px;cursor:pointer;padding:6px 8px;font-family:inherit;}');
     css.push('.kbb-ht-skip:hover{color:' + P.text + ';}');
     // narrow fallback: laptop/landscape is the target; below this we stack to one column so nothing breaks
-    css.push('@media (max-width:820px){.kbb-root{display:flex;flex-direction:column;height:auto;min-height:100%;overflow:auto;}.kbb-top{align-self:center;}.kbb-combat{height:250px;flex:none;}.kbb-combat.is-cine{height:auto;}.kbb-leftcol{min-height:0;}.kbb-arts-card{flex:none;overflow:visible;}.kbb-enemy{align-self:stretch;}.kbb-main{overflow:visible;}.kbb-main.is-shop{display:block;overflow:visible;}.kbb-shop-scroll{overflow:visible;}}');
+    // (v0.85.0, B4) phone stack: the QUESTION panel sits directly under the combat view (no
+    // per-turn scrolling past artifacts/enemy), and shop actions stay sticky at the viewport
+    // bottom. CSS order diverges from DOM order here by design — flagged in BROWSER_QA.
+    css.push('@media (max-width:820px){.kbb-root{display:flex;flex-direction:column;height:auto;min-height:100%;overflow:auto;}.kbb-top{align-self:center;order:0;}.kbb-combat{height:250px;flex:none;order:1;}.kbb-combat.is-cine{height:auto;}.kbb-main{overflow:visible;order:2;}.kbb-enemy{align-self:stretch;order:3;}.kbb-leftcol{min-height:0;order:4;}.kbb-arts-card{flex:none;overflow:visible;}.kbb-main.is-shop{display:block;overflow:visible;}.kbb-shop-scroll{overflow:visible;}.kbb-shop-actions{position:sticky;bottom:0;background:rgba(20,20,29,.96);z-index:4;padding-bottom:8px;}}');
     st.textContent = css.join('');
     (doc.head || doc.documentElement).appendChild(st);
   }
@@ -1391,7 +1394,7 @@
           var W2 = (L && L.W) || s.canvas.clientWidth || 320;
           var bp = Math.min(1, p * 2.4), c1 = 1.70158, c3 = c1 + 1;
           var eb = 1 + c3 * Math.pow(bp - 1, 3) + c1 * Math.pow(bp - 1, 2);
-          var bx = W2 / 2 + (1 - eb) * W2 * 0.55;
+          var bx = f.static ? W2 / 2 : W2 / 2 + (1 - eb) * W2 * 0.55;   // (B3) static banner: no slide
           var balpha = p < 0.8 ? 1 : (1 - p) / 0.2;
           g.save(); g.globalAlpha = balpha * 0.35; g.strokeStyle = f.col || PALETTE.gold; g.lineWidth = 1;
           g.beginPath(); g.moveTo(bx - 90, cy - 34); g.lineTo(bx + 90, cy - 34); g.stroke();
@@ -1403,10 +1406,10 @@
           g.restore(); g.globalAlpha = 1;
         } else if (f.type === 'dmg' || f.type === 'heal') {
           var col = f.type === 'heal' ? PALETTE.mantis : (f.big ? PALETTE.gold : PALETTE.peach);
-          g.save(); g.globalAlpha = 1 - p; g.textAlign = 'center'; g.textBaseline = 'middle';
+          g.save(); g.globalAlpha = f.static ? (p < 0.7 ? 1 : (1 - p) / 0.3) : 1 - p; g.textAlign = 'center'; g.textBaseline = 'middle';
           g.shadowColor = 'rgba(0,0,0,.9)'; g.shadowBlur = 4; g.fillStyle = col;
           g.font = '900 ' + (f.big ? 26 : 19) + 'px Montserrat,Arial,sans-serif';
-          g.fillText((f.type === 'heal' ? '+' : '\u2212') + f.amount, cx, cy - 18 - p * 30);
+          g.fillText((f.type === 'heal' ? '+' : '\u2212') + f.amount, cx, cy - 18 - (f.static ? 0 : p * 30));
           g.shadowBlur = 0; g.restore(); g.globalAlpha = 1;
         } else if (f.type === 'shield') {
           blastRing(g, cx, cy, 16 + p * 24, PALETTE.aqua, (1 - p) * 0.8, 3);
@@ -2055,6 +2058,18 @@
             pushFx(s, { type: 'dome', side: 'player', dur: 520, delay: ed + 320 });
             pushFx(s, { type: 'quake', side: 'player', dur: 200, delay: ed + 320, amt: 0.2 });
           }
+        }
+      } else {
+        // (v0.85.0, B3) reduced motion suppresses MOTION, not information: the numbers, the
+        // kill banner, and the strike telegraph still tell the story — statically, no shake.
+        var enR = s.run.battle && s.run.battle.enemy;
+        if (res.correct && res.damage > 0) pushFx(s, { type: 'dmg', side: 'enemy', amount: res.damage, dur: 900, big: res.win, static: true });
+        if (res.correct && res.action === 'repair' && res.healed > 0) pushFx(s, { type: 'heal', side: 'player', amount: res.healed, dur: 900, static: true });
+        if (res.win) pushFx(s, { type: 'banner', side: 'enemy', dur: 1400, text: enR && enR.boss ? 'BOSS DESTROYED' : 'TARGET DESTROYED', col: PALETTE.gold, static: true });
+        if (res.enemyAttacked) {
+          if (s.enemyPanel && s.enemyPanel.classList) { s.enemyPanel.classList.remove('kbb-en-strike'); s.enemyPanel.classList.add('kbb-en-strike'); }
+          var toHpR = (res.toHp == null ? res.incoming : res.toHp);
+          if (toHpR > 0) pushFx(s, { type: 'dmg', side: 'player', amount: toHpR, dur: 900, static: true });
         }
       }
       var correctSet = multi ? q.correctIndices : [q.correctIndex];
