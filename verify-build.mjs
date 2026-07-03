@@ -1217,6 +1217,9 @@ async function runFrames(n = 6) {
       && X.forExam({ total: 30, pct: 79 }) === 25 && X.forExam({ total: 30, pct: 80 }) === 100);
 
     // live wiring 1: every mastery.record feeds the pool (promotion detected from the real bucket move)
+    // (v0.53.0) sentinel: mark every achievement unlocked so the K4 XP-delta pins stay exact —
+    // K5 owns achievement behavior and resets this.
+    SN.achievements.LIST.forEach(d => { core.profile.achievements[d.id] = 1; });
     core.profile.xp = 0; core.profile.rankSeen = 0;
     const qX = core.questions.pool()[2];
     const mPrev = core.mastery.get(qX.id), prevB = mPrev ? mPrev.bucket : 0;
@@ -1284,6 +1287,114 @@ async function runFrames(n = 6) {
     delete core.profile.bests.ARM;
     delete core.profile.mastery[qX.id];
     shell.showMenu();
+  }
+
+  // K5. Achievements — cross-game unlocks (v0.53.0 unit 3)
+  console.log("\nK5. Achievements (predicates / streaks / one-shot unlocks / Progress panel)");
+  {
+    const core = SN.core, A = SN.achievements, X = SN.xp;
+    ok("achievements API exposed: 12 defs with id/name/desc/icon/xp/check", !!A && Array.isArray(A.LIST) && A.LIST.length === 12
+      && A.LIST.every(d => d.id && d.name && d.desc && d.icon && d.xp > 0 && typeof d.check === "function")
+      && new Set(A.LIST.map(d => d.id)).size === 12);
+    const by = {}; A.LIST.forEach(d => { by[d.id] = d; });
+
+    // pure predicate pins (crafted snapshots — no live state)
+    ok("first-contact: fires on the first answered question",
+      by["first-contact"].check({ profile: { totals: { questionsSeen: 1 } } }) === true
+      && by["first-contact"].check({ profile: { totals: { questionsSeen: 0 } } }) === false);
+    ok("hot-streak: any surface at 5; 4 is not enough",
+      by["hot-streak"].check({ profile: { streaksBest: { EXAM: 5 } } }) === true
+      && by["hot-streak"].check({ profile: { streaksBest: { EXAM: 4, CC: 4, KBB: 4 } } }) === false);
+    ok("per-game 10-chains: gate-runner=CC, void-discipline=KBB, deep-strike=ARM (no cross-credit)",
+      by["gate-runner"].check({ profile: { streaksBest: { CC: 10 } } }) === true
+      && by["gate-runner"].check({ profile: { streaksBest: { ARM: 99, KBB: 99, EXAM: 99, CC: 9 } } }) === false
+      && by["void-discipline"].check({ profile: { streaksBest: { KBB: 10 } } }) === true
+      && by["deep-strike"].check({ profile: { streaksBest: { ARM: 10 } } }) === true);
+    ok("station-restored: unlocks on a recorded ARM campaign best",
+      by["station-restored"].check({ profile: { bests: { ARM: 1 } } }) === true
+      && by["station-restored"].check({ profile: { bests: {} } }) === false);
+    ok("sim-certified: sim >= 80 only (79 no; study 100 no)",
+      by["sim-certified"].check({ profile: { examHistory: [{ mode: "sim", pct: 80 }] } }) === true
+      && by["sim-certified"].check({ profile: { examHistory: [{ mode: "sim", pct: 79 }] } }) === false
+      && by["sim-certified"].check({ profile: { examHistory: [{ mode: "study", pct: 100 }] } }) === false);
+    {
+      const m49 = {}, m50 = {};
+      for (let i = 0; i < 49; i++) m49["q" + i] = { bucket: 0 };
+      for (let i = 0; i < 50; i++) m50["q" + i] = { bucket: 0 };
+      ok("scholar: 50 distinct questions seen (49 is not enough)",
+        by["scholar"].check({ profile: { mastery: m50 } }) === true && by["scholar"].check({ profile: { mastery: m49 } }) === false);
+      const m24 = {}, m25 = {};
+      for (let i = 0; i < 24; i++) m24["q" + i] = { bucket: 4 };
+      for (let i = 0; i < 25; i++) m25["q" + i] = { bucket: 4 };
+      ok("first-mastery at bucket>=4; archivist needs 25 mastered",
+        by["first-mastery"].check({ profile: { mastery: { a: { bucket: 4 } } } }) === true
+        && by["first-mastery"].check({ profile: { mastery: { a: { bucket: 3 } } } }) === false
+        && by["archivist"].check({ profile: { mastery: m25 } }) === true
+        && by["archivist"].check({ profile: { mastery: m24 } }) === false);
+    }
+    ok("domain-sweep: every bank domain seen; commander: rank index >= 6 (3300 XP)",
+      by["domain-sweep"].check({ profile: {}, stats: { domains: [{ seen: 1 }, { seen: 2 }] } }) === true
+      && by["domain-sweep"].check({ profile: {}, stats: { domains: [{ seen: 1 }, { seen: 0 }] } }) === false
+      && by["commander"].check({ profile: { xp: 3300 } }) === true
+      && by["commander"].check({ profile: { xp: 3299 } }) === false);
+
+    // evaluate(): one-shot unlock + XP award + list-order cascade into commander
+    {
+      const p = { xp: 3290, rankSeen: 0, totals: { questionsSeen: 1 }, mastery: {}, streaks: {}, streaksBest: {}, achievements: {}, bests: {}, settings: {} };
+      const newly = A.evaluate(p);
+      ok("evaluate: first-contact (+25) pushes 3290 over 3300 -> commander cascades in the SAME pass",
+        newly.length === 2 && newly[0].id === "first-contact" && newly[1].id === "commander"
+        && p.xp === 3290 + 25 + 250 && !!p.achievements["first-contact"] && !!p.achievements.commander);
+      const again = A.evaluate(p);
+      ok("evaluate is idempotent: unlocked ids never re-fire or re-award", again.length === 0 && p.xp === 3565);
+    }
+
+    // live wiring: streaks tracked at the mastery choke point, tagged by meta.game
+    core.profile.achievements = {}; core.profile.streaks = {}; core.profile.streaksBest = {};
+    core.profile.xp = 0; core.profile.rankSeen = 0;
+    {
+      const qs = core.questions.pool().slice(3, 9);
+      const toastsBefore = w.document.querySelectorAll(".sx-toast-gold").length;
+      for (let i = 0; i < 5; i++) core.mastery.record(qs[i].id, true, { game: "EXAM" });
+      ok("5 tagged corrects -> streaksBest.EXAM = 5 -> hot-streak unlocks live (+ first-contact)",
+        core.profile.streaksBest.EXAM === 5 && !!core.profile.achievements["hot-streak"] && !!core.profile.achievements["first-contact"]);
+      ok("unlock toast fired through the shell's onUnlock hook (gold)",
+        w.document.querySelectorAll(".sx-toast-gold").length > toastsBefore);
+      core.mastery.record(qs[5].id, false, { game: "EXAM" });
+      ok("a wrong answer resets the current streak but keeps the best",
+        core.profile.streaks.EXAM === 0 && core.profile.streaksBest.EXAM === 5);
+      // clean the toast residue
+      Array.prototype.slice.call(w.document.querySelectorAll(".sx-toast")).forEach(t => t.parentNode && t.parentNode.removeChild(t));
+      // unwind these six mastery touches
+      qs.forEach(q => { delete core.profile.mastery[q.id]; });
+    }
+
+    // live wiring: submitScore -> station-restored; _recordExam -> sim-certified
+    await core.persistence.submitScore("ARM", 55, { sector: 12 });
+    ok("submitScore unlock: station-restored", !!core.profile.achievements["station-restored"]);
+    shell._recordExam({ mode: "sim", pct: 85, correct: 26, total: 30 });
+    ok("_recordExam unlock: sim-certified (evaluates AFTER the history write)", !!core.profile.achievements["sim-certified"]);
+
+    // Progress screen panel
+    shell.showStats();
+    {
+      const tiles = w.document.querySelectorAll(".sx-ach-tile");
+      const got = w.document.querySelectorAll(".sx-ach-tile.got");
+      const unlocked = Object.keys(core.profile.achievements).length;
+      const cnt = w.document.querySelector(".sx-ach-count");
+      ok("Progress panel: 12 tiles, unlocked ones marked .got, count line matches",
+        tiles.length === 12 && got.length === unlocked && !!cnt && cnt.textContent === unlocked + " / 12");
+      const gotNames = Array.prototype.map.call(got, t => t.querySelector(".sx-ach-name").textContent);
+      ok("unlocked tiles include the live unlocks from this section",
+        gotNames.indexOf("Hot streak") >= 0 && gotNames.indexOf("Station restored") >= 0 && gotNames.indexOf("Sim certified") >= 0);
+    }
+    shell.showMenu();
+
+    // hygiene: unwind the seeded state
+    core.profile.achievements = {}; core.profile.streaks = {}; core.profile.streaksBest = {};
+    core.profile.xp = 0; core.profile.rankSeen = 0;
+    delete core.profile.bests.ARM;
+    delete core.profile.examHistory;
   }
 
   SN.core.audio = realAudio;

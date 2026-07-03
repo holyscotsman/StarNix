@@ -24,7 +24,7 @@
   var CORE_VERSION = "1.1.0";              // internal contract version (changes rarely)
   // User-facing playable-build stamp. BUMP THIS (and the date) on every delivered index.html so the
   // version shown in-game tells us exactly which build is being played/tested. Shown by the shell.
-  var BUILD_VERSION = "0.53.0";
+  var BUILD_VERSION = "0.54.0";
   var BUILD_DATE = "2026-07-03";
   var BUILD_LABEL = "v" + BUILD_VERSION + " \u00b7 " + BUILD_DATE;
   var SCHEMA_VERSION = 1;
@@ -205,6 +205,14 @@
         }
         // Commander-rank XP (v0.52.0 unit 2): every answer, every surface, feeds the one pool.
         addXP(profile, xpForAnswer(!!correct, prevBucket, m.bucket));
+        // Achievements (v0.53.0 unit 3): per-surface answer streaks + unlock evaluation.
+        // meta.game tags every caller (ARM/KBB/CC/EXAM); untagged callers pool under MISC.
+        var g = (ctx && ctx.game) ? String(ctx.game) : "MISC";
+        var sk = profile.streaks || (profile.streaks = {});
+        var sb = profile.streaksBest || (profile.streaksBest = {});
+        sk[g] = correct ? (sk[g] || 0) + 1 : 0;
+        if ((sk[g] || 0) > (sb[g] || 0)) sb[g] = sk[g];
+        evaluateAchievements(profile);
         onChange();
         return m;
       },
@@ -291,6 +299,63 @@
     if (typeof profile.xp !== "number" || !(profile.xp >= 0)) profile.xp = 0;
     if (n > 0) profile.xp += Math.floor(n);
     return profile.xp;
+  }
+
+  /* =================================================================== *
+   * 4c. Achievements — ~12 cross-game unlocks (v0.53.0 unit 3)
+   * Pure predicates over a snapshot { profile, stats }; no new game seams —
+   * per-game answer streaks are tracked in profile.streaks/streaksBest by
+   * makeMasteryStore.record (the one choke point every graded answer already
+   * crosses, tagged by meta.game). Unlocks persist in profile.achievements
+   * (id -> unlock ts), award XP into the unit-2 pool, and surface through a
+   * shell-settable onUnlock callback (toast) + the Progress screen panel.
+   * =================================================================== */
+  var ACH_LIST = [
+    { id: "first-contact",    icon: "📡", xp: 25,  name: "First contact",    desc: "Answer your first question on any surface.",
+      check: function (s) { var p = s.profile; return !!(p && p.totals && p.totals.questionsSeen >= 1); } },
+    { id: "hot-streak",       icon: "🔥", xp: 50,  name: "Hot streak",       desc: "5 correct answers in a row on one surface.",
+      check: function (s) { var b = s.profile && s.profile.streaksBest; if (!b) return false; for (var k in b) { if (b[k] >= 5) return true; } return false; } },
+    { id: "gate-runner",      icon: "🌀", xp: 100, name: "Gate runner",      desc: "Chain 10 straight correct gates in Chasm Chase.",
+      check: function (s) { var b = s.profile && s.profile.streaksBest; return !!(b && b.CC >= 10); } },
+    { id: "void-discipline",  icon: "⚔",  xp: 100, name: "Void discipline",  desc: "Chain 10 straight correct answers in Kuiper Belt Battle.",
+      check: function (s) { var b = s.profile && s.profile.streaksBest; return !!(b && b.KBB >= 10); } },
+    { id: "deep-strike",      icon: "🚀", xp: 100, name: "Deep strike",      desc: "Chain 10 straight correct core scans in Acropolis Rescue.",
+      check: function (s) { var b = s.profile && s.profile.streaksBest; return !!(b && b.ARM >= 10); } },
+    { id: "station-restored", icon: "🛰", xp: 250, name: "Station restored", desc: "Complete the full ARM campaign — every sector swept.",
+      check: function (s) { var p = s.profile; return !!(p && p.bests && typeof p.bests.ARM === "number"); } },
+    { id: "sim-certified",    icon: "🎓", xp: 150, name: "Sim certified",    desc: "Score 80% or better on a full Exam sim.",
+      check: function (s) { var h = s.profile && s.profile.examHistory; if (!h || !h.length) return false; for (var i = 0; i < h.length; i++) { if (h[i].mode === "sim" && (h[i].pct || 0) >= 80) return true; } return false; } },
+    { id: "scholar",          icon: "📚", xp: 75,  name: "Scholar",          desc: "See 50 distinct questions from the bank.",
+      check: function (s) { var m = s.profile && s.profile.mastery; if (!m) return false; var n = 0; for (var k in m) { if (Object.prototype.hasOwnProperty.call(m, k)) n++; if (n >= 50) return true; } return false; } },
+    { id: "first-mastery",    icon: "✦",  xp: 50,  name: "First mastery",    desc: "Bring one question up to mastered.",
+      check: function (s) { var m = s.profile && s.profile.mastery; if (!m) return false; for (var k in m) { if (m[k] && m[k].bucket >= MASTERED_BUCKET) return true; } return false; } },
+    { id: "domain-sweep",     icon: "🗺", xp: 150, name: "Domain sweep",     desc: "Answer at least one question in every exam domain.",
+      check: function (s) { var st = s.stats; if (!st || !st.domains || !st.domains.length) return false; for (var i = 0; i < st.domains.length; i++) { if (!(st.domains[i].seen > 0)) return false; } return true; } },
+    { id: "archivist",        icon: "🏛", xp: 200, name: "Archivist",        desc: "Master 25 questions.",
+      check: function (s) { var m = s.profile && s.profile.mastery; if (!m) return false; var n = 0; for (var k in m) { if (m[k] && m[k].bucket >= MASTERED_BUCKET) { n++; if (n >= 25) return true; } } return false; } },
+    { id: "commander",        icon: "⭐", xp: 250, name: "Commander",        desc: "Reach the rank of Commander.",
+      check: function (s) { var p = s.profile; return !!(p && rankFor(p.xp).index >= 6); } }
+  ];
+  var achOnUnlock = null;   // shell-settable: function (newlyUnlockedDefs[]) — toast surface
+  function evaluateAchievements(profile) {
+    if (!profile) return [];
+    var a = profile.achievements || (profile.achievements = {});
+    var stats = null;
+    try {
+      var qp = StarNix.core && StarNix.core.questions;
+      if (qp && typeof qp.stats === "function") stats = qp.stats();
+    } catch (e) { stats = null; }
+    var snap = { profile: profile, stats: stats };
+    var newly = [];
+    for (var i = 0; i < ACH_LIST.length; i++) {           // list order — later defs see earlier awards' XP
+      var def = ACH_LIST[i];
+      if (a[def.id]) continue;
+      var hit = false;
+      try { hit = !!def.check(snap); } catch (e2) {}
+      if (hit) { a[def.id] = clock.now(); addXP(profile, def.xp); newly.push(def); }
+    }
+    if (newly.length && achOnUnlock) { try { achOnUnlock(newly.slice()); } catch (e3) {} }
+    return newly;
   }
 
   /* =================================================================== *
@@ -491,6 +556,9 @@
       mastery: {},
       xp: 0,                 // Commander-rank XP pool (v0.52.0 unit 2) — fed by answers/mastery/exams/run scores
       rankSeen: 0,           // last rank index acknowledged on the menu (drives the one-shot rank-up moment)
+      streaks: {},           // (v0.53.0 unit 3) current consecutive-correct per surface (ARM/KBB/CC/EXAM)
+      streaksBest: {},       // high-water streaks — achievement predicates read these
+      achievements: {},      // unlocked achievement id -> unlock timestamp
       settings: defaultSettings(),
       updatedAt: clock.now()
     };
@@ -508,6 +576,9 @@
     p.mastery = p.mastery || {};
     if (typeof p.xp !== "number" || !(p.xp >= 0)) p.xp = 0;             // pre-rank profiles
     if (typeof p.rankSeen !== "number" || !(p.rankSeen >= 0)) p.rankSeen = 0;
+    if (!p.streaks || typeof p.streaks !== "object") p.streaks = {};    // pre-achievement profiles
+    if (!p.streaksBest || typeof p.streaksBest !== "object") p.streaksBest = {};
+    if (!p.achievements || typeof p.achievements !== "object") p.achievements = {};
     p.settings = Object.assign({}, def.settings, p.settings || {});
     p.schemaVersion = SCHEMA_VERSION;
     return p;
@@ -791,6 +862,7 @@
             var b = profile.bests = profile.bests || {};
             if (typeof score === "number" && (typeof b[g] !== "number" || score > b[g])) b[g] = score;
             addXP(profile, xpForScore(g, score));
+            evaluateAchievements(profile);   // v0.53.0 unit 3: score-fed unlocks (e.g. station-restored)
             persistence.save(profile);
           } catch (e) {}
           return Promise.resolve();
@@ -874,6 +946,15 @@
   StarNix.xp = {
     AWARDS: XP_AWARDS, RANKS: RANKS, rankFor: rankFor,
     forAnswer: xpForAnswer, forExam: xpForExam, forScore: xpForScore, add: addXP
+  };
+
+  /* Achievements surface (v0.53.0 unit 3) — LIST is read-only data for renderers;
+   * evaluate() is idempotent (unlocked ids never re-fire, XP awards once);
+   * onUnlock(fn) is the shell's toast hook. */
+  StarNix.achievements = {
+    LIST: ACH_LIST,
+    evaluate: evaluateAchievements,
+    onUnlock: function (fn) { achOnUnlock = (typeof fn === "function") ? fn : null; }
   };
 
   /* ---- test/integration hooks (not part of the game-facing contract) - */

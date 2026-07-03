@@ -80,3 +80,39 @@ correctly unaffected. Restored, re-ran, ALL GREEN 360/360.
   the shell moment fires on the next menu visit. Deliberate, pinned as designed.
 
 Commit: `v0.53.0 — Commander rank XP meta-progression`.
+
+---
+
+## v0.54.0 — Unit 3: Achievements (12, cross-game)
+
+**Shipped:** pure-predicate achievements over `{profile, stats}` snapshots; zero new game seams.
+- Streak tracking at the ONE choke point every graded answer crosses (`mastery.record`,
+  tagged by the `meta.game` its callers already pass): `profile.streaks` current +
+  `streaksBest` high-water per surface (ARM/KBB/CC/EXAM).
+- The 12: First contact +25 · Hot streak (5-chain) +50 · Gate runner / Void discipline /
+  Deep strike (10-chains CC/KBB/ARM) +100 · Station restored (ARM win) +250 · Sim certified
+  (sim ≥80) +150 · Scholar (50 seen) +75 · First mastery +50 · Domain sweep +150 ·
+  Archivist (25 mastered) +200 · Commander (rank ≥6) +250.
+- Evaluation at mastery.record + submitScore + _recordExam (after the history write).
+  List-ordered so intra-pass XP can cascade into Commander (pinned). One-shot via
+  `profile.achievements` id→ts. XP flows into the unit-2 pool.
+- Shell: boot registers core `onUnlock` → gold toast, works MID-GAME (toast overlays stage).
+  Progress screen: 12-tile panel (locked dim / unlocked gold + ✓, N/12 count line).
+
+**Assertion delta:** verify-build 360 → **378** (+18, section K5; K4 gained an all-unlocked
+sentinel so its exact XP-delta pins stay deterministic). Full gate ALL GREEN, exit 0.
+
+**Negative control:** severed the mastery-point `evaluateAchievements` call → exactly the
+2 live-wiring pins failed (376/378; submitScore/_recordExam paths kept their own evaluate
+calls and correctly stayed green). Restored, re-ran, 378/378.
+
+**Deviations/punts (logged):**
+- NIGHT_RUN's examples "flawless KBB battle" and "ARM full-collection escape" are impossible
+  without new game-side signals (KBB `winBattle` and ARM sector-clear emit NO telemetry).
+  Shipped same-spirit replacements on existing signals (per-game 10-chains + campaign win).
+  Adding the two telemetry emits (KBB battle-won w/ damage-taken, ARM sector-clear w/
+  collected count) = a small Phase-2 candidate that would unlock the literal versions.
+- Multi-unlock toasts stack on the same spot (last wins visually) — cosmetic, rare, logged.
+- 01 doc-sync now also owes the achievements surface.
+
+Commit: `v0.54.0 — Achievements`.

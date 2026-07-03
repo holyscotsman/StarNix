@@ -130,3 +130,12 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   styling on the toast, a re-fire on every menu visit, or a pulse under reduced motion. Reduced-motion ON:
   same toast + strip, zero animation. The structural halves (strip DOM, one-shot rankSeen, static-under-rm)
   are gate-pinned (K4); this item is the look/fit/feel confirm.
+
+- **QA-M2 — Achievements panel + unlock toasts (added v0.54.0, browser-blind).** Progress screen (Stats/Codex):
+  an "Achievements N / 12" section between the heatmap and the domain list — locked tiles dim, unlocked tiles
+  gold-edged with a ✓ +XP tag. CORRECT: 12 tiles, readable two-column grid on desktop collapsing cleanly on
+  mobile, icons render (emoji), locked/unlocked contrast obvious at a glance. Unlock moment: earn one mid-game
+  (fastest: 5 straight correct anywhere → "Hot streak") — a GOLD toast "🔥 Achievement: Hot streak (+50 XP)"
+  should appear OVER the running game without breaking it, and the tile shows unlocked on the next Progress
+  visit. WRONG: peach styling, toast re-firing for the same achievement, or a tile count ≠ 12. Structure is
+  gate-pinned (K5); this is the look/fit confirm.

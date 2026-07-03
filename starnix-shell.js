@@ -130,6 +130,16 @@
     this._wireAudioUnlock();
     return StarNix.initCore(opts || {}).then(function () {
       self._applyContrast();        // #12: apply saved high-contrast preference on load
+      // v0.53.0 unit 3: achievement unlock toasts. Registered once at boot; fires from the
+      // core evaluator wherever the unlock happens — the toast overlays the stage, so it
+      // shows mid-game too. Reward styling (gold), no animation beyond the toast itself.
+      if (StarNix.achievements) {
+        StarNix.achievements.onUnlock(function (defs) {
+          for (var i = 0; i < defs.length; i++) {
+            self._toast(defs[i].icon + " Achievement: " + defs[i].name + " (+" + defs[i].xp + " XP)", "sx-toast-gold");
+          }
+        });
+      }
       self.showTitle();
       return self;
     });
@@ -573,6 +583,8 @@
         if (coreH.persistence && coreH.persistence.save) coreH.persistence.save(coreH.profile);
       } catch (eH) {}
     }
+    // (v0.53.0 unit 3) achievements see the freshly recorded history (sim-certified etc.).
+    try { if (StarNix.achievements) StarNix.achievements.evaluate(StarNix.core.profile); } catch (eA) {}
     if (sum.mode && sum.mode !== "blitz") return;   // bests are the Blitz speed leaderboard; Study/Sim don't compete on speed
     var core = StarNix.core;
     try {
@@ -727,6 +739,7 @@
       + '<div class="sx-ready"></div>'
       + '<div class="sx-stat-grid"></div>'
       + '<div class="sx-dom-head">Domain mastery heatmap</div><div class="sx-heatmap"></div>'
+      + '<div class="sx-dom-head">Achievements <span class="sx-ach-count"></span></div><div class="sx-ach"></div>'
       + '<div class="sx-dom-head">By domain · weakest first</div><div class="sx-domain-list"></div>'
       + '<div class="sx-dom-head">Weakest questions</div><div class="sx-weak"></div>'
       + '<div class="sx-row"></div></div>';
@@ -778,6 +791,29 @@
         box.appendChild(tile);
       }
     })(s.querySelector(".sx-heatmap"));
+
+    // ---- achievements panel (v0.53.0 unit 3): 12 tiles, locked dim / unlocked gold ----
+    (function buildAch(box) {
+      if (!box || !StarNix.achievements) return;
+      var list = StarNix.achievements.LIST;
+      var un = (core.profile && core.profile.achievements) || {};
+      var got = 0;
+      for (var i = 0; i < list.length; i++) {
+        var d = list[i], has = !!un[d.id];
+        if (has) got++;
+        var tile = el("div", "sx-ach-tile" + (has ? " got" : ""));
+        tile.appendChild(el("span", "sx-ach-ic", d.icon));
+        var body = el("span", "sx-ach-body");
+        body.appendChild(el("span", "sx-ach-name", d.name));
+        body.appendChild(el("span", "sx-ach-desc", d.desc));
+        tile.appendChild(body);
+        tile.appendChild(el("span", "sx-ach-xp", (has ? "✓ " : "") + "+" + d.xp + " XP"));
+        tile.title = has ? "Unlocked" : "Locked";
+        box.appendChild(tile);
+      }
+      var cnt = s.querySelector(".sx-ach-count");
+      if (cnt) cnt.textContent = got + " / " + list.length;
+    })(s.querySelector(".sx-ach"));
 
     // ---- weakest-questions drill (v0.51.0): worst-20 by bucket/streak/misses -> Study mode ----
     (function buildWeak(box) {
@@ -1184,7 +1220,17 @@
       ".sx-rank-up{animation:sxRankPulse 1.6s ease-out 3;}",
       "@keyframes sxRankPulse{0%{filter:brightness(1);}30%{filter:brightness(1.7);}100%{filter:brightness(1);}}",
       "@media (prefers-reduced-motion: reduce){.sx-rank-up{animation:none;}}",
-      ".sx-toast-gold{border-color:var(--gold);color:#ffedc2;}"
+      ".sx-toast-gold{border-color:var(--gold);color:#ffedc2;}",
+      // Achievements panel (v0.53.0 unit 3) — Progress screen grid; locked = dim, unlocked = gold edge.
+      ".sx-ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px;text-align:left;margin:4px 0 10px;}",
+      ".sx-ach-count{color:var(--mid);font-weight:600;font-size:11px;margin-left:6px;}",
+      ".sx-ach-tile{display:flex;align-items:center;gap:9px;border:1px solid var(--border);border-radius:10px;padding:8px 10px;opacity:.45;background:rgba(10,10,18,.5);}",
+      ".sx-ach-tile.got{opacity:1;border-color:var(--gold);box-shadow:0 0 10px rgba(255,200,87,.12);}",
+      ".sx-ach-ic{font-size:17px;width:22px;text-align:center;flex:none;}",
+      ".sx-ach-body{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1;}",
+      ".sx-ach-name{font-size:12px;font-weight:700;color:var(--text);}",
+      ".sx-ach-desc{font-size:11px;color:var(--mid);line-height:1.25;}",
+      ".sx-ach-xp{font-size:11px;font-weight:700;color:var(--gold);flex:none;}"
     ].join("");
     document.head.appendChild(st);
   };
