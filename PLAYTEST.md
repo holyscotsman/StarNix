@@ -16,7 +16,7 @@ taste calls. Fixes deliberately NOT implemented here (they feed Phase 2).
   `overflow:hidden`), so the exam is **unreachable by mouse at laptop heights**. The headless
   gate never caught it because jsdom clicks don't need visibility — exactly the blind spot
   this unit exists for. *Fix shape (Phase 2): `overflow-y:auto` on `.sx-menu` + compact the
-  daily strip (e.g. collapsed one-row summary that expands).* **Severity: high.**
+  daily strip (e.g. collapsed one-row summary that expands).* **Severity: high.** → **FIXED v0.61.0** (menu scrolls; compact strip; Playwright-verified NIT reachable).
 - **A2 — CC mountains render as smooth pyramids — QA-C1's literal WRONG description.**
   `21-cc-establishing.png`, `34/42-cc-live`: the `_buildPeaks` ridge rows read as isolated
   smooth grey-pink cones — no crags, no far-row haze, uniform faces. The v0.47 crag rewrite is
@@ -28,7 +28,7 @@ taste calls. Fixes deliberately NOT implemented here (they feed Phase 2).
 - **A3 — Progress screen shows a doubled "Daily missions" header.** `06-progress-top.png`:
   the `.sx-dom-head` "DAILY MISSIONS" section label sits directly above the strip's own
   "Daily missions · <date>" head. *Fix: suppress the inner head when hosted on the stats
-  screen (or drop the dom-head).* **Severity: low, but visibly sloppy.**
+  screen (or drop the dom-head).* **Severity: low, but visibly sloppy.** → **FIXED v0.61.0** (strip head suppressed on Progress).
 - **A4 — CC top-right HUD collision.** `34-cc-live-03.png`: the km/speed readout overlaps the
   "↻ intro" chip; the speed line is partially unreadable. *Fix: margin/right-offset for the
   readout or move the intro chip.* **Severity: low-medium.**

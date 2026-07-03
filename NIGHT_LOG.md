@@ -310,6 +310,36 @@ Commit: `v0.60.0 — Playwright visual playtest + PLAYTEST.md`.
 
 ---
 
+---
+
+## Phase 2 · iteration 1 — MINI-SPEC (written before build, per protocol)
+
+**What:** PLAYTEST A1 + A3 (+C3): make the menu survive its new progression head at laptop
+heights, and fix the doubled daily header on Progress.
+**Why (rubric):** mission value 5/5 — the NIT exam tile is mouse-UNREACHABLE at 1280×800,
+and the exam is the learning core; verifiability 4/5 (source-level CSS pin + DOM-shape pins;
+fold geometry itself is jsdom-invisible, evidenced by a Playwright re-shot); blast radius
+5/5 (starnix-shell.js only); size 5/5. Top scorer of every A-finding.
+**How:**
+1. `.sx-menu` gains `overflow-y:auto` + `justify-content:flex-start` (the actual fix).
+2. `_renderDaily(host, opts)` — menu hosts a COMPACT strip (no goal-desc line, undated
+   short head); the Progress screen keeps the full rows but drops the strip's inner head
+   (its `.sx-dom-head` already titles the section — A3's double header gone).
+**Planned pins (+4 net):** CSS source contains the menu overflow rule; menu strip has 3 rows
+but NO `.sx-daily-desc`; stats strip HAS descs; exactly ONE "Daily missions" heading on
+Progress. K6's existing "dated head on menu" pin updates to the undated wording — an honest
+re-pin for a deliberate redesign, not a loosening (claim-flow pins unchanged).
+**Negative control:** strip the `overflow-y` rule → the CSS source pin must fail alone.
+
+**RESULT (v0.61.0):** shipped exactly as spec'd. Gate 407 → **409/409** (+3 net: A1 CSS
+regression pin, Progress full-rows, single-heading; K6's menu pin re-pinned to the compact
+redesign — claim-flow pins untouched). Negctrl: overflow stripped → exactly the A1 pin
+failed (408/409), restored. Playwright evidence: menu scrollable, NIT tile in-viewport after
+scroll (`57/58-menu-fixed-*.png`). PLAYTEST A1 + A3 annotated FIXED.
+Commit: `v0.61.0 — Menu fold fix + daily strip layout (PLAYTEST A1/A3)`.
+
+---
+
 **PHASE 1 COMPLETE: all NINE units shipped, v0.52.0 → v0.60.0, gate grown 345 → 407
 verify-build assertions (+ ARM RUN 46, KBB RUN 26, fairness 25, view-smoke +5) — every
 code unit green-gated with a bite-proven negative control before commit. Phase 2 next;

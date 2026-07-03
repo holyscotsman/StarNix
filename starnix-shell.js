@@ -398,7 +398,7 @@
       '<h2 class="sx-h2">Mission select</h2></div>' +
       '<div class="sx-cards"></div>';
     this._renderRank(s.querySelector(".sx-rank"));
-    this._renderDaily(s.querySelector(".sx-daily"));
+    this._renderDaily(s.querySelector(".sx-daily"), { compact: true });   // (P2·1) menu shows the compact strip; full rows live on Progress
     var photoEl = s.querySelector(".sx-menu-photo");
     var menuBg = global.STARNIX_ASSETS && global.STARNIX_ASSETS.menuBg;
     if (photoEl && menuBg) { photoEl.style.backgroundImage = 'url("' + menuBg + '")'; photoEl.classList.add("on"); }
@@ -471,13 +471,14 @@
   /* Daily-missions strip (v0.56.0 unit 6) — shared by the menu card and the Progress screen
    * row. Three rows: icon + label + progress n/target; a gold Claim button when done and
    * unclaimed (pays mission XP into the pool), a ✓ chip once claimed. Rebuilt per render. */
-  Shell.prototype._renderDaily = function (host) {
+  Shell.prototype._renderDaily = function (host, opts) {
     if (!host) return;
+    opts = opts || {};                                 // (v0.60.0 P2·1) compact: no desc line (menu); head: false = host section already titled (Progress, fixes the A3 double header)
     var self = this, core = StarNix.core, D = StarNix.daily;
     var prof = core && core.profile;
     if (!prof || !D) { host.style.display = "none"; return; }
     D.ensure(prof);
-    host.appendChild(el("div", "sx-daily-head", "Daily missions · " + prof.daily.date));
+    if (opts.head !== false) host.appendChild(el("div", "sx-daily-head", opts.compact ? "Daily missions" : "Daily missions · " + prof.daily.date));
     for (var i = 0; i < prof.daily.missions.length; i++) {
       (function (idx) {
         var st = D.state(prof, idx);
@@ -486,7 +487,8 @@
         row.appendChild(el("span", "sx-daily-ic", st.icon));
         var body = el("span", "sx-daily-body");
         body.appendChild(el("span", "sx-daily-name", st.name));
-        body.appendChild(el("span", "sx-daily-desc", st.label));
+        if (!opts.compact) body.appendChild(el("span", "sx-daily-desc", st.label));
+        else row.title = st.label;                     // compact keeps the goal one hover away
         row.appendChild(body);
         row.appendChild(el("span", "sx-daily-prog", st.progress + " / " + st.target));
         if (st.claimed) {
@@ -845,8 +847,8 @@
       }
     })(s.querySelector(".sx-heatmap"));
 
-    // ---- daily missions row (v0.56.0 unit 6): same strip the menu shows ----
-    this._renderDaily(s.querySelector(".sx-daily"));
+    // ---- daily missions row (v0.56.0 unit 6): full rows; the section label above titles it (A3) ----
+    this._renderDaily(s.querySelector(".sx-daily"), { head: false });
 
     // ---- achievements panel (v0.53.0 unit 3): 12 tiles, locked dim / unlocked gold ----
     (function buildAch(box) {
@@ -1197,7 +1199,7 @@
       ".sx-cap{position:absolute;left:50%;bottom:54px;transform:translateX(-50%);max-width:620px;width:86%;font-size:16px;font-weight:600;color:#eef;text-shadow:0 0 12px #000,0 0 4px #000;pointer-events:none;line-height:1.4;}",
       ".sx-skip{position:absolute;top:16px;right:16px;background:rgba(16,16,24,.7);border:1px solid var(--border);color:var(--mid);border-radius:10px;padding:8px 14px;font-family:inherit;font-weight:600;cursor:pointer;}",
       ".sx-skip:hover{border-color:var(--aqua);color:var(--text);}",
-      ".sx-menu{justify-content:flex-start;padding-top:40px;}",
+      ".sx-menu{justify-content:flex-start;padding-top:40px;overflow-y:auto;padding-bottom:40px;}",   // (v0.60.0 P2·1, PLAYTEST A1) the progression head grew the menu past laptop folds — scroll, never clip
       ".sx-menu-photo,.sx-title-photo{position:absolute;inset:0;z-index:0;pointer-events:none;background-size:cover;background-position:center;opacity:0;transition:opacity .8s ease;will-change:transform;}",
       ".sx-menu-photo.on,.sx-title-photo.on{opacity:.62;animation:sx-bg-drift 64s ease-in-out infinite alternate;}",
       ".sx-title-photo.on{opacity:.55;}",

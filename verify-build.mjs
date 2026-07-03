@@ -1491,9 +1491,16 @@ async function runFrames(n = 6) {
     core.profile.daily.bestStreak = 99; core.profile.daily.exams = 99; core.profile.daily.promotions = 99;
     core.profile.xp = core.profile.daily.xpStart + 999;
     shell.showMenu();
-    ok("menu: daily strip renders the dated head + 3 mission rows",
-      /2026-07-04/.test((w.document.querySelector(".sx-daily-head") || {}).textContent || "")
-      && w.document.querySelectorAll(".sx-daily-row").length === 3);
+    // (v0.60.0 P2·1, PLAYTEST A1/A3) the menu hosts a COMPACT strip: undated head, no goal
+    // lines (they live in row tooltips + on Progress); and the menu itself must scroll.
+    ok("menu: compact daily strip — undated head + 3 rows, goal text tucked into tooltips",
+      /Daily missions/.test((w.document.querySelector(".sx-daily-head") || {}).textContent || "")
+      && !/2026-07-04/.test((w.document.querySelector(".sx-daily-head") || {}).textContent || "")
+      && w.document.querySelectorAll(".sx-daily-row").length === 3
+      && w.document.querySelectorAll(".sx-menu .sx-daily-desc").length === 0
+      && (w.document.querySelector(".sx-daily-row").getAttribute("title") || "").length > 0);
+    ok("menu: scrolls past the fold (PLAYTEST A1 — the NIT tile must stay reachable)",
+      /\.sx-menu\{[^}]*overflow-y:auto/.test((w.document.getElementById("starnix-shell-css") || {}).textContent || ""));
     {
       const claims = w.document.querySelectorAll(".sx-daily-claim");
       ok("menu: every completed unclaimed mission offers a Claim button", claims.length === 3);
@@ -1506,8 +1513,12 @@ async function runFrames(n = 6) {
       const t = w.document.querySelector(".sx-toast-gold"); if (t && t.parentNode) t.parentNode.removeChild(t);
     }
     shell.showStats();
-    ok("Progress screen: the same daily strip renders as a row section",
-      w.document.querySelectorAll(".sx-daily-stats .sx-daily-row").length === 3);
+    ok("Progress screen: full daily rows (goal lines visible)",
+      w.document.querySelectorAll(".sx-daily-stats .sx-daily-row").length === 3
+      && w.document.querySelectorAll(".sx-daily-stats .sx-daily-desc").length === 3);
+    ok("Progress screen: exactly ONE 'Daily missions' heading (A3 double header gone)",
+      [...w.document.querySelectorAll(".sx-dom-head")].filter(h => /Daily missions/.test(h.textContent)).length === 1
+      && w.document.querySelectorAll(".sx-daily-stats .sx-daily-head").length === 0);
     shell.showMenu();
     // hygiene
     core.clock.now = realNow;
