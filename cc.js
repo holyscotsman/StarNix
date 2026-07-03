@@ -2105,8 +2105,14 @@
         if (sim.phase === PHASE_QUESTION && el.overlay.style.display === 'none') showQuestion();
         // question countdown (the sim is frozen while in a question, so the loop drives the timer)
         if (sim.phase === PHASE_QUESTION) { sim.tickQuestion(Math.min(dt, 0.05)); updateQTimer(); }
-        // sim auto-resolved the question without a click (timed out) -> render the feedback now
-        if (sim.phase === PHASE_EXPLAIN && el.overlay.style.display !== 'none' && !feedbackShown && sim.lastResult) showFeedback(sim.lastResult);
+        // sim auto-resolved the question without a click (timed out) -> render the feedback now.
+        // (v0.81.0) ALSO when the timeout was lethal: phase jumps straight to OVER, and without
+        // this the question overlay stayed up forever with dead options (full softlock).
+        if ((sim.phase === PHASE_EXPLAIN || sim.phase === PHASE_OVER) && el.overlay.style.display !== 'none' && !feedbackShown && sim.lastResult) showFeedback(sim.lastResult);
+        // (v0.81.0) collision deaths never reached showOver — it only ran from the See-results
+        // click. Surface the crash screen from the loop; the overlay-hidden guard keeps the
+        // question-death path (which routes through See results) in charge of its own timing.
+        if (sim.phase === PHASE_OVER && el.gameover.style.display === 'none' && el.overlay.style.display === 'none') showOver();
 
         if (view) { view.applySpeedCamera(sim.speed, sim.phase === PHASE_RUN, sim.player.x, Math.min(dt, 0.05)); view.render(Math.min(dt, 0.05)); }
         updateHud();

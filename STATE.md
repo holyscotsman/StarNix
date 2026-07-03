@@ -101,7 +101,16 @@
 > **v0.6.21:** title screen uses the no-station nebula (`kbbBg`→`nebulaBg`); menu keeps the station vista. KBB shows `nebulaBg` + `bcmShip`. 200/200; art negative-controlled.
 > </details>
 
-## v0.80.0 — KBB battle cinematics (JB3 done — JASON BATCH #3 COMPLETE)
+## v0.81.0 — CC death-path fix (Jason bug: no crash screen after losing)
+
+showOver only ran from the See-results click: collision deaths showed nothing, killing
+timeouts soft-locked the question overlay. RAF loop now renders lethal-timeout feedback
+(PHASE_OVER included) and surfaces SHIP DOWN when both overlays are down. New permanent
+suite cc-death-paths.cjs (5 pins, jsdom module mount, all three deaths driven end-to-end);
+gate is now 14 suites. NEXT: ARM boss rework (remove gold reticle, front-mounted weakpoints,
+upward hyperspeed backdrop) — maps ready from the diagnostic workflow.
+
+> **Earlier this session (v0.80.0):** KBB battle cinematics (batch #3 complete)
 
 Full cinematic grammar: charge→beam→sparks/dome/motes, staged kill (hull persists to core
 detonation, shockwave, 0.5 quake, DESTROYED banner). Root cause found & fixed: overlay fx
