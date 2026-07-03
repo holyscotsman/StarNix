@@ -449,7 +449,7 @@ async function runFrames(n = 6) {
     ccSim.resumeAfterQuestion();
     ok("boost activates on resume (invuln + fast-forward)", ccSim.boostActive === true && ccSim._boostTargetScore > ccSim.scoreDistance);
     const sd0 = ccSim.scoreDistance;
-    for (let f = 0; f < 60 * 4 && ccSim.boostActive; f++) ccSim.step(1 / 60);
+    for (let f = 0; f < 60 * 8 && ccSim.boostActive; f++) ccSim.step(1 / 60);   // (v0.103.0, C7) BOOST_TIME doubled to 6s
     ok("boost covers ~100 km then ends", !ccSim.boostActive && (ccSim.scoreDistance - sd0) >= cfg7.BOOST_KM * 1000 * 0.95);
     ccSim.reset();
     let collected = false;               // drive the real sim until a gate forces a question
@@ -1875,6 +1875,8 @@ async function runFrames(n = 6) {
 
   // JB4 (v0.77.0): the CC crash screen says so + surfaces the Garage
   console.log("\nJB4. CC crash screen source pins");
+  ok("C7 (v0.103.0): Boost Mode overlay shipped (haze veil + banner + reduced-motion opt-out)",
+    html.includes("cc-boost-ovr") && html.includes("BOOST MODE") && html.includes("ccBoostPulse"));
   ok("JB4: game over says SHIP DOWN and auto-opens the Garage",
     html.includes("SHIP DOWN") && html.includes("refit is part of the death loop"));
 

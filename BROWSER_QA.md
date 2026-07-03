@@ -229,6 +229,10 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-C15 — Boost Mode (added v0.103.0).** Hit a boost: ship snaps to center, controls lock, the
+  screen hazes with a pulsing BOOST MODE banner, ~6 s of flight, then ~5 s of clear road (side
+  walls only) before traffic resumes. Reduced motion: banner static, no blur.
+
 - **QA-C14 — Coin routing + squeezes (added v0.102.0).** Coin lines visibly dodge into open lanes
   and arc over rocks — following them should always be SAFE (that's the design: coins teach the
   path). Every ~2.5-4 km the canyon squeezes to two lanes for 1-2 km: wall holds one side, jumps

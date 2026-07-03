@@ -101,7 +101,12 @@
 > **v0.6.21:** title screen uses the no-station nebula (`kbbBg`→`nebulaBg`); menu keeps the station vista. KBB shows `nebulaBg` + `bcmShip`. 200/200; art negative-controlled.
 > </details>
 
-## v0.102.0 — CC unit 2: coin routing + squeeze stretches (C6/C9)
+## v0.103.0 — CC unit 3: Boost Mode rework (C7)
+
+cc-run 50. REMAINING: C10 barrel roll + C4 90° turns, C5/C8/C3 mountains+cinematics,
+G2 save/resume, G3 intro, G4 full-scan.
+
+> **Earlier this session (v0.102.0):** CC unit 2
 
 cc-run 43 (coin-clip audit 0/300), fairness 25 green through squeezes. REMAINING: C7 boost
 rework, C10 barrel roll + C4 90° turns, C5/C8/C3 mountains+cinematics, G2 save/resume,

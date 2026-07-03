@@ -47,6 +47,48 @@ function runToQuestion(sim, maxSecs, pinShields) {
   return false;
 }
 
+/* ============ C7 (v0.103.0): Boost Mode — locked, centered, doubled, calm road ============ */
+(function boostMode() {
+  group('C7: auto-center + steering lock + 2x duration + calm window');
+  ok(CFG.BOOST_TIME === 6, 'boost duration doubled (BOOST_TIME 6)');
+  var sim = mkSim(SEED + 71);
+  sim.player.lane = 0; sim._retarget();
+  var rowTypes = [];
+  var realRow2 = sim._spawnRow.bind(sim);
+  sim._spawnRow = function (z) { realRow2(z); };   // keep original; audit via pool snapshots below
+  sim._activateBoost();
+  ok(sim.boostActive === true && sim.player.lane === 1, 'activation auto-centers the ship');
+  sim.moveLeft();
+  ok(sim.player.lane === 1, 'steering is locked during Boost Mode');
+  // ride the whole boost + the calm window, auditing every spawned obstacle type
+  var dt = 1 / 60, calmBad = 0, sawCalmNarrow = 0, coinsDuringCalm = 0;
+  var coinBaseline = 0;
+  for (var t = 0; t < 60 * 20; t++) {
+    var wasCalm = sim.boostActive || sim.distance < sim._boostCalmUntil;
+    var obN0 = 0, obT = sim.obstacles.items;
+    sim.shields = 99;
+    var coinsActive0 = sim.coins.items.filter(function (cn) { return cn.active; }).length;
+    sim.step(dt);
+    if (sim.phase === 'QUESTION') { sim.answer(0); sim.resumeAfterQuestion(); }
+    if (wasCalm) {
+      var coinsActive1 = sim.coins.items.filter(function (cn) { return cn.active; }).length;
+      if (coinsActive1 > coinsActive0) coinsDuringCalm++;
+      for (var i = 0; i < obT.length; i++) {
+        var o = obT[i];
+        if (o.active && o.z > CFG.DRAW_DIST - 2) {           // just spawned at the horizon
+          if (o.type !== E.OB_NARROW) calmBad++; else sawCalmNarrow++;
+        }
+      }
+    }
+    if (!sim.boostActive && sim.distance >= sim._boostCalmUntil && t > 60 * 8) break;
+  }
+  ok(calmBad === 0 && /iframe = Math\.max\(this\.iframe, 1\.0\)/.test(require('fs').readFileSync('./cc.js', 'utf8')), 'Boost + 5s after: nothing spawns but side walls + end-grace i-frames in source (' + sawCalmNarrow + ' narrows, 0 others)');
+  ok(coinsDuringCalm === 0, 'no coins spawn into the calm road');
+  ok(sim.boostActive === false && sim._boostCalmUntil > 0, 'boost ended with a calm window armed (grace i-frames source-pinned)');
+  sim.moveLeft();
+  ok(sim.player.lane === 0, 'steering returns after Boost Mode');
+})();
+
 /* ============ C6/C9 (v0.102.0): coin routing + squeeze stretches ============ */
 (function coinsAndSqueeze() {
   group('C6/C9: coins never clip obstacles; squeeze stretches hold one side, no ducks');

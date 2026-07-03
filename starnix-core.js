@@ -24,7 +24,7 @@
   var CORE_VERSION = "1.1.0";              // internal contract version (changes rarely)
   // User-facing playable-build stamp. BUMP THIS (and the date) on every delivered index.html so the
   // version shown in-game tells us exactly which build is being played/tested. Shown by the shell.
-  var BUILD_VERSION = "0.102.0";
+  var BUILD_VERSION = "0.103.0";
   var BUILD_DATE = "2026-07-03";
   var BUILD_LABEL = "v" + BUILD_VERSION + " \u00b7 " + BUILD_DATE;
   var SCHEMA_VERSION = 1;

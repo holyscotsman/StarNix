@@ -86,7 +86,7 @@
     // during the skip; the normal cadence resumes after.
     GATES_PER_BOOST: 2,          // (v0.77.0, JB6) boost every 2 gates = every 20 km (was 5 = 50 km)
     BOOST_KM: 100,             // scored distance the boost covers
-    BOOST_TIME: 3,             // ~seconds the boost lasts (derives the boosted score rate: BOOST_KM*1000/BOOST_TIME)
+    BOOST_TIME: 6,             // (v0.103.0, C7, Jason) doubled — ~seconds the boost lasts (score rate: BOOST_KM*1000/BOOST_TIME)
     BOOST_SPEED: 200,          // real world-scroll during boost (≈2.4× MAX_SPEED) — the fast-forward visual
 
     // Coins
@@ -262,7 +262,7 @@
     this.boostActive = false;                   // 04 task 8: boost power-up state
     this._gatesPassed = 0;
     this._boostPending = false;
-    this._boostTargetScore = 0;
+    this._boostTargetScore = 0; this._boostCalmUntil = 0;
     this._nextCoinAt = cfg.BASE_GAP * 0.5;
     // (v0.102.0, C9, Jason) squeeze stretches: the canyon narrows to TWO lanes for 1-2 km
     this._squeezeUntil = 0; this._squeezeSide = SIDE_LEFT; this._nextSqueezeAt = 700;
@@ -278,11 +278,11 @@
 
   // ---- input (pure; module calls these) ----
   CCSim.prototype.moveLeft = function () {
-    if (this.phase !== PHASE_RUN) return;
+    if (this.phase !== PHASE_RUN || this.boostActive) return;   // (v0.103.0, C7) no steering in Boost Mode
     if (this.player.lane > 0) { this.player.lane--; this._retarget(); }
   };
   CCSim.prototype.moveRight = function () {
-    if (this.phase !== PHASE_RUN) return;
+    if (this.phase !== PHASE_RUN || this.boostActive) return;   // (C7)
     if (this.player.lane < 2) { this.player.lane++; this._retarget(); }
   };
   CCSim.prototype._retarget = function () {
@@ -323,6 +323,8 @@
     this.scoreDistance += this.scoreSpeed * dt;
     if (this.boostActive && this.scoreDistance >= this._boostTargetScore) {
       this.boostActive = false;
+      this._boostCalmUntil = this.distance + this.cfg.MAX_SPEED * 5;   // (v0.103.0, C7) ~5s of clear road at cruise (boost speed would triple it)
+      this.iframe = Math.max(this.iframe, 1.0);      // hand control back gently — no instant faceplant
       this._nextGateScore = this.scoreDistance + cfg.GATE_KM * 1000;   // resume the normal gate cadence after the skip
     }
 
@@ -621,6 +623,9 @@
   // 04 task 8: blast forward — invulnerable, canyon fast-forwards, scored distance covers BOOST_KM over ~BOOST_TIME.
   CCSim.prototype._activateBoost = function () {
     this.boostActive = true;
+    // (v0.103.0, C7, Jason) the ship auto-centers and steering locks for the ride
+    this.player.lane = 1; this._retarget();
+    this._boostCalmUntil = 0;                        // set when the boost ENDS (+5s of clear road)
     this._boostTargetScore = this.scoreDistance + (this.cfg.BOOST_KM + (this._up ? this._up.boostKm : 0)) * 1000;   // (J9) overcharged boost
     this._emit && this._emit('boost');
     if (this.ctx.telemetry && typeof this.ctx.telemetry.emit === 'function') {
@@ -670,6 +675,7 @@
       this._nextGateScore += cfg.GATE_KM * 1000;
     }
     // obstacle rows — skip any that would land inside a gate's keep-clear window
+    var calm = this.boostActive || this.distance < this._boostCalmUntil;   // (v0.103.0, C7)
     while (this.distance + cfg.DRAW_DIST >= this._nextRowAt) {
       // (v0.102.0, C9) periodic squeeze: pick a side, hold it for 1-2 km, rest 1.5-2.5 km.
       // Same side for the WHOLE stretch — consistent open lanes stay fair at MIN_GAP.
@@ -678,7 +684,11 @@
         this._squeezeUntil = this._nextRowAt + 1000 + this.rng.next() * 1000;
         this._nextSqueezeAt = this._squeezeUntil + 1500 + this.rng.next() * 1000;
       }
-      if (!this._nearGateZone(this._nextRowAt)) this._spawnRow(this._nextRowAt - this.distance);
+      if (!this._nearGateZone(this._nextRowAt)) {
+        // (C7) Boost Mode + 5s after: nothing but occasional SIDE walls (never the center lane)
+        if (calm) { if (this.rng.next() < 0.4) this._spawnNarrow(this.rng.next() < 0.5 ? SIDE_LEFT : SIDE_RIGHT, this._nextRowAt - this.distance); }
+        else this._spawnRow(this._nextRowAt - this.distance);
+      }
       var gap = cfg.BASE_GAP - (this.speed - cfg.BASE_SPEED) * cfg.GAP_K;
       if (gap < cfg.MIN_GAP) gap = cfg.MIN_GAP; else if (gap > cfg.BASE_GAP) gap = cfg.BASE_GAP;
       this._nextRowAt += gap;
@@ -689,7 +699,7 @@
     // (v0.102.0, C6) coins trail the ROW horizon by a full line-length: every obstacle a
     // line could overlap is already live, so _coinFix sees the whole truth when routing.
     while (this.distance + cfg.DRAW_DIST - 20 >= this._nextCoinAt) {
-      if (!this._nearGateZone(this._nextCoinAt)) this._spawnCoinLine(this._nextCoinAt - this.distance);
+      if (!this._nearGateZone(this._nextCoinAt) && !calm) this._spawnCoinLine(this._nextCoinAt - this.distance);
       this._nextCoinAt += cfg.BASE_GAP * (0.9 + this.rng.next() * 0.6);
     }
   };
@@ -2063,6 +2073,8 @@
         if (km10 !== hudCache.score) { hudCache.score = km10; el.score.textContent = (km10 / 10).toFixed(1) + ' km'; }
         var spd = sim.boostActive ? -1 : Math.round(sim.scoreSpeed);
         if (spd !== hudCache.dist) { hudCache.dist = spd; el.dist.textContent = sim.boostActive ? 'BOOST \u26A1' : spd + ' m/s'; }
+        var bOn = !!sim.boostActive;
+        if (hudCache.boostOvr !== bOn) { hudCache.boostOvr = bOn; el.boostOvr.style.display = bOn ? 'flex' : 'none'; }   // (v0.103.0, C7)
         var cl = sim.coinScore | 0;
         if (el.cells && cl !== hudCache.cells) { hudCache.cells = cl; el.cells.textContent = '\u2b21 ' + cl; }   // (J9)
         var bk = buffStr(sim.buffs);
@@ -2283,6 +2295,8 @@
     var fallback = ce('div', 'cc-fallback'); root.appendChild(fallback);
 
     var hud = ce('div', 'cc-hud'); root.appendChild(hud);
+    // (v0.103.0, C7, Jason) unmistakable Boost Mode: haze veil + banner; steering is locked sim-side
+    var boostOvr = ce('div', 'cc-boost-ovr'); boostOvr.innerHTML = '<span>BOOST MODE</span>'; root.appendChild(boostOvr);
     var shieldWrap = ce('div', 'cc-shieldwrap'); var slabel = ce('span', 'cc-lbl'); slabel.textContent = 'Shields';
     var shieldPips = ce('div', 'cc-pips'); shieldWrap.appendChild(slabel); shieldWrap.appendChild(shieldPips); hud.appendChild(shieldWrap);
     var score = ce('div', 'cc-score'); hud.appendChild(score);
@@ -2323,7 +2337,7 @@
 
     return { root: root, canvas: canvas, fallback: fallback, hud: hud, shieldPips: shieldPips, score: score, dist: dist, buffs: buffs,
       kLeft: kLeft, kRight: kRight, kJump: kJump, kDuck: kDuck, replay: replay,
-      overlay: overlay, qStem: qStem, qOpts: qOpts, qFeedback: qFeedback, qTimer: qTimer, cells: cells,
+      overlay: overlay, qStem: qStem, qOpts: qOpts, qFeedback: qFeedback, qTimer: qTimer, cells: cells, boostOvr: boostOvr,
       intro: intro, introCap: introCap, introEyebrow: introEyebrow, introSkip: introSkip,
       gameover: gameover, ovrTitle: ovrTitle, ovrStats: ovrStats, ovrCells: ovrCells, garagePanel: garagePanel, btnGarage: btnGarage, btnRestart: btnRestart, btnExit: btnExit };
   }
@@ -2431,6 +2445,10 @@
     '.cc-howto{position:absolute;inset:0;z-index:14;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(5,5,11,.84);backdrop-filter:blur(4px);pointer-events:auto;}' +
     '.cc-howto-panel{width:min(460px,94%);background:rgba(20,20,29,.97);border:1px solid #34344a;border-radius:16px;padding:22px;box-shadow:0 0 40px rgba(120,85,250,.28);}' +
     '.cc-howto-eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#1FDDE9;margin-bottom:6px;}' +
+    '.cc-boost-ovr{position:absolute;inset:0;display:none;align-items:center;justify-content:center;pointer-events:none;z-index:7;background:radial-gradient(ellipse at center, rgba(31,221,233,.06) 30%, rgba(31,221,233,.18) 100%);backdrop-filter:blur(1.5px);}' +
+    '.cc-boost-ovr span{font-size:34px;font-weight:800;letter-spacing:.3em;color:#1FDDE9;text-shadow:0 0 24px rgba(31,221,233,.8);animation:ccBoostPulse 0.5s ease-in-out infinite alternate;}' +
+    '@keyframes ccBoostPulse{from{opacity:.75;}to{opacity:1;}}' +
+    '@media (prefers-reduced-motion: reduce){.cc-boost-ovr{backdrop-filter:none;}.cc-boost-ovr span{animation:none;}}' +
     '.cc-howto-loadout{margin:8px 0 2px;padding:6px 9px;border:1px solid rgba(255,200,87,.35);border-radius:8px;font-size:12px;color:#FFC857;background:rgba(255,200,87,.07);}' +
     '.cc-howto-h{font-size:21px;font-weight:800;color:#F2F2F7;margin-bottom:14px;}' +
     '.cc-howto-list{display:flex;flex-direction:column;gap:11px;margin-bottom:18px;}' +
