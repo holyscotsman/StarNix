@@ -3,6 +3,43 @@
 Morning report per `NIGHT_RUN.md` v2. One entry per unit (version, unit, what shipped,
 assertion delta, negative-control result, punts). Blockers logged here, not asked.
 
+---
+
+## ☀️ MORNING SUMMARY (kept current; latest state at time of writing: v0.64.0)
+
+**Shipped: 13 green-gated units — all nine Phase-1 units (v0.52.0–v0.60.0) + four Phase-2
+iterations (v0.61.0–v0.64.0).** Every code unit: full gate green + a negative control that
+provably bit + one commit. Gate grew 345 → **412** verify-build assertions, plus NEW suites:
+ARM RUN 46, CC RUN 26, KBB RUN 20→26, fairness 20→25, view-smoke +9. Playwright (unit 9's
+granted exception) gave the night real eyes: 63 screenshots, 7 objective defects found —
+**all 7 fixed and re-verified the same night** (see PLAYTEST.md, all A-items annotated).
+
+**The features, one line each:** ARM engine harness · Commander-rank XP (one pool, 10 ranks,
+menu strip + one-shot promotion toast) · 12 achievements (pure predicates, mid-game toasts,
+Progress panel) · +6 KBB artifacts (balance targets untouched) · CC sweeper hazard (first
+moving obstacle; fairness 25/25 with worst-case solvability) · daily missions (3/day,
+date-seeded, claimable XP) · mastery-gated ship trails (per-domain unlocks, applied in all
+three games) · Blitz combo multiplier (×1.5 cap, exploit-proofed) · the visual playtest +
+its 7 fixes (menu fold/scroll!, CC craggy peaks root-cause, full-bleed KBB cinematic, HUD
+collisions, fog end-cap) · cc-run.cjs harness parity.
+
+**Top 3 things to look at first:**
+1. **Play the menu → Progress → a CC run** (`npm run build`, open index.html): the whole
+   progression surface (rank/daily/achievements) + the new CC look (craggy peaks, sweeper
+   hazard, end-cap) shipped browser-blind-then-machine-eyed; your eyes are the final gate.
+   `playtest-shots/` (local, 63 PNGs) is the before/after tour; start with `05`, `21` vs `60`.
+2. **The QA-A5 doc/code discrepancy** (NIGHT_LOG v0.52.0 entry): question timeouts NEVER
+   damage — the documented `timeUp→wrong→damage→gameOver` trace doesn't exist in code.
+   Design call needed: should they? (One line + doc re-sync if yes.)
+3. **Blitz bests are soft now** (combo inflates ≤50%) and **cosmetics revert if a domain's
+   mastery decays below 50%** — both deliberate, both one-liners to change if you disagree.
+
+**Open/blocked (carried):** browser QA pass v0.42–0.64 (QA-M1–M4, K6, C9, E6 added tonight);
+ten `kbb*` sprites; D1 bank expansion (your dumps); a1q13/a1q27/a3q7 quarantined; a4q50
+orphan; 01 doc-sync owed (xp/rankSeen/StarNix.xp/submitScore/achievements/daily/cosmetics
+surfaces); KBB-win/ARM-sector-clear telemetry emits (would unlock the literal "flawless
+battle"/"full-collection" achievements); performance-domain artifact slot.
+
 Baseline at start: v0.51.0, commit 068168c, `npm run check` ALL GREEN (verify-build 345,
 fairness 20/20, kbb-run 20/20, kbb-draw green). Node v26.4.0 via Homebrew.
 
@@ -427,6 +464,29 @@ travel legs now pin shields and graded deltas measure off the pin. Negctrl (phas
 sweeper) failed exactly the live-lane pin. Full gate 412/412 + CC RUN 26/26.
 ALL THREE GAMES now have engine run-through harnesses.
 Commit: `v0.64.0 — cc-run.cjs engine harness parity`.
+
+---
+
+## Phase 2 · iteration 5 — MINI-SPEC (before build)
+
+**What:** the standing repeatable unit — kbb-balance + CC spawn-mix in REPORT mode, with a
+one-off instrumented analysis (per-artifact purchase counts + clear-depth correlation across
+the fuzz cohorts; CC row-type distribution incl. the new 10% sweeper share), then AT MOST one
+tuning fix that keeps every locked target green — or a justified no-tune conclusion.
+**Why (rubric):** mission 3/5 (tonight added 6 artifacts + a hazard; the distributions have
+never been LOOKED at, only gated); verifiability 5/5 (locked targets must stay green
+untouched); blast radius 5/5 (a data-driven one-knob tune at most); size 4/5.
+**Planned output:** analysis appended to `PLAYTEST.md` (per NIGHT_RUN §Phase-2); a tune ONLY
+if the data shows a clear dead/outlier knob; negctrl per the usual rule if code changes.
+
+**RESULT (no version bump — analysis only, zero code changed):** 600 instrumented fuzz runs
++ CC row-mix counts appended to PLAYTEST §E. **Justified NO-TUNE:** tonight's six artifacts
+sit within noise of the 4.76 cohort mean; the strong signals — all four legendaries never
+bought (price vs random-cohort coins) and the domain-artifact depth split (fuzz bank is
+all-storage) — are fuzz-model properties; tuning game constants against the test's blind
+spots would be tuning the wrong thing. One real design question surfaced for Jason:
+legendary reachability (price curve / pity offer). Locked targets untouched, gate untouched.
+Commit: `P2·5 — balance/pacing analysis (no-tune conclusion) → PLAYTEST §E`.
 
 ---
 

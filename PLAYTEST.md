@@ -81,3 +81,31 @@ taste calls. Fixes deliberately NOT implemented here (they feed Phase 2).
 - Cinematic beat timings in the script hit the warp beat instead of the shell planet beat
   (`03`) — the shell planet confirm stays on Jason's QA-S1.
 - Everything audio, all motion feel, and touch ergonomics remain human-gated.
+
+---
+
+## E. Balance/pacing analysis (P2·5, v0.64.0 — the standing report-mode unit)
+
+600-run instrumented sweep of the kbb-balance fuzz (70% cohort, random-affordable buys) +
+a 4-seed × 120 s CC row-mix count. **Conclusion: NO tuning change shipped — the data shows
+no pathological knob, and the two strongest signals are properties of the fuzz model, not
+the game.** Locked targets untouched and green throughout.
+
+- **Tonight's six artifacts sit in the healthy band.** Owned-run avg cleared depth vs the
+  4.76 cohort mean: snapshot-ledger 4.91 (n=132 — the most-bought common, working as the
+  cheap staple), one-click-repair 4.82, erasure-coding 4.75, cluster-expand 5.39,
+  lcm-pipeline 4.07 (fuzz-dead by design — the synthetic bank is all storage-domain),
+  prism-focus n=2 (rares are rarely affordable to this cohort; no signal).
+- **All four LEGENDARIES were never bought in 600 runs** (metadata-ring, aegis-capacitor,
+  golden-cache, singularity-seed): base price 24 + section scaling exceeds what the random
+  cohort ever holds. A fuzz-visibility fact, but also a real question for Jason: should
+  legendaries be reachable outside long/good runs? (Design lever = price curve or a pity
+  offer; deliberately NOT tuned tonight — it moves locked distributions.)
+- **Domain artifacts split by fuzz construction, not merit:** data-locality reads 9.94
+  because the synthetic bank is 100% storage (it's a pure ×2 in-fuzz); lcm-pipeline reads
+  4.07 for the mirror reason. In the real bank both are ~1/9-domain conditionals.
+  Correlation-vs-causation caveat on the whole table: the buy policy is random-affordable,
+  so weak-looking artifacts are partly "owned by runs that found no damage."
+- **CC row mix (actual spawns):** narrow 26.0% · arch 17.9% · wall 15.8% · combo 12.2% ·
+  extend 11.1% · pinch 9.5% · **sweeper 7.5%** (10% draw share minus gate-zone skips —
+  present, not dominant; matches intent).
