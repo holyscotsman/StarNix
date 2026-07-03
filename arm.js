@@ -1300,7 +1300,7 @@
           // (v0.97.0, A10, Jason) two beam types: the classic single beam to sidestep, or the
           // WALL — the whole channel gets blasted except one safe column you must reach.
           boss.laserMode = runRng.next() < 0.6 ? "beam" : "wall";
-          if (boss.laserMode === "wall") { var BAw = bossArena(); boss.gapX = BAw.x + BAw.w * (0.18 + runRng.next() * 0.64); }
+          if (boss.laserMode === "wall") { var BAw = bossArena(); boss.gapX = BAw.l + BAw.w * (0.18 + runRng.next() * 0.64); }   // (v0.108.0, G4 HIGH) was .x = NaN — the wall never fired
           sfx("lasercharge");
         }
       } else if (boss.laserState === "charge") {
@@ -1377,13 +1377,18 @@
     // (v0.106.0, G2) checkpoint helpers — profile.saves.ARM via ctx.persistence
     function saveCheckpoint() {
       try {
-        if (!(PERS && PERS.load && PERS.save)) return;
+        if (!PERS) return;
         var snap = { sector: sector, coins: coins, lvl: { engine: lvl.engine, maneuver: lvl.maneuver, capacitor: lvl.capacitor, shieldCell: lvl.shieldCell, rapid: lvl.rapid }, stationBuild: stationBuild, usedIds: usedIds.slice(0, 400), label: 'Sector ' + sector + ' of ' + SECTORS + ' \u00b7 ' + coins + ' \u2b21 \u00b7 station ' + stationBuild + '/' + TOTAL };
-        PERS.load().then(function (p) { p.saves = p.saves || {}; p.saves.ARM = snap; return PERS.save(p); }).catch(function () {});
+        // (v0.108.0, G4) LIVE-profile write — clone-writes were clobbered by the next answer
+        if (PERS.update) PERS.update(function (p) { p.saves = p.saves || {}; p.saves.ARM = snap; });
+        else if (PERS.load && PERS.save) PERS.load().then(function (p) { p.saves = p.saves || {}; p.saves.ARM = snap; return PERS.save(p); }).catch(function () {});
       } catch (eSv) {}
     }
     function clearCheckpoint() {
-      try { if (PERS && PERS.load && PERS.save) PERS.load().then(function (p) { if (p.saves && p.saves.ARM) { delete p.saves.ARM; return PERS.save(p); } }).catch(function () {}); } catch (eCl) {}
+      try {
+        if (PERS && PERS.update) PERS.update(function (p) { if (p.saves) delete p.saves.ARM; });
+        else if (PERS && PERS.load && PERS.save) PERS.load().then(function (p) { if (p.saves && p.saves.ARM) { delete p.saves.ARM; return PERS.save(p); } }).catch(function () {});
+      } catch (eCl) {}
     }
     function nextSector() {
       sector++;
@@ -1998,7 +2003,7 @@
       drawCoreQuestions(); buildSectorWorld();
       shields = maxShields; charges = maxCharges; invuln = 0;  // give a clean ship so the fight is testable
       setState("SECTOR");
-      try { showToast("Dev: jumped to boss \u2014 sector 4"); } catch (e) {}
+      try { showToast("Dev: jumped to boss \u2014 sector 3"); } catch (e) {}
     }
     function showSettings() {
       prevState = (state === "SETTINGS") ? prevState : state;
@@ -2031,16 +2036,14 @@
     function markBeltCleared() {
       if (beltClearedSent) return; beltClearedSent = true;
       try {
-        if (PERS && PERS.load && PERS.save) {
-          PERS.load().then(function (p) { if (!p.armBeltCleared) { p.armBeltCleared = true; return PERS.save(p); } }).catch(function () {});
-        }
+        if (PERS && PERS.update) PERS.update(function (p) { p.armBeltCleared = true; });   // (v0.108.0, G4) live profile — the award trigger reads THIS object
+        else if (PERS && PERS.load && PERS.save) PERS.load().then(function (p) { if (!p.armBeltCleared) { p.armBeltCleared = true; return PERS.save(p); } }).catch(function () {});
       } catch (e) {}
     }
     function persistSetting(k, v) {
       try {
-        if (PERS && PERS.load && PERS.save) {
-          PERS.load().then(function (p) { p.settings = p.settings || {}; p.settings[k] = v; return PERS.save(p); }).catch(function () {});
-        }
+        if (PERS && PERS.update) PERS.update(function (p) { p.settings = p.settings || {}; p.settings[k] = v; });   // (v0.108.0, G4) live profile
+        else if (PERS && PERS.load && PERS.save) PERS.load().then(function (p) { p.settings = p.settings || {}; p.settings[k] = v; return PERS.save(p); }).catch(function () {});
       } catch (e) {}
     }
 
@@ -2349,8 +2352,8 @@
         var kw = boss.laserT / (LASER_CHARGE * 1.5), BAd = bossArena();
         c2d.save();
         c2d.globalAlpha = 0.06 + 0.16 * kw; c2d.fillStyle = COL.peach;
-        c2d.fillRect(BAd.x, 0, Math.max(0, boss.gapX - GAP_HALF - BAd.x), H);
-        c2d.fillRect(boss.gapX + GAP_HALF, 0, Math.max(0, BAd.x + BAd.w - (boss.gapX + GAP_HALF)), H);
+        c2d.fillRect(BAd.l, 0, Math.max(0, boss.gapX - GAP_HALF - BAd.l), H);
+        c2d.fillRect(boss.gapX + GAP_HALF, 0, Math.max(0, BAd.l + BAd.w - (boss.gapX + GAP_HALF)), H);
         c2d.globalAlpha = 0.25 + 0.45 * kw; c2d.strokeStyle = COL.mantis; c2d.lineWidth = 2;
         c2d.strokeRect(boss.gapX - GAP_HALF, 0, GAP_HALF * 2, H);        // the safe lane, outlined in green
         c2d.restore(); return;
@@ -2358,10 +2361,10 @@
       if (boss.laserState === "fire" && boss.laserMode === "wall") {
         var BAf = bossArena();
         c2d.save(); c2d.shadowBlur = 26; c2d.shadowColor = COL.peach; c2d.globalAlpha = 0.85; c2d.fillStyle = COL.peach;
-        c2d.fillRect(BAf.x, 0, Math.max(0, boss.gapX - GAP_HALF - BAf.x), H);
-        c2d.fillRect(boss.gapX + GAP_HALF, 0, Math.max(0, BAf.x + BAf.w - (boss.gapX + GAP_HALF)), H);
+        c2d.fillRect(BAf.l, 0, Math.max(0, boss.gapX - GAP_HALF - BAf.l), H);
+        c2d.fillRect(boss.gapX + GAP_HALF, 0, Math.max(0, BAf.l + BAf.w - (boss.gapX + GAP_HALF)), H);
         c2d.globalAlpha = 1; c2d.fillStyle = "#fff";
-        c2d.fillRect(BAf.x, 0, Math.max(0, boss.gapX - GAP_HALF - BAf.x) * 0.0 + 0, 0);   // core kept simple: peach wall only
+        
         c2d.restore(); return;
       }
       if (boss.laserState === "charge") {             // buildup: a widening warning beam + a growing orb at the muzzle
@@ -2752,6 +2755,8 @@
       root.__armTest = {
         step: function (dt) { tick(dt == null ? 1 / 60 : dt); },
         bossRush: function (g) { drawBossRush(g); },               // (v0.83.0) explicit, ctx-injectable rush probe
+        sector: function () { return sector; }, coins: function () { return coins; },   // (v0.108.0, G4) resume pins
+        bossGapX: function () { return boss ? boss.gapX : NaN; },
         starCount: function () { return stars.length; },
         state: function () { return state; },
         palette: function () { return { highContrast: highContrast, border: COL.border, aqua: COL.aqua, text: COL.text, mid: COL.mid, trail: TRAIL }; },
@@ -2812,7 +2817,7 @@
         },
         arrive: function (i) { if (cores[i]) onArrive(cores[i]); },
         bossEnabled: function () { return bossActive; },
-        bossInfo: function () { var dead = 0; if (boss && boss.wps) for (var i = 0; i < boss.wps.length; i++) if (boss.wps[i].dead) dead++; return { active: !!(boss && boss.active), wpHp: boss ? boss.wpHp : 0, wpMax: boss ? boss.wpMax : 0, queue: bossQueue.length, dying: !!(boss && boss.dying), cores: cores.length, wpDead: dead, wpActive: boss ? boss.wpActive : 0, wpCount: boss && boss.wps ? boss.wps.length : 0 }; },
+        bossInfo: function () { var dead = 0; if (boss && boss.wps) for (var i = 0; i < boss.wps.length; i++) if (boss.wps[i].dead) dead++; return { active: !!(boss && boss.active), wpHp: boss ? boss.wpHp : 0, wpMax: boss ? boss.wpMax : 0, queue: bossQueue.length, dying: !!(boss && boss.dying), cores: cores.length, wpDead: dead, wpActive: boss ? boss.wpActive : 0, wpCount: boss && boss.wps ? boss.wps.length : 0, laserMode: boss ? boss.laserMode : null, laserState: boss ? boss.laserState : null }; },
         hitWeakpoint: function (n) { var k = 0; while (k++ < (n || 1)) { if (!boss || !boss.active || boss.dying) break; if (--boss.wpHp <= 0) shedCore(); } },
         spawnMissileAt: function (x, y) { var mm = null; for (var i = 0; i < missiles.length; i++) { if (!missiles[i].active) { mm = missiles[i]; break; } } if (mm) { mm.active = true; mm.x = x; mm.y = y; mm.ang = 0; mm.vx = MISSILE_SPEED; mm.vy = 0; mm.life = 9; } },
         missileInfo: function () { var n = 0, d = -1; for (var i = 0; i < missiles.length; i++) { if (missiles[i].active) { n++; d = Math.sqrt((missiles[i].x - ship.x) * (missiles[i].x - ship.x) + (missiles[i].y - ship.y) * (missiles[i].y - ship.y)); } } return { active: n, distToShip: d }; },

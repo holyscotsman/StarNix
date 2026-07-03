@@ -229,6 +229,13 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-G7 — G4 repair verifications (added v0.108.0).** (a) Save/Resume FOR REAL: play ARM into
+  sector 2, answer a few more questions, exit, re-enter — Resume must still be offered (it used to
+  vanish after any answer). (b) Belt sweeper: clear a sector's asteroids — the toast should now
+  actually arrive on your next answer. (c) ARM boss: the WALL laser (green safe column) must
+  actually appear and hurt — it was invisible since v0.97. (d) CC: corners should never ambush you
+  right out of a question anymore.
+
 - **QA-G6 — Intro cinematic (added v0.107.0).** Replay the intro: stars have depth and streak hard
   when the Disruptor fires; the camera leans into each beat; the blast/jump have real sound. EARS:
   flag anything piercing. Reduced motion: calm flat version.

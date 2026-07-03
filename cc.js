@@ -341,7 +341,7 @@
     }
     if (this.turnPending && !this.boostActive && this.scoreDistance >= this.turnPending.atScore) {
       var needLane = this.turnPending.dir === 'right' ? 2 : 0;
-      var madeIt = this.player.lane === needLane;
+      var madeIt = this.player.lane === needLane || this.iframe > 0;   // (v0.108.0, G4) grace windows apply to corners too — no undodgeable clip off a question
       this.turnMade = madeIt; this.turnDir = this.turnPending.dir;   // view reads these for the yaw flourish
       if (!madeIt) this._onCrash();                                  // clipped the corner wall — shield cost, run continues
       this._emit && this._emit(madeIt ? 'turn' : 'turnfail');
@@ -352,8 +352,13 @@
     if (this.boostActive && this.scoreDistance >= this._boostTargetScore) {
       this.boostActive = false;
       this._boostCalmUntil = this.distance + this.cfg.MAX_SPEED * 5;   // (v0.103.0, C7) ~5s of clear road at cruise (boost speed would triple it)
+      // (v0.108.0, G4) a warning with less than 3/4 of its window left is autopiloted too —
+      // a boost ending mid-warning left near-zero reaction from the forced center lane
+      if (this.turnPending && (this.turnPending.atScore - this.scoreDistance) < cfg.SCORE_SPEED * cfg.TURN_WARN_S * 0.75) {
+        this.turnPending = null; this._nextTurnScore += cfg.TURN_KM * 1000; this._emit && this._emit('turnauto');
+      }
       this.iframe = Math.max(this.iframe, 1.0);      // hand control back gently — no instant faceplant
-      this._nextGateScore = this.scoreDistance + cfg.GATE_KM * 1000;   // resume the normal gate cadence after the skip
+      this._nextGateScore = (Math.floor(this.scoreDistance / (cfg.GATE_KM * 1000)) + 1) * (cfg.GATE_KM * 1000);   // (v0.108.0, G4) SNAP to the 10-km grid — drift was letting gates land inside turn warnings
     }
 
     // player lane tween (linear from the lane being left to the target)
@@ -479,7 +484,7 @@
       magnet: !!u.magnet,
       plating: !!u.plating
     };
-    if (this.phase === 'RUN' && this.distance < 1) {           // fresh run: apply immediately
+    if (this.phase === 'RUN' && this.distance < 1 && !this._resumed) {           // fresh run: apply immediately
       this.shields = this.cfg.SHIELDS_START + this._up.hull;
       this._platingLeft = this._up.plating ? 1 : 0;
     }
@@ -1901,7 +1906,9 @@
         sim.scoreDistance = rz.scoreDistance; sim.shields = Math.max(1, rz.shields | 0);
         sim.coinScore = rz.coinScore | 0; sim._gatesPassed = rz.gatesPassed | 0;
         if (rz.nextTurnScore) sim._nextTurnScore = rz.nextTurnScore;
-        sim._nextGateScore = sim.scoreDistance + sim.cfg.GATE_KM * 1000;
+        sim._nextGateScore = (Math.floor(sim.scoreDistance / (sim.cfg.GATE_KM * 1000)) + 1) * (sim.cfg.GATE_KM * 1000);   // (G4) grid snap
+        sim._resumed = true;                                              // (G4) applyUpgrades must NOT re-fill the checkpointed shields
+        if (rz.boostLeft > 0) { sim._activateBoost(); sim._boostTargetScore = sim.scoreDistance + rz.boostLeft; }   // (G4) an earned boost survives the save
       }
 
       // settings (apply async; defaults until loaded)
@@ -2085,8 +2092,10 @@
               var P4 = ctx.persistence;
               if (P4 && P4.load && P4.save) {
                 var snap = { scoreDistance: sim.scoreDistance, shields: sim.shields, coinScore: sim.coinScore, gatesPassed: sim._gatesPassed, nextTurnScore: sim._nextTurnScore,
+                  boostLeft: sim.boostActive ? Math.max(0, sim._boostTargetScore - sim.scoreDistance) : 0,   // (v0.108.0, G4) an earned ride is part of the save
                   label: (sim.scoreDistance / 1000).toFixed(1) + ' km \u00b7 ' + sim.shields + ' shields \u00b7 ' + sim.coinScore + ' cells' };
-                P4.load().then(function (p) { p.saves = p.saves || {}; p.saves.CC = snap; return P4.save(p); }).catch(function () {});
+                if (P4.update) P4.update(function (p) { p.saves = p.saves || {}; p.saves.CC = snap; });   // (G4 HIGH) live profile
+                else P4.load().then(function (p) { p.saves = p.saves || {}; p.saves.CC = snap; return P4.save(p); }).catch(function () {});
               }
             } catch (eSv) {}
           }
@@ -2109,7 +2118,7 @@
 
       // ---- game over ----
       function showOver() {
-        try { var P5 = ctx.persistence; if (P5 && P5.load && P5.save) P5.load().then(function (p) { if (p.saves && p.saves.CC) { delete p.saves.CC; return P5.save(p); } }).catch(function () {}); } catch (eCl) {}   // (v0.106.0, G2)
+        try { var P5 = ctx.persistence; if (P5 && P5.update) P5.update(function (p) { if (p.saves) delete p.saves.CC; }); else if (P5 && P5.load && P5.save) P5.load().then(function (p) { if (p.saves && p.saves.CC) { delete p.saves.CC; return P5.save(p); } }).catch(function () {}); } catch (eCl) {}   // (v0.108.0, G4) live profile
         var banked = sim.coinScore | 0;                        // (v0.73.0, J9) cells earned this run
         if (ctx.persistence && typeof ctx.persistence.load === 'function') {
           Promise.resolve(ctx.persistence.load()).then(function (prof) {
@@ -2267,7 +2276,7 @@
         ];
         // (v0.101.0, C11, Jason) your Garage loadout, visible BEFORE the run (async-load safe)
         var loadout = ce('div', 'cc-howto-loadout'); panel.appendChild(loadout);
-        setTimeout(function () {
+        var ldT = setTimeout(function () {
           try {
             var gp = garageProfile, parts = [];
             if (gp && CC.garage && CC.garage.state) {
@@ -2277,6 +2286,7 @@
             loadout.textContent = parts.length ? '\u2699 EQUIPPED: ' + parts.join(' \u00b7 ') : '\u2699 No upgrades fitted yet \u2014 bank cells, refit in the Garage after a run.';
           } catch (eLd) { loadout.textContent = ''; }
         }, 120);
+        if (typeof howToTimers !== 'undefined' && howToTimers && howToTimers.push) howToTimers.push(ldT); else if (state && state.timers) state.timers.push(ldT);   // (v0.108.0, G4) tracked for teardown
         var lis = [];
         for (var i = 0; i < rules.length; i++) {
           var li = ce('div', 'cc-howto-li');
@@ -2571,7 +2581,7 @@
     '.cc-howto{position:absolute;inset:0;z-index:14;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(5,5,11,.84);backdrop-filter:blur(4px);pointer-events:auto;}' +
     '.cc-howto-panel{width:min(460px,94%);background:rgba(20,20,29,.97);border:1px solid #34344a;border-radius:16px;padding:22px;box-shadow:0 0 40px rgba(120,85,250,.28);}' +
     '.cc-howto-eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#1FDDE9;margin-bottom:6px;}' +
-    '.cc-turn-banner{position:absolute;top:38%;left:50%;transform:translateX(-50%);display:none;font-size:26px;font-weight:800;letter-spacing:.22em;color:#FFC857;text-shadow:0 0 18px rgba(255,200,87,.8);pointer-events:none;z-index:8;animation:ccTurnFlash 0.4s step-end infinite;}' +
+    '.cc-turn-banner{position:absolute;top:38%;left:50%;transform:translateX(-50%);display:none;font-size:26px;font-weight:800;letter-spacing:.22em;color:#FFC857;text-shadow:0 0 18px rgba(255,200,87,.8);pointer-events:none;z-index:12;animation:ccTurnFlash 0.4s step-end infinite;}' +
     '@keyframes ccTurnFlash{0%{opacity:1;}50%{opacity:.45;}}' +
     '@media (prefers-reduced-motion: reduce){.cc-turn-banner{animation:none;}}' +
     '.cc-boost-ovr{position:absolute;inset:0;display:none;align-items:center;justify-content:center;pointer-events:none;z-index:7;background:radial-gradient(ellipse at center, rgba(31,221,233,.06) 30%, rgba(31,221,233,.18) 100%);backdrop-filter:blur(1.5px);}' +

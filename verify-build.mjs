@@ -118,8 +118,8 @@ async function runFrames(n = 6) {
     let guard = 0;
     while (SN.shell.screen === "cinematic" && guard < 60) { await runFrames(20); guard++; }   // drive through every beat
     w.performance.now = realNow;
-    ok("G3 (v0.107.0): the cinematic sound rail fired its beats (charge/fire/explode/jump)",
-      ["sfx:lasercharge", "sfx:laserfire", "sfx:explode", "sfx:laserhit"].every(n => calls.indexOf(n) >= 0));
+    ok("G3 (v0.107.0): the cinematic sound rail fired its beats EXACTLY ONCE each",
+      ["sfx:lasercharge", "sfx:laserfire", "sfx:explode", "sfx:laserhit"].every(n => calls.filter(x => x === n).length === 1));
     ok("ran every beat without a frame error", frameErrors.length === beforeErr);
     ok("auto-advanced to menu at end", SN.shell.screen === "menu");
     ok("menu track played on cinematic end", calls.indexOf("track:menu") !== -1);
@@ -150,7 +150,7 @@ async function runFrames(n = 6) {
 
   console.log("\nD. ARM");
   calls.length = 0;
-  shell.enterGame("ARM");
+  delete SN.core.profile.saves; shell.enterGame("ARM");
   ok("screen === game:ARM", shell.screen === "game:ARM");
   ok("build-version badge persists into a game (on root, not stage)", !!w.document.querySelector(".sx-build-badge"));
   ok("ARM track played on enter", calls.indexOf("track:arm") !== -1);
@@ -174,7 +174,7 @@ async function runFrames(n = 6) {
   ok("ARM game root detached", !armRoot.parentNode);
 
   console.log("\nD2. ARM charge/recharge model (P1 — no softlock)");
-  shell.enterGame("ARM");
+  delete SN.core.profile.saves; shell.enterGame("ARM");
   await wait(10);
   const armT = shell.currentGameRoot.__armTest;
   ok("ARM exposes test seam", !!armT);
@@ -368,7 +368,7 @@ async function runFrames(n = 6) {
   {
     const prev = SN.core.profile.settings.colorblind;
     SN.core.profile.settings.colorblind = true;
-    shell.enterGame("ARM"); await wait(10);
+    delete SN.core.profile.saves; shell.enterGame("ARM"); await wait(10);
     const pHc = shell.currentGameRoot.__armTest.palette();
     ok("ARM reads high-contrast from settings.colorblind", pHc.highContrast === true);
     ok("ARM canvas border uses the HC value", pHc.border === "#9aa0e0");
@@ -376,7 +376,7 @@ async function runFrames(n = 6) {
     { const e = await runFrames(); ok("ARM HC draw loop runs without error", e.length === 0); }
     shell.exitGame();
     SN.core.profile.settings.colorblind = false;
-    shell.enterGame("ARM"); await wait(10);
+    delete SN.core.profile.saves; shell.enterGame("ARM"); await wait(10);
     const pBase = shell.currentGameRoot.__armTest.palette();
     ok("ARM uses the base palette when HC off", pBase.highContrast === false && pBase.border === "#34344a");
     shell.exitGame();
@@ -385,7 +385,7 @@ async function runFrames(n = 6) {
 
   console.log("\nE. CC (Three absent -> graceful fallback)");
   calls.length = 0;
-  shell.enterGame("CC");
+  delete SN.core.profile.saves; shell.enterGame("CC");
   ok("screen === game:CC", shell.screen === "game:CC");
   ok("CC track played on enter", calls.indexOf("track:cc") !== -1);
   await wait(10);
@@ -418,7 +418,7 @@ async function runFrames(n = 6) {
   ok("CC game root detached", !ccRoot.parentNode);
 
   console.log("\nE2. CC gate question overlay (P1 — freeze regression)");
-  shell.enterGame("CC");
+  delete SN.core.profile.saves; shell.enterGame("CC");
   await wait(10);
   { const sk = w.document.querySelector(".cc-intro-skip"); if (sk) sk.click(); }  // #11: skip descent -> how-to
   { const c = w.document.querySelector(".cc-howto-cont"); if (c) c.click(); }     // dismiss how-to -> run (module now reacts to gameplay phases)
@@ -509,7 +509,7 @@ async function runFrames(n = 6) {
   ok("CC(2) unmounted -> menu", shell.screen === "menu");
 
   console.log("\nE3. CC obstacle redesign (rock wall narrowing / full-width arch / solvable rows)");
-  shell.enterGame("CC");
+  delete SN.core.profile.saves; shell.enterGame("CC");
   await wait(10);
   { const sk = w.document.querySelector(".cc-intro-skip"); if (sk) sk.click(); }
   { const c = w.document.querySelector(".cc-howto-cont"); if (c) c.click(); }
@@ -624,7 +624,7 @@ async function runFrames(n = 6) {
 
   console.log("\nF. KBB (real module — #24 flow: how-to -> cinematic -> shop -> start)");
   calls.length = 0;
-  shell.enterGame("KBB");
+  delete SN.core.profile.saves; shell.enterGame("KBB");
   ok("screen === game:KBB", shell.screen === "game:KBB");
   ok("KBB track played on enter", calls.indexOf("track:kbb") !== -1);
   await wait(10);
@@ -667,7 +667,7 @@ async function runFrames(n = 6) {
 
   console.log("\nG. Answering a KBB question (engine smoke)");
   calls.length = 0;
-  shell.enterGame("KBB");
+  delete SN.core.profile.saves; shell.enterGame("KBB");
   await wait(10);
   // (v0.68.0, J6) advance through the NEW opening: cinematic -> live battle + tour -> skip tour
   { const sk = Array.from(w.document.querySelectorAll(".kbb-skip")).find(b => /skip/i.test(b.textContent || "")); if (sk) sk.dispatchEvent(new w.Event("click", { bubbles: true })); }
@@ -788,7 +788,7 @@ async function runFrames(n = 6) {
 
   console.log("\nG2. Pause overlay (shell-driven freeze + music stop/restart, self-heal)");
   calls.length = 0;
-  shell.enterGame("ARM");
+  delete SN.core.profile.saves; shell.enterGame("ARM");
   await wait(10);
   ok("running game shows a Pause button, no overlay yet", !!w.document.querySelector(".sx-pausebtn") && !w.document.querySelector(".sx-pause"));
   let pzThrew = false;
@@ -840,7 +840,7 @@ async function runFrames(n = 6) {
   ok("pause overlay + game root cleared after exit", !w.document.querySelector(".sx-pause") && !w.document.querySelector(".sx-game-root"));
 
   console.log("\nH. Re-entry (state isolation)");
-  shell.enterGame("ARM"); await wait(10);
+  delete SN.core.profile.saves; shell.enterGame("ARM"); await wait(10);
   ok("ARM re-mounts cleanly", shell.screen === "game:ARM" && shell.currentGameRoot.childNodes.length > 0);
   shell.exitGame();
   ok("ARM re-exits cleanly", shell.screen === "menu");
@@ -1112,25 +1112,59 @@ async function runFrames(n = 6) {
     const ccS = shell._ccTestSim || (w.CC && w.CC._lastSim);
     ok("CC resume restores km/shields/cells", !!ccS && ccS.scoreDistance === 123000 && ccS.shields === 3 && ccS.coinScore === 44);
     shell.exitGame(); await wait(120);
-    // write side: a KBB shop exit checkpoints; source pins for the ARM/CC hooks + clears
-    shell.enterGame("KBB");
-    await wait(200);
+    // (v0.108.0, G4) the update seam is the LIVE profile — no clone clobbering
     {
-      const runW = w.KBB._test.state().run;
-      runW.phase = "shop"; w.KBB._test.buildShop(runW);
-      const stW = w.KBB._test.state();
-      // drive the module's own leave-shop path via the rendered button
-      stW.mainPanel && (stW.mainPanel.textContent = "");
-      w.KBB.leaveShop || null;
+      SN.core.persistence.update(p => { p.__probe = 41; });
+      ok("persistence.update mutates the LIVE core.profile (split-brain fix)", SN.core.profile.__probe === 41);
+      delete SN.core.profile.__probe;
     }
-    // simplest honest write probe: call the module path through the DOM after a forced shop render
-    ok("ARM checkpoints at the sector boundary + clears on death (source)",
-      html.includes("p.saves.ARM = snap") && html.includes("clearCheckpoint();   // (v0.106.0, G2) a dead run is not resumable"));
-    ok("KBB checkpoints on shop exit + clears on loss (source)",
-      html.includes("p.saves.KBB = snap") && html.includes("delete p.saves.KBB"));
+    // ARM resume: BEHAVIORAL — land in the checkpointed sector with the checkpointed wallet
+    SN.core.profile.saves = { ARM: { sector: 2, coins: 77, lvl: { engine: 1, maneuver: 0, capacitor: 0, shieldCell: 0, rapid: 0 }, stationBuild: 5, usedIds: [], label: "Sector 2 · test" } };
+    shell.enterGame("ARM");
+    ok("ARM chooser appears for the saved sector", shell.screen === "resume:ARM");
+    [...w.document.querySelectorAll("button")].find(n => /Resume/.test(n.textContent)).click();
+    await wait(80);
+    const armR = shell.currentGameRoot.__armTest;
+    ok("ARM resume lands at sector 2 with the checkpointed wallet", armR.sector() === 2 && armR.coins() === 77);
+    shell.exitGame(); await wait(120);
+    // KBB resume with a STATEFUL artifact + burned Lazarus (the fidelity fix)
+    SN.core.profile.saves = { KBB: { section: 2, round: 3,
+      squad: { hp: 30, maxHp: 40, shield: 0, startShield: 0, basePower: 12, block: 6, healPower: 6, coins: 9 },
+      artifacts: [{ id: "compounding-core", state: { f: 7 } }], flags: { lazarusUsed: true },
+      depthClearedSection: 1, depthClearedRound: 2, consumables: [], label: "x" } };
+    shell.enterGame("KBB");
+    [...w.document.querySelectorAll("button")].find(n => /Resume/.test(n.textContent)).click();
+    await wait(300);
+    const kR = w.KBB._test.state().run;
+    ok("KBB resume re-equips the artifact WITH its run state + keeps Lazarus burned",
+      kR.squad.artifacts.length === 1 && kR.squad.artifacts[0].def.id === "compounding-core"
+      && kR.squad.artifacts[0].state.f === 7 && kR.flags.lazarusUsed === true
+      && kR.depthClearedSection === 1);
+    // and the WRITE path, driven for real (JB2 recipe): answer -> flip to shop at the
+    // feedback -> Continue renders the shop -> Next battle fires onLeaveShop -> checkpoint
+    {
+      delete SN.core.profile.saves;
+      const skW = [...w.document.querySelectorAll(".kbb-skip")].find(n => /skip/i.test(n.textContent || "")); if (skW) skW.click();
+      await wait(80);
+      const htW = w.document.querySelector(".kbb-ht-skip"); if (htW) htW.click();
+      await wait(80);
+      const stW = w.KBB._test.state();
+      const qW = stW.run.battle.question;
+      if (qW) {
+        const ciW = qW.multi ? qW.correctIndices : [qW.correctIndex];
+        for (const iW of ciW) { const oW = w.document.querySelector('.kbb-opt[data-idx="' + iW + '"]'); if (oW) oW.click(); }
+        const sbW = w.document.querySelector(".kbb-submit"); if (sbW && !sbW.disabled) sbW.click();
+        stW.run.phase = "shop"; w.KBB._test.buildShop(stW.run);
+        const cW = w.document.querySelector(".kbb-cont:not(.kbb-submit)"); if (cW) cW.click();
+        const nbW = [...w.document.querySelectorAll(".kbb-btn")].find(n => /next battle|start run|next section/i.test(n.textContent || ""));
+        if (nbW) nbW.click();
+      }
+      ok("KBB shop exit checkpoints to the LIVE profile synchronously",
+        !!(SN.core.profile.saves && SN.core.profile.saves.KBB && SN.core.profile.saves.KBB.section >= 1));
+    }
+    shell.exitGame(); await wait(120);
     ok("CC checkpoints each survived gate + clears on SHIP DOWN (source)",
       html.includes("p.saves.CC = snap") && html.includes("delete p.saves.CC"));
-    shell.exitGame(); await wait(120);
     delete SN.core.profile.saves;
   }
 
@@ -1878,17 +1912,17 @@ async function runFrames(n = 6) {
     }
     // applied in the live games (jsdom mount through the shell)
     shell.showMenu();
-    shell.enterGame("ARM");
+    delete SN.core.profile.saves; shell.enterGame("ARM");
     await wait(10);
     ok("ARM: the mounted palette carries the trail tint", shell.currentGameRoot.__armTest.palette().trail === chosen.color);
     shell.exitGame();
-    shell.enterGame("KBB");
+    delete SN.core.profile.saves; shell.enterGame("KBB");
     await wait(10);
     ok("KBB: the mounted view state carries the trail tint", w.KBB._test.state().trailColor === chosen.color);
     shell.exitGame();
     // fallback: with the cosmetic cleared, ARM returns to stock aqua
     delete core.profile.settings.shipTrail; delete core.profile.settings.shipTrailColor;
-    shell.enterGame("ARM");
+    delete SN.core.profile.saves; shell.enterGame("ARM");
     await wait(10);
     {
       const pal = shell.currentGameRoot.__armTest.palette();

@@ -359,7 +359,7 @@
       { at: B.planet, name: "collect", done: false },
       { at: B.mission, name: "correct", done: false }
     ];
-    var camZ = 1;   // (G3) slow camera push-in per beat; snaps home on beat changes
+    var camZ = 1, lastCap = null, lastMo = null;   // (G3) push-in; (G4) DOM write caches
     function frame(ts) {
       var dt = (ts - last) / 1000; last = ts; if (dt > 0.05) dt = 0.05; T += dt;
       for (var sfb = 0; sfb < SFX_BEATS.length; sfb++) { var fb = SFX_BEATS[sfb]; if (!fb.done && T >= fb.at) { fb.done = true; try { StarNix.core.audio.sfx(fb.name); } catch (eFb) {} } }
@@ -399,8 +399,8 @@
         ctx.fillRect(0, 0, W, H * 0.06); ctx.fillRect(0, H * 0.94, W, H * 0.06);
       }
 
-      if (T >= B.mission) mission.style.opacity = String(clamp((T - B.mission) / 0.8, 0, 1));
-      cap.textContent = caption(T);
+      if (T >= B.mission) { var mo = String(clamp((T - B.mission) / 0.8, 0, 1)); if (mo !== lastMo) { lastMo = mo; mission.style.opacity = mo; } }
+      var capNow = caption(T); if (capNow !== lastCap) { lastCap = capNow; cap.textContent = capNow; }   // (v0.108.0, G4) no per-frame DOM writes
       if (T >= B.end) { self._endCinematic(); return; }
       self._raf = global.requestAnimationFrame(frame);
     }

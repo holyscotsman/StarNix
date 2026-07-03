@@ -101,7 +101,15 @@
 > **v0.6.21:** title screen uses the no-station nebula (`kbbBg`→`nebulaBg`); menu keeps the station vista. KBB shows `nebulaBg` + `bcmShip`. 200/200; art negative-controlled.
 > </details>
 
-## v0.107.0 — Intro cinematic deepened (G3)
+## v0.108.0 — G4 repair: split-brain profile fix (spec 01 v1.7), wall laser revived, honest resume pins — BATCH #5 COMPLETE
+
+All 35 batch items + 22 scan findings shipped (v0.92–v0.108, 17 releases). Gate: 16 suites,
+~490 pins, exit-code clean. OWED BY JASON: browser QA v0.92–v0.108 (checklist current),
+kbb* sprites + ccShipDuck, D1 question dumps, blueprint percentages for weighted sims.
+DEFERRED (logged): _rowOpenLane removal; improvement-audit backlog (payload diet, CI,
+clasp, day-streak/debrief retention pack) in the w6sr0zd0a audit output.
+
+> **Earlier this session (v0.107.0):** intro cinematic
 
 3D starfield + camera push + beat SFX rail (pinned). LAST batch #5 item: G4 full
 bug-scan/optimization workflow, then the closing report. Browser QA owed v0.92–v0.107.

@@ -241,6 +241,20 @@ var detSector3 = null;   // captured for the determinism probe against window 2
   ok(/BOSS_FLOW = 920/.test(H.ARM_SRC) && /bt \* BOSS_FLOW \* depth/.test(H.ARM_SRC)
      && /bossActive\) drawBossRush\(\)/.test(H.ARM_SRC) && /three static faint shafts/.test(H.ARM_SRC),
      'boss arena rushes upward: BOSS_FLOW streaks behind the world, calm under reduced motion');
+  // (v0.108.0, G4 HIGH) the wall laser must produce a FINITE gap (bossArena has .l, not .x —
+  // gapX was NaN and the wall mode was completely inert since v0.97)
+  (function () {
+    var st9 = T.setupBossSector();
+    var found = false, guard9 = 0;
+    while (!found && guard9++ < 400) {
+      T.step(0.1);
+      var bi9 = T.bossInfo();
+      if (bi9 && bi9.laserMode === 'wall') found = true;
+    }
+    var gap9 = T.bossGapX ? T.bossGapX() : NaN;
+    ok(found && isFinite(gap9) && gap9 > 0,
+       'A10 wall laser arms with a FINITE safe-gap x (' + (found ? Math.round(gap9) : 'never armed') + ')');
+  })();
   // (v0.97.0, A10) boss arsenal: seekers + dual lasers
   ok(/MISSILE_SPEED = 130, MISSILE_TURN = 1\.7, MISSILE_R = 10/.test(H.ARM_SRC)
      && /boss\.laserMode = runRng\.next\(\) < 0\.6 \? "beam" : "wall"/.test(H.ARM_SRC)

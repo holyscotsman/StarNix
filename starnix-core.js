@@ -24,7 +24,7 @@
   var CORE_VERSION = "1.1.0";              // internal contract version (changes rarely)
   // User-facing playable-build stamp. BUMP THIS (and the date) on every delivered index.html so the
   // version shown in-game tells us exactly which build is being played/tested. Shown by the shell.
-  var BUILD_VERSION = "0.107.0";
+  var BUILD_VERSION = "0.108.0";
   var BUILD_DATE = "2026-07-03";
   var BUILD_LABEL = "v" + BUILD_VERSION + " \u00b7 " + BUILD_DATE;
   var SCHEMA_VERSION = 1;
@@ -1034,6 +1034,16 @@
       // v0.52.0 unit 2: complete the 01 persistence seam ARM already calls (guarded — it was a
       // silent no-op until now). Records the game's best score + awards run XP into the pool.
       // Bound to the LIVE profile object here so it can never desync from core.profile.
+      if (!persistence.update) {
+        // (v0.108.0, G4 HIGH) the ONLY safe way for games to write profile fields: load()
+        // returns storage CLONES, and the mastery store saves the LIVE profile on every
+        // answer — so clone-writes (checkpoints, achievement flags, settings) were being
+        // clobbered last-writer-wins. update() mutates the live object, then persists it.
+        persistence.update = function (fn) {
+          try { if (typeof fn === "function") fn(profile); } catch (eU) {}
+          return persistence.save(profile);
+        };
+      }
       if (!persistence.submitScore) {
         persistence.submitScore = function (game, score, meta) {
           try {

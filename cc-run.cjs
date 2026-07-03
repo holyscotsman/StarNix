@@ -47,6 +47,13 @@ function runToQuestion(sim, maxSecs, pinShields) {
   return false;
 }
 
+/* ============ FAIRNESS INVARIANT (v0.108.0, G4): jumpability at max speed ============ */
+(function minGap() {
+  group('INVARIANT: MIN_GAP >= MAX_SPEED * JUMP_TIME (was pinned only in a dead suite)');
+  ok(CFG.MIN_GAP >= CFG.MAX_SPEED * CFG.JUMP_TIME,
+     'every row is jumpable on reaction at max speed (' + CFG.MIN_GAP + ' >= ' + (CFG.MAX_SPEED * CFG.JUMP_TIME).toFixed(1) + ')');
+})();
+
 /* ============ C4 (v0.104.0): 90° turns every 250 km ============ */
 (function turns() {
   group('C4: turn warning, lane check, wall clip on miss');

@@ -200,8 +200,8 @@
       description: 'Reveal two wrong options on every question.',
       hooks: { onQuestionShown: function (c) { c.api.revealWrong(); c.api.revealWrong(); } } },
     { id: 'ntp-sync', name: 'NTP Sync', rarity: 'common', category: 'utility',
-      description: '+6s on question timers (if enabled).',
-      hooks: { onAcquire: function (c) { c.run.flags.extraTimeMs = (c.run.flags.extraTimeMs || 0) + 6000; } } },
+      description: '+3 shield at every battle start.',   // (v0.108.0, G4) was a no-op timer artifact (K9 removed all timer reads)
+      hooks: { onBattleStart: function (c) { c.api.addShield(3); } } },
     { id: 'prism-beam', name: 'Prism Beam', rarity: 'rare', category: 'utility',
       description: '+1 max attack every battle.',
       hooks: { onBattleStart: function (c) { c.api.addMaxAttacks(1); } } },
@@ -1049,7 +1049,15 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
         var rz = ctx.resumeData;
         run.section = rz.section; run.round = rz.round;
         if (rz.squad) for (var rk3 in rz.squad) { if (Object.prototype.hasOwnProperty.call(rz.squad, rk3)) run.squad[rk3] = rz.squad[rk3]; }
-        if (rz.artifacts) for (var ra3 = 0; ra3 < rz.artifacts.length; ra3++) { try { equipArtifact(run, rz.artifacts[ra3], false); } catch (eEq) {} }
+        if (rz.artifacts) for (var ra3 = 0; ra3 < rz.artifacts.length; ra3++) {
+          try {
+            var rec3 = rz.artifacts[ra3], rid3 = rec3 && rec3.id ? rec3.id : rec3;   // (v0.108.0) new {id,state} or legacy bare id
+            var eq3 = equipArtifact(run, rid3, false);
+            if (eq3 && eq3.inst && rec3 && rec3.state) { for (var sk3 in rec3.state) { if (Object.prototype.hasOwnProperty.call(rec3.state, sk3)) eq3.inst.state[sk3] = rec3.state[sk3]; } }
+          } catch (eEq) {}
+        }
+        if (rz.flags) run.flags = rz.flags;                                          // (G4) Lazarus stays burned
+        if (rz.depthClearedSection) { run.depthClearedSection = rz.depthClearedSection; run.depthClearedRound = rz.depthClearedRound || 0; }
         if (rz.consumables) run.consumables = rz.consumables.slice(0, CONFIG.consumableCap);
         run.battle = null; startBattle(run);   // open ON the checkpointed round's battle
       }
@@ -1993,7 +2001,7 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
     // YELLOW stays clear; lost is a full-cover modal so no panel bleeds behind it.
     function renderLost(s) {
       saveBest(s); clearLost(s);
-      try { var P3 = s.ctx.persistence; if (P3 && P3.load && P3.save) P3.load().then(function (p) { if (p.saves && p.saves.KBB) { delete p.saves.KBB; return P3.save(p); } }).catch(function () {}); } catch (eCl) {}   // (v0.106.0, G2)
+      try { var P3 = s.ctx.persistence; if (P3 && P3.update) P3.update(function (p) { if (p.saves) delete p.saves.KBB; }); else if (P3 && P3.load && P3.save) P3.load().then(function (p) { if (p.saves && p.saves.KBB) { delete p.saves.KBB; return P3.save(p); } }).catch(function () {}); } catch (eCl) {}   // (v0.108.0, G4) live profile
       var d = s.doc, ov = el(d, 'div', 'kbb-lost'); s.lostEl = ov;
       var card = el(d, 'div', 'kbb-lost-card');
       card.appendChild(el(d, 'div', 'kbb-big', 'Run over'));
@@ -2007,6 +2015,7 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
     }
     function restart(s) {
       s.ui.replaceOffer = -1; clearLost(s); hideTip(s);
+      s._battleKey = ''; s.battleStartAt = s.lastTs || 0; s.heroExitAt = 0;   // (v0.108.0, G4) fresh run = fresh fly-in + sting
       s.run = createRun(s.ctx, {});   // (v0.68.0, J6) restarts skip the loadout shop too — consistent straight-to-battle opening
       renderAll(s);
     }
@@ -2325,14 +2334,19 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
       // (v0.106.0, G2) the shop exit is the checkpoint: section/round/squad/artifacts
       try {
         var P2 = s.ctx.persistence;
-        if (P2 && P2.load && P2.save) {
+        if (P2) {
           var rq = s.run.squad;
+          // (v0.108.0, G4) full-fidelity snapshot: artifact per-instance STATE (compounding
+          // stacks), once-per-run flags (Lazarus stays burned), and the depth score.
           var snap = { section: s.run.section, round: s.run.round,
             squad: { hp: rq.hp, maxHp: rq.maxHp, shield: rq.shield, startShield: rq.startShield || 0, basePower: rq.basePower, block: rq.block, healPower: rq.healPower, coins: rq.coins },
-            artifacts: rq.artifacts.map(function (ai) { return ai.def.id; }),
+            artifacts: rq.artifacts.map(function (ai) { return { id: ai.def.id, state: ai.state || {} }; }),
+            flags: s.run.flags || {},
+            depthClearedSection: s.run.depthClearedSection || 0, depthClearedRound: s.run.depthClearedRound || 0,
             consumables: s.run.consumables.slice(),
             label: 'Depth ' + s.run.section + '-' + s.run.round + ' \u00b7 ' + rq.artifacts.length + ' artifacts \u00b7 ' + rq.coins + 'c' };
-          P2.load().then(function (p) { p.saves = p.saves || {}; p.saves.KBB = snap; return P2.save(p); }).catch(function () {});
+          if (P2.update) P2.update(function (p) { p.saves = p.saves || {}; p.saves.KBB = snap; });   // (G4 HIGH) live profile
+          else if (P2.load && P2.save) P2.load().then(function (p) { p.saves = p.saves || {}; p.saves.KBB = snap; return P2.save(p); }).catch(function () {});
         }
       } catch (eSv) {}
       drawQuestion(s.run); renderAll(s);
