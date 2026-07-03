@@ -1306,7 +1306,23 @@
     kbb:  { upbeat: ["kbb", "kbb_up_2", "kbb_up_3", "kbb_up_4", "kbb_up_5"],     chill: ["kbb_ch_1", "kbb_ch_2", "kbb_ch_3", "kbb_ch_4", "kbb_ch_5"] },
     cc:   { upbeat: ["cc", "cc_up_2", "cc_up_3", "cc_up_4", "cc_up_5"],          chill: ["cc_ch_1", "cc_ch_2", "cc_ch_3", "cc_ch_4", "cc_ch_5"] }
   };
-  var plIdx = {};   // rotation cursor per context+genre
+  // (v0.70.0, J5) in-place rotation: ~2 min per track, then a RANDOM different track from the
+  // same context+genre playlist (Jason: "cycle randomly once the song ends"). Deterministic
+  // xorshift picker (no Math.random); fixed beds (exam/cinematic/boss) never rotate.
+  var ROTATE_SECS = 120;
+  var rotateTimer = null, currentContext = null, lastPick = {};
+  var rotSeed = 0xC0FFEE >>> 0;
+  function rotRand() { rotSeed ^= rotSeed << 13; rotSeed >>>= 0; rotSeed ^= rotSeed >>> 17; rotSeed ^= rotSeed << 5; rotSeed >>>= 0; return rotSeed / 4294967296; }
+  function armRotation() {
+    if (rotateTimer) { clearTimeout(rotateTimer); rotateTimer = null; }
+    if (!currentContext) return;
+    rotateTimer = setTimeout(nextTrack, ROTATE_SECS * 1000);
+    if (rotateTimer && rotateTimer.unref) rotateTimer.unref();   // node harnesses: never hold the process open
+  }
+  function nextTrack() {                    // also the future "skip track" seam
+    if (!currentContext) return;
+    playTrack(currentContext, current && current.intensity ? { intensity: true } : undefined);
+  }
   function setMusicGenre(g) { GENRE = (g === "chill") ? "chill" : "upbeat"; }
   function getMusicGenre() { return GENRE; }
   function resolveTrack(id) {
@@ -1314,14 +1330,17 @@
     // but a stray "ARM" must resolve, not silently vanish at the TRACKS lookup downstream.
     var pl = PLAYLISTS[id];
     if (!pl && PLAYLISTS[String(id).toLowerCase()]) { id = String(id).toLowerCase(); pl = PLAYLISTS[id]; }
-    if (!pl) return id;                    // fixed ids (exam/cinematic/boss) pass through
+    if (!pl) { currentContext = null; return id; }   // fixed ids (exam/cinematic/boss): no rotation
+    currentContext = id;
     var list = pl[GENRE] || pl.upbeat, key = id + ":" + GENRE;
-    var i = plIdx[key] || 0; plIdx[key] = (i + 1) % list.length;
-    return TRACKS[list[i]] ? list[i] : id;                          // def missing -> fall back to the context def
+    var pick = list[(rotRand() * list.length) | 0], tries = 0;      // (J5) random-not-same beats the old sequential cursor
+    while (list.length > 1 && pick === lastPick[key] && tries++ < 8) pick = list[(rotRand() * list.length) | 0];
+    lastPick[key] = pick;
+    return TRACKS[pick] ? pick : id;                                // def missing -> fall back to the context def
   }
   function playTrack(id, opts) {
     var intensity = !!(opts && opts.intensity);
-    if (!(opts && opts.exact)) id = resolveTrack(id);   // opts.exact: bypass playlist resolution (tests/boss)
+    if (!(opts && opts.exact)) { id = resolveTrack(id); armRotation(); }   // opts.exact: bypass playlist resolution (tests/boss)
     var def = TRACKS[id];
     if (!def) return; // unknown track id: ignore (contract is the known context ids)
     if (!ready) { pending = { id: id, intensity: intensity }; return; }
@@ -1372,6 +1391,7 @@
     playTrack: playTrack,
     setMusicGenre: setMusicGenre,   // (v0.49.0) 'upbeat' | 'chill' — the pause-menu toggle
     getMusicGenre: getMusicGenre,
+    nextTrack: nextTrack,           // (v0.70.0, J5) rotate now — the 2-min timer's tick, exposed as a seam
     isReady: isReady,
     state: state,
     analyser: function () { return analyser; }, // read-only diagnostics tap (null before ensure)

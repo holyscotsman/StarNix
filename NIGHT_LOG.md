@@ -608,6 +608,12 @@ Commit: `v0.69.0 — J1 ARM shake leak+feel, J2 boss bed ends on destroy`.
 **Remaining from Jason's batch:** J5 music rotation (~2 min), J7/J8 150-word caps,
 J4 CC duck rework, J9 CC shop.
 
+**J5 SHIPPED (v0.70.0):** ~2-min in-place rotation, random-not-same within the context+genre
+playlist (deterministic xorshift picker), fixed beds exempt, node-safe timer (unref), and
+`nextTrack()` exported as the future skip-track seam. audio-smoke +3; negctrl (gutted
+nextTrack) failed exactly its pin. Gate 415/415.
+Commit: `v0.70.0 — J5 in-place music rotation (~2 min, random-next)`.
+
 ---
 
 ## 🛑 STOP — end of the night run (after P2·5) — superseded by ▶️ RUN RESUMED above

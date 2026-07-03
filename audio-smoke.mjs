@@ -47,7 +47,8 @@ globalThis.window = globalThis;
 globalThis.AudioContext = MockAC;
 
 // load the plain-script module into global scope
-(0, eval)(fs.readFileSync(new URL("./audio.js", import.meta.url), "utf8"));
+const SRC = fs.readFileSync(new URL("./audio.js", import.meta.url), "utf8");
+(0, eval)(SRC);
 const A = globalThis.StarNix.core.audio;
 
 let fails = 0; const errs = [];
@@ -101,6 +102,21 @@ console.log("\nGenre resolution + rotation (v0.49.0):");
   A.playTrack("kbb");
   ok('upbeat: playTrack("kbb") resolves into the kbb upbeat list (got ' + A.state().trackId + ")", /^kbb(_up_[2-5])?$/.test(A.state().trackId));
   ok("getMusicGenre reflects the setting", A.getMusicGenre() === "upbeat");
+}
+
+console.log("\n2-minute rotation (v0.70.0, J5):");
+{
+  A.setMusicGenre("upbeat");
+  A.playTrack("arm");
+  const r1 = A.state().trackId;
+  A.nextTrack();                                   // the 120 s timer's tick, fired by hand
+  const r2 = A.state().trackId;
+  ok("nextTrack() rotates to a DIFFERENT def in the same playlist (" + r1 + " -> " + r2 + ")",
+     /^arm(_up_[2-5])?$/.test(r1) && /^arm(_up_[2-5])?$/.test(r2) && r1 !== r2);
+  A.playTrack("boss");
+  A.nextTrack();
+  ok("fixed beds never rotate (boss stays put)", A.state().trackId === "boss");
+  ok("rotation cadence pinned at ~2 min per track", SRC.indexOf("ROTATE_SECS = 120") !== -1);
 }
 
 console.log("\nNode churn (v0.45.0 \u2014 persistent voice chains; only one-shot sources per note):");
