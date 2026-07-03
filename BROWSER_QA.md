@@ -229,6 +229,12 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-G3 — Review-sweep verifications (added v0.90.0).** (a) Exam with misses → "Redrill the N
+  missed" must actually OPEN a study session (it was landing on the menu). (b) KBB on a phone: the
+  first-run tour must scroll each highlighted zone into view — Next/Skip always reachable. (c) With
+  Extra time ON, Blitz "Best" shows a separate slot from your normal bests. (d) A scan/reveal artifact
+  on a multi-answer question must never cross out a correct option.
+
 - **QA-G2 — Leitner pacing feel (added v0.89.0).** Play the same question correctly twice within a
   minute (any two games): mastery must NOT jump two rungs (Progress heatmap moves slower now — that's
   the anti-cram gate, not a bug). Due counts should stop re-listing your fully-mastered cards every

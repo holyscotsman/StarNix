@@ -1110,7 +1110,8 @@ async function runFrames(n = 6) {
         { id: "rd1", domain: "vms", difficulty: 1, stem: "R1", options: ["a", "b"], correctIndex: 0, explanation: "e" },
         { id: "rd2", domain: "vms", difficulty: 1, stem: "R2", options: ["a", "b"], correctIndex: 0, explanation: "e" }
       ];
-      const hR = EX.run({ mode: "study", container: cR, questions: rdPool, count: 2, rng: erng, audio: mockAudio, mastery: mockMastery, reducedMotion: true, onRedrill: (qs) => { redrilled = qs; }, onExit: () => {}, onRetry: () => {} });
+      let rdExit = 0;
+      const hR = EX.run({ mode: "study", container: cR, questions: rdPool, count: 2, rng: erng, audio: mockAudio, mastery: mockMastery, reducedMotion: true, onRedrill: (qs) => { redrilled = qs; }, onExit: () => { rdExit++; }, onRetry: () => {} });
       for (let qi = 0; qi < 2; qi++) {
         const dq = hR._state.order[hR._state.view], wrongIdx = (dq.correctIndex + 1) % dq.options.length;
         cR.querySelectorAll(".sx-exam-opt")[wrongIdx].click();                     // select
@@ -1124,6 +1125,29 @@ async function runFrames(n = 6) {
       rdBtn.click();
       ok("redrill hands back exactly the missed questions", !!redrilled && redrilled.length === 2
         && redrilled.every(q => /^rd/.test(q.id)));
+      ok("redrill does NOT also fire onExit (the fall-through killed the feature in prod)", rdExit === 0);
+
+      // (v0.90.0, review) extra-time Blitz bests live in their own ':xt' slot
+      SN.core.profile.settings.extraTime = true;
+      shell._recordExam({ mode: "blitz", total: 20, pct: 88, pass: true, speedPoints: 15000, correct: 17 });
+      ok("extra-time best writes bests.EXAM['20:xt'], base '20' untouched",
+        SN.core.profile.bests.EXAM["20:xt"] && SN.core.profile.bests.EXAM["20:xt"].pts === 15000
+        && SN.core.profile.bests.EXAM["20"].pts === 16000);
+      SN.core.profile.settings.extraTime = false;
+
+      // (v0.90.0, review) a due correct at the ladder top still ticks the promote mission
+      {
+        const capQ = SN.core.questions.pool()[5];
+        SN.core.mastery.record(capQ.id, true, { game: "CC" });          // ensure the record exists
+        const mC = SN.core.mastery.get(capQ.id);
+        mC.bucket = SN._internal.constants.MAX_BUCKET; mC.lastSeen = 0; // at cap, long overdue
+        const p0 = SN.core.profile.daily.promotions;
+        SN.core.mastery.record(capQ.id, true, { game: "CC" });
+        ok("due correct at MAX_BUCKET counts toward the promote mission (no unclaimable dailies)",
+          SN.core.profile.daily.promotions === p0 + 1);
+      }
+      ok("expander labels use the real 120-word cap (no negative 'more words')",
+        !html.includes("(wx.length - 150)") && (html.match(/\(wx\.length - 120\)/g) || []).length >= 2);
     }
   }
 

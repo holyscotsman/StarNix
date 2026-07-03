@@ -1882,7 +1882,7 @@
           if (wx.length <= 120) { exp.textContent = res.question.explanation || ''; return; }
           exp.textContent = wx.slice(0, 120).join(' ') + '\u2026';
           var det = document.createElement('details'); det.className = 'cc-fb-more';
-          var sm = document.createElement('summary'); sm.textContent = 'Show the full explanation (' + (wx.length - 150) + ' more words)';
+          var sm = document.createElement('summary'); sm.textContent = 'Show the full explanation (' + (wx.length - 120) + ' more words)';
           var bd = document.createElement('div'); bd.textContent = wx.slice(120).join(' ');
           det.appendChild(sm); det.appendChild(bd); exp.appendChild(det);
         })();

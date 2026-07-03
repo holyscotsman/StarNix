@@ -189,6 +189,30 @@ function newWindow() {
   })();
 })();
 
+/* ============ REVEAL INTEGRITY (v0.90.0, review) ============ */
+(function revealIntegrity() {
+  group('REVEAL: revealOneWrong never rules out a CORRECT option (multi-answer)');
+  var V = newWindow(), K = V.KBB;
+  var run = K.createRun(H.makeCtx(K, { seed: SEED + 31 }), { seed: SEED + 31 });
+  var guard = 0, qM = null;
+  while (guard++ < 30) {
+    var d = K.drawQuestion(run); var qq = d && d.question;
+    if (qq && qq.multi) { qM = qq; break; }
+    if (qq) K.submitAnswer(run, qq.correctIndex, 5000, 'attack');
+    if (run.phase !== 'battle') { try { K.leaveShop(run); } catch (e) {} }
+    if (run.phase === 'lost') break;
+  }
+  if (qM) {
+    var actx = KBBseam(run);
+    for (var rv = 0; rv < qM.options.length + 2; rv++) actx.api.revealWrong();
+    var revealed = run.battle.revealed, clean = true;
+    for (var ri = 0; ri < revealed.length; ri++) if (qM.correctIndices.indexOf(revealed[ri]) >= 0) clean = false;
+    ok(clean && revealed.length === qM.options.length - qM.correctIndices.length,
+       'multi-answer reveal only ever rules out true wrongs (' + revealed.join(',') + ' vs correct ' + qM.correctIndices.join(',') + ')');
+  } else { ok(false, 'reveal-integrity probe found no multi question'); }
+  function KBBseam(runX) { return V.KBB._test.ctx(runX, { id: 'probe' }, {}); }
+})();
+
 /* ================= 2) DOM ================= */
 (function domFlow() {
   group('DOM: mount -> skip intro -> Start run -> answered turns -> boss music -> unmount');
@@ -309,8 +333,9 @@ function newWindow() {
       var obN = doc.querySelector('.kbb-opt[data-idx="' + wrongN + '"]'); if (obN) obN.click();
       var subN = q('.kbb-submit'); if (subN && !subN.disabled) subN.click();
       var noteEl = q('.kbb-fb-note');
-      ok(!!noteEl && noteEl.textContent.indexOf('note-') >= 0,
-         "L3: wrong pick shows its optionNote ('" + (noteEl ? noteEl.textContent.slice(0, 40) : 'none') + "')");
+      var expectN = 'Your pick \u2014 ' + qN.optionNotes[wrongN];   // (v0.90.0) EXACT match — prefix-only was tautological vs the mock bank
+      ok(!!noteEl && noteEl.textContent === expectN,
+         "L3: wrong pick shows EXACTLY its own optionNote ('" + (noteEl ? noteEl.textContent.slice(0, 44) : 'none') + "')");
       V.step(3);
       var cN = q('.kbb-cont:not(.kbb-submit)'); if (cN) { cN.click(); V.step(2); }
     } else {
@@ -385,6 +410,8 @@ function newWindow() {
      'B4: <=820px stack order is combat(1) -> questions(2) -> enemy(3) -> artifacts(4)');
   ok(/\.kbb-shop-actions\{position:sticky;bottom:0/.test(SRC),
      'B4: shop actions are sticky-bottom on phones too');
+  ok(/tgt\.scrollIntoView\(\{ block: 'center' \}\)/.test(SRC),
+     "REVIEW: the how-to tour scrolls each spotlight into view (phone soft-lock fix)");
 })();
 
 H.summary('KBB RUN');

@@ -395,8 +395,11 @@
   function revealOneWrong(run) {
     var b = run.battle; if (!b || !b.question) return;
     var q = b.question, n = q.options.length;
+    // (v0.90.0, review) multi-answer questions carry correctIndices with correctIndex
+    // undefined — the old check could reveal a CORRECT option as "wrong" (a false key).
+    var cs = Array.isArray(q.correctIndices) && q.correctIndices.length ? q.correctIndices : [q.correctIndex];
     for (var i = 0; i < n; i++) {
-      if (i === q.correctIndex) continue;
+      if (cs.indexOf(i) >= 0) continue;
       if (b.revealed.indexOf(i) >= 0) continue;
       b.revealed.push(i); return;
     }
@@ -2102,7 +2105,7 @@
         else {
           var exEl = el(s.doc, 'div', 'kbb-fb-exp', wx.slice(0, 120).join(' ') + '\u2026');
           var det = s.doc.createElement('details'); det.className = 'kbb-fb-more';
-          var sm = s.doc.createElement('summary'); sm.textContent = 'Show the full explanation (' + (wx.length - 150) + ' more words)';
+          var sm = s.doc.createElement('summary'); sm.textContent = 'Show the full explanation (' + (wx.length - 120) + ' more words)';
           var bd = s.doc.createElement('div'); bd.textContent = wx.slice(120).join(' ');
           det.appendChild(sm); det.appendChild(bd); exEl.appendChild(det);
           fb.appendChild(exEl);
@@ -2290,6 +2293,10 @@
           call.appendChild(el(d, 'div', 'kbb-ht-call-x', z.x));
           call.appendChild(stepRow(last));
           ov.appendChild(call);
+          // (v0.90.0, review) phones scroll the stacked layout — bring the spotlighted zone
+          // (and the callout with the only Next/Skip controls) into view or the tour soft-locks.
+          try { if (tgt && tgt.scrollIntoView) tgt.scrollIntoView({ block: 'center' }); } catch (e2) {}
+          try { if (call.scrollIntoView) call.scrollIntoView({ block: 'nearest' }); } catch (e3) {}
         }
       }
       render();

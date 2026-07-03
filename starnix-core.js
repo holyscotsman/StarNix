@@ -24,7 +24,7 @@
   var CORE_VERSION = "1.1.0";              // internal contract version (changes rarely)
   // User-facing playable-build stamp. BUMP THIS (and the date) on every delivered index.html so the
   // version shown in-game tells us exactly which build is being played/tested. Shown by the shell.
-  var BUILD_VERSION = "0.89.0";
+  var BUILD_VERSION = "0.90.0";
   var BUILD_DATE = "2026-07-03";
   var BUILD_LABEL = "v" + BUILD_VERSION + " \u00b7 " + BUILD_DATE;
   var SCHEMA_VERSION = 1;
@@ -195,7 +195,10 @@
         // "mastered" (which feeds masteredPct, readiness, trails). Wrong answers always demote.
         var wasDue = !m.seen || (m.lastSeen + (INTERVALS[Math.min(m.bucket, INTERVALS.length - 1)] || 0)) <= now;
         m.seen++;
-        m.lastSeen = now;
+        // (v0.90.0, review) a non-due CORRECT answer must not restart the interval clock —
+        // otherwise early re-answers defer the due date (and thus promotion) indefinitely.
+        // Due answers and ALL wrong answers reset it (demotion restarts the rung's interval).
+        if (wasDue || !correct) m.lastSeen = now;
         if (correct) {
           m.correct++; m.streak++;
           if (m.bucket < MAX_BUCKET && wasDue) m.bucket++;
@@ -223,7 +226,9 @@
         if (dd && correct) {
           dd.correct++;
           dd.byGame[g] = (dd.byGame[g] || 0) + 1;
-          if (m.bucket > prevBucket) dd.promotions++;
+          // (v0.90.0, review) at the ladder top a due correct COUNTS for the promote mission
+          // (else late-prep days with <target due cards make it unclaimable).
+          if (m.bucket > prevBucket || (correct && wasDue && m.bucket === MAX_BUCKET)) dd.promotions++;
           if (sk[g] > dd.bestStreak) dd.bestStreak = sk[g];
         }
         evaluateAchievements(profile);
@@ -238,9 +243,13 @@
         for (var k in map) {
           if (!Object.prototype.hasOwnProperty.call(map, k)) continue;
           var m = map[k];
-          if (m.seen && (m.lastSeen + (INTERVALS[Math.min(m.bucket, INTERVALS.length - 1)] || 0)) <= now) out.push(k);
+          var at = m.lastSeen + (INTERVALS[Math.min(m.bucket, INTERVALS.length - 1)] || 0);
+          if (m.seen && at <= now) out.push({ id: k, at: at });
         }
-        return out;
+        // (v0.90.0, review) most OVERDUE first = earliest due-time first — overdue-ness
+        // depends on the interval, not on lastSeen alone.
+        out.sort(function (a, b) { return a.at - b.at; });
+        return out.map(function (x) { return x.id; });
       },
       summary: function () {
         var totalSeen = 0, uniqueCorrect = 0, uniqueIncorrect = 0, masteredCount = 0;
@@ -545,6 +554,10 @@
       var newNotes = new Array(n);
       for (i = 0; i < n; i++) newNotes[i] = q.optionNotes[order[i]];
       out.optionNotes = newNotes;
+    } else if (out.optionNotes) {
+      // (v0.90.0, review) length mismatch: the generic clone copied RAW notes indexed against
+      // the ORIGINAL order — drop them; no rationale beats a wrong rationale.
+      out.optionNotes = undefined;
     }
     return out;
   }

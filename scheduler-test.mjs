@@ -49,6 +49,29 @@ function recordDue(f, id, correct) {
   f.m.record("s1", false, { game: "KBB" }); ok("wrong -> bucket 1 (decay) + streak reset, gate never blocks demotion", f.m.get("s1").bucket === 1 && f.m.get("s1").streak === 0);
 }
 
+// (v0.90.0, review) a non-due CORRECT answer must not restart the review interval —
+// otherwise early re-answers defer promotion forever
+{ const f = fresh();
+  recordDue(f, "s1", true);                                   // bucket 1, lastSeen = T
+  const t0 = T;
+  T = t0 + 5000;                                              // 5s later — still inside the 30s interval
+  f.m.record("s1", true, { game: "KBB" });                    // early re-answer (not due)
+  ok("non-due correct keeps lastSeen (interval clock not reset)", f.m.get("s1").lastSeen === t0);
+  T = t0 + constants.INTERVALS[1] + 1000;
+  ok("card still comes due on the ORIGINAL schedule", f.m.dueList(T).indexOf("s1") >= 0);
+  recordDue(f, "s1", true);
+  ok("and then promotes normally when answered due", f.m.get("s1").bucket === 2);
+}
+
+// (v0.90.0, review) dueList serves earliest-due-first (true overdue order)
+{ const f = fresh();
+  f.m.record("s1", true, { game: "KBB" }); f.m.record("s2", true, { game: "KBB" });
+  f.m.get("s1").lastSeen = T - 35000;                         // due 5s ago (30s interval)
+  f.m.get("s2").lastSeen = T - 90000;                         // due 60s ago — more overdue
+  const dl = f.m.dueList(T);
+  ok("dueList orders by due-time ascending (most overdue first)", dl[0] === "s2" && dl[1] === "s1");
+}
+
 // (v0.89.0, L5) the extended ladder: 9 rungs, monotonic, 3d/7d on top; the cap holds
 { const f = fresh();
   ok("L5: ladder is 9 rungs (buckets 0-8), MAX_BUCKET 8",

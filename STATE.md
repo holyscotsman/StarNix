@@ -101,7 +101,15 @@
 > **v0.6.21:** title screen uses the no-station nebula (`kbbBg`→`nebulaBg`); menu keeps the station vista. KBB shows `nebulaBg` + `bcmShip`. 200/200; art negative-controlled.
 > </details>
 
-## v0.89.0 — Leitner promotion gating + 3d/7d buckets (L4+L5 — BATCH #4 COMPLETE)
+## v0.90.0 — Batch #4 review sweep (10 findings fixed; redrill was DEAD in prod)
+
+Redrill fall-through to onExit fixed (+pin on the stub blindness); Leitner lastSeen no
+longer resets on non-due corrects; KBB multi-answer reveal integrity; phone tour scroll
+soft-lock; dueList true overdue order; :xt bests split; promote-at-cap dailies; misaligned
+notes dropped; expander labels; exact-match note pin. verify 448, kbb-run 43. Batch #4
+now v0.84–v0.90.
+
+> **Earlier this session (v0.89.0):** Leitner gating + ladder
 
 Promote only when DUE (anti-cram, pinned); ladder now 9 rungs topping at 7 days; no profile
 migration needed. scheduler-test re-baselined on recordDue. Batch #4 shipped v0.84–v0.89:

@@ -77,5 +77,11 @@ console.log("Answer-order shuffle:");
   ok("optionNotes stay aligned to their options across 10 shuffles", aligned && moved);
 }
 
+{ // (v0.90.0, review) length-mismatched notes are DROPPED, never shipped misaligned
+  const sparse = { id: "qs", options: ["A", "B", "C", "D"], correctIndex: 0, optionNotes: ["only", "three", "notes"] };
+  const out = shuffleQuestionOptions(sparse, makeRng(3));
+  ok("mismatched-length optionNotes dropped from the shuffled copy", out.optionNotes === undefined);
+}
+
 console.log(fails === 0 ? "\nSHUFFLE TEST: ALL GREEN" : "\nSHUFFLE TEST: " + fails + " FAILED");
 process.exit(fails === 0 ? 0 : 1);

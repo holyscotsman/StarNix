@@ -562,7 +562,7 @@
     function lenBtn(title, sub, count) {
       var b = el("button", "sx-exam-len");
       var best = "";
-      try { var e = core.profile.bests && core.profile.bests.EXAM && core.profile.bests.EXAM[String(count)]; if (e) best = '<span class="b">Best: ' + (e.pts || 0).toLocaleString() + ' pts \u00b7 ' + (e.pct || 0) + '%</span>'; } catch (x) {}
+      try { var xk = core.profile.settings && core.profile.settings.extraTime ? ":xt" : ""; var e = core.profile.bests && core.profile.bests.EXAM && core.profile.bests.EXAM[String(count) + xk]; if (e) best = '<span class="b">Best: ' + (e.pts || 0).toLocaleString() + ' pts \u00b7 ' + (e.pct || 0) + '%</span>'; } catch (x) {}
       b.innerHTML = '<span class="t">' + title + '</span><span class="s">' + sub + '</span>' + best;
       self._on(b, "click", function () { self.showExam(count); });
       lens.appendChild(b);
@@ -590,7 +590,7 @@
     else { try { pool = core.questions.pool(); } catch (e) {} }
     var ec = (count && count > 0 && count < pool.length) ? count : pool.length;
     var prevBest = 0;
-    try { var eb = core.profile.bests && core.profile.bests.EXAM && core.profile.bests.EXAM[String(ec)]; if (eb) prevBest = eb.pts || 0; } catch (e) {}
+    try { var xk2 = core.profile.settings && core.profile.settings.extraTime ? ":xt" : ""; var eb = core.profile.bests && core.profile.bests.EXAM && core.profile.bests.EXAM[String(ec) + xk2]; if (eb) prevBest = eb.pts || 0; } catch (e) {}
     try { core.audio.playTrack("exam"); } catch (e) {}   // chill study bed; no game/Vega audio in the exam
     if (StarNix.exam && StarNix.exam.run) {
       this._exam = StarNix.exam.run({
@@ -653,7 +653,9 @@
     try {
       var b = core.profile.bests = core.profile.bests || {};
       var ex = b.EXAM = b.EXAM || {};
-      var key = String(sum.total);
+      // (v0.90.0, review) extra-time runs score on a stretched window — same skill, more
+      // points — so they compete in their own ':xt' slot instead of inflating the base bests.
+      var key = String(sum.total) + (core.profile.settings && core.profile.settings.extraTime ? ":xt" : "");
       var prev = ex[key];
       if (!prev || (sum.speedPoints || 0) > (prev.pts || 0)) {
         ex[key] = { pts: sum.speedPoints || 0, pct: sum.pct || 0, correct: sum.correct || 0, total: sum.total || 0, at: (core.clock && core.clock.now ? core.clock.now() : Date.now()) };
@@ -762,14 +764,15 @@
     var core = StarNix.core, out = [];
     try {
       var now = core.clock && core.clock.now ? core.clock.now() : Date.now();
-      var dueSet = {};
+      // (v0.90.0, review) dueList is already sorted earliest-due-first (true overdue order —
+      // lastSeen alone ignores the interval); preserve ITS order instead of re-sorting.
       var ids = core.mastery.dueList ? core.mastery.dueList(now) : [];
-      for (var d = 0; d < ids.length; d++) dueSet[ids[d]] = true;
+      var byId = {};
       var pool = core.questions.pool();
-      for (var i = 0; i < pool.length; i++) if (dueSet[pool[i].id]) out.push({ q: pool[i], m: core.mastery.get(pool[i].id) });
-      out.sort(function (a, b) { return (a.m.lastSeen - b.m.lastSeen) || (a.m.bucket - b.m.bucket); });
+      for (var i = 0; i < pool.length; i++) byId[pool[i].id] = pool[i];
+      for (var d = 0; d < ids.length; d++) if (byId[ids[d]]) out.push(byId[ids[d]]);
     } catch (e) {}
-    return out.slice(0, n || 30).map(function (x) { return x.q; });
+    return out.slice(0, n || 30);
   };
 
   Shell.prototype._weakestQuestions = function (n) {

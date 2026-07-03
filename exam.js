@@ -230,8 +230,9 @@
     injectCSS();
     var container = opts.container; if (!container) return;
     // (v0.84.0, B2) 'Extra time on timed questions' finally reaches the ONE heavily-timed
-    // surface. Blitz points stay comparable: pointsAt decays on the elapsed/window FRACTION,
-    // so a stretched window keeps the identical scoring curve — bests need no exemption.
+    // surface. (v0.90.0 correction) the curve is identical only as a FRACTION of the window —
+    // the same absolute answer time scores more under a stretched window, so Blitz bests are
+    // kept in a separate ':xt' slot by the shell rather than mixed into one leaderboard.
     var XT = opts.extraTime ? EXTRA_FACTOR : 1;
     var rngIn = opts.rng || Math.random;
     var rng = (typeof rngIn === "function") ? rngIn : ((rngIn && typeof rngIn.next === "function") ? rngIn.next : Math.random);
@@ -660,8 +661,10 @@
           on(btn, "click", function () {
             var a = btn.getAttribute("data-a");
             teardown();
+            // (v0.90.0, review) branches CHAINED — the unchained form also fired onExit on
+            // redrill, tearing down the freshly mounted redrill session (feature-dead in prod).
             if (a === "redrill") { opts.onRedrill(sum.wrong.map(function (r) { return r.q; })); }   // (v0.87.0, L2) miss -> immediate retrieval
-            if (a === "retry") { if (typeof opts.onRetry === "function") opts.onRetry(); else run(opts); }
+            else if (a === "retry") { if (typeof opts.onRetry === "function") opts.onRetry(); else run(opts); }
             else onExit();
           });
         })(actions[ai]);
