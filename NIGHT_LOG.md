@@ -680,6 +680,13 @@ starfield (alpha canvas made it a 10-line change + gradient for readability). Pi
 (422/422); negctrl clean; shot `65-nit-nebula-bg.png`. QA-E7 = his readability confirm.
 Commit: `v0.74.0 — NIT nebula backdrop`.
 
+**(v0.75.0):** caps 150→120 everywhere (Jason's retune; J8 pins now 120/80) + the hyperdrive
+warp energized — root cause of "slow motion": anchored stars + a k² ramp that idled through
+half the tunnel; now true radial flow (WARP_FLOW 340, per-star parallax, speed floor) at
+1.0s countdown + 2.2s tunnel. arm-run 61/61; two negctrls, each bit exactly its pin.
+NOTE: Jason's remote README edit (4f5c31a) arrived mid-release — rebased cleanly on top.
+Commit: `v0.75.0 — 120-word caps + hyperdrive flow rework`.
+
 ---
 
 ## 🛑 STOP — end of the night run (after P2·5) — superseded by ▶️ RUN RESUMED above

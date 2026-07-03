@@ -1181,10 +1181,10 @@ async function runFrames(n = 6) {
         return out;
       };
       const capLong = runCap(longExp);
-      ok("J8: a 200-word explanation shows exactly 150 words + an expander with the 50-word tail",
-        !!capLong.det && /50 more words/.test(capLong.det.querySelector("summary").textContent)
-        && capLong.head.replace(/…/g, "").trim().split(/\s+/).length === 150
-        && capLong.det.querySelector("div").textContent.trim().split(/\s+/).length === 50);
+      ok("J8: a 200-word explanation shows exactly 120 words + an expander with the 80-word tail (Jason v0.75.0)",
+        !!capLong.det && /80 more words/.test(capLong.det.querySelector("summary").textContent)
+        && capLong.head.replace(/…/g, "").trim().split(/\s+/).length === 120
+        && capLong.det.querySelector("div").textContent.trim().split(/\s+/).length === 80);
       const capShort = runCap("short and sweet");
       ok("J8: short explanations render whole — no expander", !capShort.det && /short and sweet/.test(capShort.text));
       // (v0.74.0) the NIT wears the title nebula behind its starfield (Jason's ask)
@@ -1199,7 +1199,7 @@ async function runFrames(n = 6) {
       }
       ok("J8: the same cap ships in ARM/KBB/CC feedback + J7 Vega comms (source pins)",
         html.includes("arm-explain-more") && html.includes("kbb-fb-more") && html.includes("cc-fb-more")
-        && html.includes("Vega never exceeds 150 words"));
+        && html.includes("Vega never exceeds 120 words"));
     }
 
     // ---- shell: mode picker renders, Study is default, choice reaches the exam ----

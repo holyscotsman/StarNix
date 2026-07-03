@@ -212,6 +212,12 @@ var detSector3 = null;   // captured for the determinism probe against window 2
   T.step(1.0);                                       // death sequence blasts raise shake
   T.engageReturn(); T.flushWarp();
   ok(T.state() === 'HOME' && T.shake() === 0, 'J1: no leaked shake at the home station (was frozen 11-18px forever)');
+  // (v0.75.0) hyperdrive re-time (Jason: fluid, not slow motion): 1.0s countdown + 2.2s tunnel,
+  // and the tunnel FLOWS (radial star rush constant in source — regression-guarded)
+  ok(/return reducedMotion \? 1\.0 : 1\.0/.test(H.ARM_SRC) && /return reducedMotion \? 0\.7 : 2\.2/.test(H.ARM_SRC),
+     'warp timing pinned: countdown 1.0s, tunnel 2.2s (total 3.2s, was 4.85s)');
+  ok(/WARP_FLOW = 340/.test(H.ARM_SRC) && /r0 \+ wt \* WARP_FLOW \* depth/.test(H.ARM_SRC),
+     'the tunnel MOVES: radial star flow with per-star parallax (no more anchored streaks)');
 })();
 
 /* ================= 6) PAUSE: gnow() freezes; resume re-opens the clock ================= */

@@ -29,7 +29,7 @@
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]; }); }
   // (v0.71.0, J8) DISPLAY cap for authored explanations: never edit bank content — show the
   // first EXPLAIN_CAP words, tuck the rest behind a native <details> expander.
-  var EXPLAIN_CAP = 150;
+  var EXPLAIN_CAP = 120;   // (v0.75.0) Jason: 120, not 150
   function capExplainHTML(text) {
     var w = String(text || "").trim().split(/\s+/);
     if (w.length <= EXPLAIN_CAP) return '<div class="ex">' + esc(text) + "</div>";

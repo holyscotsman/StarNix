@@ -1916,12 +1916,12 @@
       fb.appendChild(el(s.doc, 'div', null, headTxt));
       if (q.explanation) {                                       // (v0.71.0, J8) 150-word display cap
         var wx = String(q.explanation).trim().split(/\s+/);
-        if (wx.length <= 150) fb.appendChild(el(s.doc, 'div', 'kbb-fb-exp', q.explanation));
+        if (wx.length <= 120) fb.appendChild(el(s.doc, 'div', 'kbb-fb-exp', q.explanation));
         else {
-          var exEl = el(s.doc, 'div', 'kbb-fb-exp', wx.slice(0, 150).join(' ') + '\u2026');
+          var exEl = el(s.doc, 'div', 'kbb-fb-exp', wx.slice(0, 120).join(' ') + '\u2026');
           var det = s.doc.createElement('details'); det.className = 'kbb-fb-more';
           var sm = s.doc.createElement('summary'); sm.textContent = 'Show the full explanation (' + (wx.length - 150) + ' more words)';
-          var bd = s.doc.createElement('div'); bd.textContent = wx.slice(150).join(' ');
+          var bd = s.doc.createElement('div'); bd.textContent = wx.slice(120).join(' ');
           det.appendChild(sm); det.appendChild(bd); exEl.appendChild(det);
           fb.appendChild(exEl);
         }

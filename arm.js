@@ -299,7 +299,7 @@
     /* ---------------------------------------------------------------------- */
     function safeRecord(id, correct) { try { MAST.record(id, correct, { game: "ARM" }); } catch (e) {} }
     // (v0.71.0, J7/J8) display caps — authored text is NEVER edited; long explanations tuck
-    // their tail behind a native <details>, and Vega's comms hard-cap at 150 words (the full
+    // their tail behind a native <details>, and Vega's comms hard-cap at 120 words (the full
     // authored detail resurfaces in the answer explanation).
     function capWords(t, n) {
       var w = String(t == null ? "" : t).trim().split(/\s+/);
@@ -761,7 +761,7 @@
         commsMsg.appendChild(mk("div", "arm-comms-key", parts.lead));
         if (parts.body) commsMsg.appendChild(mk("div", "arm-comms-why", parts.body));
       } else {
-        var capV = capWords(parts || "", 150);     // (J7) Vega never exceeds 150 words
+        var capV = capWords(parts || "", 120);     // (J7) Vega never exceeds 120 words (Jason v0.75.0)
         commsMsg.textContent = capV.rest ? (capV.s + "\u2026") : capV.s;
       }
     }
@@ -1068,8 +1068,8 @@
     }
     // Hyperdrive warp: a 3-2-1 countdown ("spinning up") then an accelerating streak tunnel.
     // Durations are reduced-motion aware and are the only knobs for the cinematic length.
-    function warpCD() { return reducedMotion ? 1.0 : 1.65; }      // 3-2-1 countdown
-    function warpStreak() { return reducedMotion ? 0.7 : 3.2; }   // S3: longer hold in the tunnel (was 1.7) — sit ~1.5s more before arrival
+    function warpCD() { return reducedMotion ? 1.0 : 1.0; }       // (v0.75.0, Jason) punchy 3-2-1 — a beat per number
+    function warpStreak() { return reducedMotion ? 0.7 : 2.2; }   // (v0.75.0, Jason) shorter, FASTER tunnel — energy over slow-motion
     function warpTotal() { return warpCD() + warpStreak(); }
     function startWarp(done) { warpT = 0; warpBeat = -1; warpDone = done; setState("WARP"); }
     function coreLvl(core) { return Math.floor(core.idx / 2); }
@@ -1394,7 +1394,7 @@
         var head = lastCorrect ? "\u2713 Correct. "
           : (timedOut ? (forgiving ? "\u23F1 Time\u2019s up \u2014 core scattered. " : "\u23F1 Time\u2019s up \u2014 incorrect. ")
                       : (forgiving ? "\u2717 Lost \u2014 core scattered. " : "\u2717 Incorrect. "));
-        var capX = capWords(q.explanation, 150);   // (J8)
+        var capX = capWords(q.explanation, 120);   // (J8; 120 per Jason v0.75.0)
         ex.textContent = head + capX.s + (capX.rest ? "\u2026" : "");
         if (capX.rest) {
           var moreX = doc.createElement("details"); moreX.className = "arm-explain-more";
@@ -2433,13 +2433,20 @@
           if (k > 0.8) { c2d.fillStyle = "rgba(255,255,255," + ((k - 0.8) / 0.2 * 0.9) + ")"; c2d.fillRect(0, 0, W, H); }
           c2d.globalAlpha = 1; return;
         }
-        if (canFilter) c2d.filter = "blur(" + (1 + 3.2 * k) + "px)";   // heavier blur as we accelerate
-        var speed = k * k * 78; c2d.lineWidth = 2;                     // accelerating star streaks (iris -> aqua)
+        if (canFilter) c2d.filter = "blur(" + (1 + 2.4 * k) + "px)";   // heavier blur as we accelerate
+        // (v0.75.0, Jason: "more fluid, more animated, not slow motion") the tunnel now MOVES:
+        // stars flow radially past the camera with per-star parallax (deterministic from warpT),
+        // the speed floor keeps it energetic from frame one, and colors alternate per star.
+        var WARP_FLOW = 340;                                           // px/s radial rush at full tilt
+        var speed = (0.35 + 0.65 * k * k) * 110; c2d.lineWidth = 2;
+        var maxR2 = maxR + 40;
         for (var i = 0; i < stars.length; i++) {
-          var s = stars[i]; var dx = (s.x % W) - cx, dy = (s.y % H) - cy; var a = Math.atan2(dy, dx); var r = Math.sqrt(dx * dx + dy * dy);
-          var len = speed * (8 + 8 * k);
+          var s = stars[i]; var dx = (s.x % W) - cx, dy = (s.y % H) - cy; var a = Math.atan2(dy, dx); var r0 = Math.sqrt(dx * dx + dy * dy);
+          var depth = 0.45 + 0.9 * s.a;                                // parallax: bright stars rush harder
+          var r = (r0 + wt * WARP_FLOW * depth * (0.4 + 0.6 * k)) % maxR2;
+          var len = speed * (6 + 7 * k) * depth * (0.25 + r / maxR2);  // longer streaks toward the rim
           var x1 = cx + Math.cos(a) * r, y1 = cy + Math.sin(a) * r, x2 = cx + Math.cos(a) * (r + len), y2 = cy + Math.sin(a) * (r + len);
-          c2d.strokeStyle = k < 0.5 ? COL.iris300 : COL.aqua; c2d.globalAlpha = 0.35 * s.a + 0.5 * k;
+          c2d.strokeStyle = (i % 2) ? COL.iris300 : COL.aqua; c2d.globalAlpha = (0.3 + 0.4 * (r / maxR2)) * s.a + 0.4 * k;
           c2d.shadowBlur = 8 + 10 * k; c2d.shadowColor = COL.aqua;
           c2d.beginPath(); c2d.moveTo(x1, y1); c2d.lineTo(x2, y2); c2d.stroke();
         }
