@@ -182,6 +182,38 @@ var detSector3 = null;   // captured for the determinism probe against window 2
      'relaunch recovers to SECTOR for the downstream probes');
 })();
 
+/* ================= 5b) BOSS KILL: shake decays + resets, boss bed ends on destroy ================= */
+(function bossKill() {
+  group('BOSS KILL (J1/J2): shake hygiene through the fight, boss bed ends the moment it dies');
+  var T = root.__armTest;
+  var info = T.setupBossSector();
+  ok(info.enabled === true && T.state() === 'SECTOR', 'setupBossSector arms the dreadnought arena');
+  ok(ctx._rec.tracks.some(function (t) { return t.id === 'boss'; }), "arena entry plays the 'boss' bed");
+  var kills = 0, guard = 0;
+  while (kills < 5 && guard++ < 12) {
+    T.hitWeakpoint(T.bossInfo().wpMax);              // break the active weakpoint -> sheds a core
+    if (kills === 0) {
+      ok(T.shake() > 0, 'weakpoint break kicks screen shake (' + T.shake().toFixed(1) + ')');
+      T.step(1.5);
+      ok(T.shake() === 0, 'shake decays back to zero mid-fight (sanity; the J1 leak fix is the resets below)');
+    }
+    var cs = T.cores(), target = null;
+    for (var i = cs.length - 1; i >= 0; i--) { var c = cs[i]; if (c.state !== 'collected' && c.state !== 'lost' && c.kind !== 'combat') { target = c.idx; break; } }
+    if (target == null) break;
+    T.arrive(target);
+    if (T.state() !== 'QUESTION') break;
+    T.answer(true);
+    kills++;
+  }
+  ok(kills === 5 && T.bossInfo().dying === true, 'five weakpoints -> five caught cores -> reactor breached (dying)');
+  var ids = ctx._rec.tracks.map(function (t) { return t.id; });
+  ok(ids.lastIndexOf('arm') > ids.lastIndexOf('boss'), "J2: the 'arm' bed replaces 'boss' the moment the reactor breaches");
+  // leak regression (J1): shake raised by death blasts must NOT survive into the home/next world
+  T.step(1.0);                                       // death sequence blasts raise shake
+  T.engageReturn(); T.flushWarp();
+  ok(T.state() === 'HOME' && T.shake() === 0, 'J1: no leaked shake at the home station (was frozen 11-18px forever)');
+})();
+
 /* ================= 6) PAUSE: gnow() freezes; resume re-opens the clock ================= */
 (function pauseFreeze() {
   group('PAUSE: module pause() freezes gnow(); resume() reopens it');

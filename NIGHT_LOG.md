@@ -598,6 +598,16 @@ counter-roll; the "nuts" shake = `shakeAmt` NEVER resets and its decay only runs
 `bossActive` — frozen 11–18 px jitter leaks into HOME/next sectors/game-over/new runs; the
 jitter also ignores reducedMotion (01 §12 violation).
 
+**J1 + J2 SHIPPED (v0.69.0):** the leak fixed at its gates (buildSectorWorld/enterHome/
+gameOver resets + unconditional decay + reduced-motion gate on the jitter); feel calmed
+(lead 0.35→0.15, roll ±2.6°→±1.1°, spring dt·5→dt·8 — Jason's eye re-judges); boss bed ends
+at reactor breach (J2). arm-run gained the full five-weakpoint boss-kill drive (59/59) —
+the boss fight had never been machine-driven end-to-end before. Negctrl (enterHome reset
+removed) failed exactly the leak pin. Gate 415/415.
+Commit: `v0.69.0 — J1 ARM shake leak+feel, J2 boss bed ends on destroy`.
+**Remaining from Jason's batch:** J5 music rotation (~2 min), J7/J8 150-word caps,
+J4 CC duck rework, J9 CC shop.
+
 ---
 
 ## 🛑 STOP — end of the night run (after P2·5) — superseded by ▶️ RUN RESUMED above

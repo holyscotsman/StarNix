@@ -757,6 +757,7 @@
       }
     }
     function buildSectorWorld() {
+      shakeAmt = 0;   // (v0.69.0, J1) fresh world = zero inherited shake (the post-boss leak's other half)
       // reset core runtime (keep drawn questions); rebuild ambient field.
       for (var i = 0; i < cores.length; i++) {
         var c = cores[i], L = c.ch;
@@ -1112,6 +1113,7 @@
         }
         if (activeN === 0) {                        // all five destroyed + resolved -> staged death sequence (updateBossDeath)
           boss.active = false; boss.dying = true; boss.deathT = 0; boss.exCD = 0;
+          try { AUD.playTrack("arm", { intensity: tierOf(sector) >= 2 ? 1 : 0 }); } catch (eM) {}   // (v0.69.0, J2) boss destroyed -> the boss bed ends NOW, not at the next sector
           setBanner("\u2620 Dreadnought reactor breached!");
           setState("SECTOR"); return;
         }
@@ -1225,6 +1227,7 @@
     }
     function engageReturn() { if (!returnReady) return; startWarp(enterHome); }
     function enterHome() {
+      shakeAmt = 0;   // (v0.69.0, J1) the home station is calm water
       enemies = []; clearProjectiles(); asteroids = []; clearParticles();
       // commit this attempt's lost cores to the (Increment-2) resurfacing pool
       sectorLost = [];
@@ -1291,6 +1294,7 @@
       newRun();
     }
     function gameOver() {
+      shakeAmt = 0;   // (v0.69.0, J1) the death panel must not inherit boss shake
       setState("GAMEOVER"); sfx("explode");
       burst(ship.x, ship.y, COL.peach, 40); burst(ship.x, ship.y, COL.gold, 24); deathTimer = 1.1;
     }
@@ -1901,15 +1905,15 @@
     // (v0.44.0 feel, A3) the camera LEADS the velocity and springs toward its target instead of
     // hard-locking to the hull — the frame breathes with flight. Reduced-motion = no lead, stiffer spring.
     function camTo(tx, ty, dt) {
-      var k = dt ? Math.min(1, dt * (reducedMotion ? 14 : 5)) : 1;
+      var k = dt ? Math.min(1, dt * (reducedMotion ? 14 : 8)) : 1;   // (v0.69.0, J1) tighter spring = less lag-chase swim
       camX += (tx - camX) * k; camY += (ty - camY) * k;
     }
     function camera(dt) {
-      var lead = reducedMotion ? 0 : 0.35;
+      var lead = reducedMotion ? 0 : 0.15;
       camTo(clamp(ship.x + ship.vx * lead - W / 2, 0, Math.max(0, MAP_W - W)), clamp(ship.y + ship.vy * lead - H / 2, 0, Math.max(0, MAP_H - H)), dt);
     }
     function homeCamera(dt) {
-      var lead = reducedMotion ? 0 : 0.35;
+      var lead = reducedMotion ? 0 : 0.15;
       camTo(clamp(ship.x + ship.vx * lead - W / 2, 0, Math.max(0, HOME_W - W)), clamp(ship.y + ship.vy * lead - H / 2, 0, Math.max(0, HOME_H - H)), dt);
     }
 
@@ -2022,6 +2026,7 @@
 
       updateParticles(dt);
       checkCombatCleared();
+      if (shakeAmt > 0) shakeAmt = Math.max(0, shakeAmt - dt * 26);   // (v0.69.0, J1) decay ALWAYS — it was caged inside updateBoss, freezing leaked shake for whole sectors
       if (bossActive && boss) updateBoss(dt);
       for (i = 0; i < cores.length; i++) {
         var co = cores[i]; co.pulse += dt * 3;
@@ -2299,9 +2304,9 @@
       drawNebula(camX, camY);
       drawStarsParallax(false);                                     // (A1) layered backdrop, behind the world
       var shx = 0, shy = 0;
-      if (shakeAmt > 0) { shx = (Math.random() - 0.5) * shakeAmt * 2; shy = (Math.random() - 0.5) * shakeAmt * 2; }
+      if (shakeAmt > 0 && !reducedMotion) { shx = (Math.random() - 0.5) * shakeAmt * 2; shy = (Math.random() - 0.5) * shakeAmt * 2; }   // (v0.69.0, J1) 01 §12: no jitter under reduced motion
       c2d.save();
-      if (!reducedMotion && shipBank) { c2d.translate(W / 2, H / 2); c2d.rotate(-shipBank * 0.045); c2d.translate(-W / 2, -H / 2); }   // (A3) the whole scene counter-banks with the turn
+      if (!reducedMotion && shipBank) { c2d.translate(W / 2, H / 2); c2d.rotate(-shipBank * 0.02); c2d.translate(-W / 2, -H / 2); }   // (A3) the whole scene counter-banks with the turn
       c2d.translate(-camX + shx, -camY + shy);
       for (var i = 0; i < asteroids.length; i++) drawAsteroid(asteroids[i]);
       for (i = 0; i < cores.length; i++) { var c = cores[i]; if (c.state !== "collected" && c.state !== "lost") drawCore(c); }
@@ -2376,7 +2381,7 @@
       drawNebula(camX, camY);
       drawStarsParallax(false);
       c2d.save();
-      if (!reducedMotion && shipBank) { c2d.translate(W / 2, H / 2); c2d.rotate(-shipBank * 0.045); c2d.translate(-W / 2, -H / 2); }
+      if (!reducedMotion && shipBank) { c2d.translate(W / 2, H / 2); c2d.rotate(-shipBank * 0.02); c2d.translate(-W / 2, -H / 2); }
       c2d.translate(-camX, -camY);
       drawStationGlyph(HS_X, HS_Y);
       c2d.fillStyle = "#aebbd6"; c2d.font = "600 12px Montserrat"; c2d.textAlign = "center"; c2d.fillText("MCI STATION", HS_X, HS_Y + (52 + stationBuild * 7));
@@ -2585,6 +2590,7 @@
           pq.choose(ans); pq.proceed(); return true;
         },
         engageReturn: function () { returnReady = true; engageReturn(); },
+        shake: function () { return shakeAmt; },   // (v0.69.0) J1 pins
         gnow: function () { return gnow(); },
         isPaused: function () { return paused; },
         pause: function () { pause(); },
