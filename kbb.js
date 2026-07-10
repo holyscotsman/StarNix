@@ -458,6 +458,14 @@
   }
   function startBattle(run) {
     var enemy = makeEnemy(run);
+    if (run.pendingElite) {   // (v0.114.0, D6) elite waypoint: tougher hull, hotter guns, richer cache
+      run.pendingElite = false;
+      enemy.maxHp = Math.round(enemy.maxHp * 1.45); enemy.hp = enemy.maxHp;
+      enemy.intent += 1; enemy.baseIntent += 1;
+      enemy.rewardCoins = Math.round(enemy.rewardCoins * 1.8);
+      enemy.elite = true;
+      run.log.push('Elite contact: ' + enemy.name);
+    }
     run.battle = {
       enemy: enemy, attackIndex: 0, maxAttacks: CONFIG.maxAttacks, over: false,
       correctCount: 0, wrongCount: 0, correctStreak: 0,
@@ -739,6 +747,14 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
     return { ok: true };
   }
 
+  // (v0.114.0, D6) unknown-stop payout — the only thing a cache does is coins, through the log
+  function claimCache(run, amt) {
+    amt = Math.max(0, Math.round(amt || 0));
+    run.squad.coins += amt;
+    run.log.push('Salvage cache: +' + amt + ' coins');
+    return amt;
+  }
+
   // ---- Run creation ----
   function createRun(ctx, opts) {
     opts = opts || {};
@@ -932,6 +948,45 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
     css.push('.kbb-sqspr.h1{filter:drop-shadow(0 0 6px rgba(255,107,91,.55));}');
     css.push('.kbb-sqspr.h2{filter:drop-shadow(0 0 6px rgba(120,85,250,.6));}');
     css.push('.kbb-sqspr.h3{filter:drop-shadow(0 0 6px rgba(146,221,35,.5));}');
+    // ---- (v0.114.0, D6) the run map ----
+    css.push('.kbb-main.is-map{width:min(980px,96%);align-self:center;display:flex;flex-direction:column;overflow:hidden;border:1px solid ' + P.border + ';box-shadow:none;}');
+    css.push('.kbb-map-head{flex:none;}');
+    css.push('.kbb-map-name{font-weight:800;font-size:24px;margin:2px 0 4px;}');
+    css.push('.kbb-map-note{font-size:12px;color:' + P.gold + ';margin-bottom:2px;}.kbb-map-note b{color:' + P.gold + ';}');
+    css.push('.kbb-map{position:relative;flex:1;min-height:210px;margin:6px 0;border:1px solid rgba(52,52,74,.6);border-radius:12px;background:radial-gradient(120% 120% at 30% 20%,#121222 0%,#0a0a14 70%);overflow:hidden;}');
+    css.push('.kbb-map-svg{position:absolute;inset:0;width:100%;height:100%;}');
+    css.push('.kbb-map-svg .trav{stroke:' + P.aqua + ';stroke-width:2.5;vector-effect:non-scaling-stroke;}');
+    css.push('.kbb-map-svg .ahead{stroke:rgba(255,255,255,.22);stroke-width:2;stroke-dasharray:3 9;vector-effect:non-scaling-stroke;}');
+    css.push('.kbb-map-svg .stopln{stroke:rgba(255,255,255,.14);stroke-width:1.5;stroke-dasharray:2 7;vector-effect:non-scaling-stroke;}');
+    css.push('.kbb-mapnode{position:absolute;transform:translate(-50%,-50%);width:52px;height:52px;border-radius:50%;border:2px solid ' + P.border + ';background:rgba(16,16,26,.92);color:' + P.mid + ';font-family:inherit;font-weight:800;font-size:17px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;}');
+    css.push('.kbb-mapnode:disabled{cursor:default;opacity:.55;}');
+    css.push('.kbb-mapnode.cleared{border-color:' + P.mantis + ';color:' + P.mantis + ';}');
+    css.push('.kbb-mapnode.current{width:60px;height:60px;border-color:' + P.aqua + ';color:' + P.text + ';opacity:1;}');
+    css.push('.kbb-mapnode.pick{border-color:rgba(31,221,233,.5);color:' + P.text + ';}');
+    css.push('.kbb-root:not(.kbb-reduced) .kbb-mapnode.pick:hover{transform:translate(-50%,-50%) scale(1.06);}');
+    css.push('.kbb-mapnode.sel{border-color:' + P.aqua + ';box-shadow:0 0 16px rgba(31,221,233,.4);animation:kbbNodeGlow 1.6s ease-in-out infinite;}');
+    css.push('@keyframes kbbNodeGlow{0%,100%{box-shadow:0 0 10px rgba(31,221,233,.25);}50%{box-shadow:0 0 20px rgba(31,221,233,.5);}}');
+    css.push('.kbb-reduced .kbb-mapnode.sel{animation:none;}');
+    css.push('.kbb-mapnode.t-elite.pick{border-color:rgba(255,107,91,.6);color:' + P.peach + ';}');
+    css.push('.kbb-mapnode.t-elite.sel{border-color:' + P.peach + ';box-shadow:0 0 16px rgba(255,107,91,.4);}');
+    css.push('.kbb-mapnode.stop{width:46px;height:46px;border-style:dashed;}');
+    css.push('.kbb-mapnode.t-shop{color:' + P.gold + ';border-color:rgba(255,200,87,.55);}');
+    css.push('.kbb-mapnode.t-unknown{color:' + P.iris300 + ';border-color:rgba(172,155,253,.5);}');
+    css.push('.kbb-mapnode.used{opacity:.35;}');
+    css.push('.kbb-mapnode.t-boss{width:88px;height:88px;border-color:rgba(255,107,91,.6);background:rgba(20,12,16,.9);}');
+    css.push('.kbb-mapnode.t-boss img{width:64px;height:64px;object-fit:contain;filter:drop-shadow(0 0 10px rgba(255,107,91,.5));}');
+    css.push('.kbb-root:not(.kbb-reduced) .kbb-mapnode.t-boss.pick{animation:kbbLoom 2.4s ease-in-out infinite;}');
+    css.push('@keyframes kbbLoom{0%,100%{box-shadow:0 0 12px rgba(255,107,91,.25);}50%{box-shadow:0 0 26px rgba(255,107,91,.55);}}');
+    css.push('.kbb-mapnode .cap{font-size:7.5px;letter-spacing:.12em;color:' + P.dim + ';margin-top:2px;white-space:nowrap;}');
+    css.push('.kbb-mapnode .cap.here{color:' + P.aqua + ';position:absolute;top:100%;margin-top:6px;}');
+    css.push('.kbb-mapnode.t-boss .cap{color:' + P.peach + ';}');
+    css.push('.kbb-mapdock{flex:none;display:flex;align-items:center;gap:14px;padding:9px 12px;border:1px solid rgba(52,52,74,.7);border-radius:12px;background:rgba(20,20,32,.66);}');
+    css.push('.kbb-mapdock-sq{display:flex;gap:6px;}.kbb-mapdock-sq .kbb-sqspr{width:32px;height:32px;}');
+    css.push('.kbb-mapdock-arts{display:flex;align-items:center;gap:6px;}.kbb-mapdock-arts i{font-style:normal;font-weight:800;font-size:8.5px;letter-spacing:.14em;color:' + P.dim + ';}');
+    css.push('.kbb-map-art{width:24px;height:24px;border-radius:7px;border:1.5px solid ' + P.iris + ';display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:' + P.text + ';background:rgba(255,255,255,.04);}');
+    css.push('.kbb-map-art.empty{border-style:dashed;border-color:' + P.border + ';}');
+    css.push('.kbb-mapdock-next{margin-left:auto;font-size:12px;font-weight:700;color:' + P.mid + ';}');
+    css.push('.kbb-embark{border-color:' + P.aqua + ';}');
     css.push('.kbb-stem{font-size:15px;line-height:1.45;margin:2px 0 12px;font-weight:600;}');
     css.push('.kbb-exhibit-warn{margin:0 0 10px;padding:6px 9px;border-left:2px solid ' + P.gold + ';background:rgba(255,200,87,.1);font-size:12px;color:' + P.gold + ';}');
     css.push('.kbb-opts{display:flex;flex-direction:column;gap:8px;}');
@@ -1107,6 +1162,7 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
         if (rz.flags) run.flags = rz.flags;                                          // (G4) Lazarus stays burned
         if (rz.depthClearedSection) { run.depthClearedSection = rz.depthClearedSection; run.depthClearedRound = rz.depthClearedRound || 0; }
         if (rz.consumables) run.consumables = rz.consumables.slice(0, CONFIG.consumableCap);
+        if (rz.map) run.map = rz.map;                                                // (v0.114.0, D6) the section map survives resume
         run.battle = null; startBattle(run);   // open ON the checkpointed round's battle
       }
       var container = el(doc, 'div', 'kbb-root' + (reduced ? ' kbb-reduced' : ''));
@@ -2000,7 +2056,7 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
       else { itxt = 'Incoming attack \u2694 ' + ci; alert = true; }
       if (alert) icls += ' alert';
       s.enemyText.innerHTML =
-        '<div class="kbb-eyebrow">BCM warship' + (e.boss ? ' \u00B7 <span style="color:' + PALETTE.gold + '">BOSS</span>' : '') + '</div>' +
+        '<div class="kbb-eyebrow">BCM warship' + (e.boss ? ' \u00B7 <span style="color:' + PALETTE.gold + '">BOSS</span>' : '') + (e.elite ? ' \u00B7 <span style="color:' + PALETTE.gold + '">ELITE</span>' : '') + '</div>' +
         '<div class="ennm">' + e.name + '</div>' +
         '<span class="' + icls + '">' + itxt + '</span>' +
         ((b.attackIndex + 1 >= b.maxAttacks)
@@ -2065,7 +2121,7 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
       var p = s.mainPanel; p.className = 'kbb-main'; p.textContent = '';
       if (s.hand) s.hand.style.display = (s.run.phase === 'battle') ? '' : 'none';   // (v0.113.0, D5)
       if (s.run.phase === 'lost') { renderLost(s); return; }
-      if (s.run.phase === 'shop') return renderShop(s, p);
+      if (s.run.phase === 'shop') return (s.run._preRun || s.mapShop) ? renderShop(s, p) : renderMap(s, p);   // (v0.114.0, D6)
       return renderBattle(s, p);
     }
 
@@ -2087,6 +2143,7 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
     }
     function restart(s) {
       s.ui.replaceOffer = -1; clearLost(s); hideTip(s);
+      s.mapShop = false; s.mapSel = null; s.mapNote = '';   // (v0.114.0, D6)
       s._battleKey = ''; s.battleStartAt = s.lastTs || 0; s.heroExitAt = 0;   // (v0.108.0, G4) fresh run = fresh fly-in + sting
       s.run = createRun(s.ctx, {});   // (v0.68.0, J6) restarts skip the loadout shop too — consistent straight-to-battle opening
       renderAll(s);
@@ -2347,6 +2404,161 @@ buildHand(s);   // (v0.113.0, D5) fanned move cards + gem + piles live in the ha
       renderEnemy(s); renderSquad(s); renderArtifacts(s); renderLog(s);
     }
 
+    // ================= (v0.114.0, D6) THE RUN MAP =================
+    // Between battles (the engine's 'shop' phase) the shell shows a section map instead
+    // of the bare shop: the 4-battles+boss spine is UNCHANGED (ranks = rounds — embarking
+    // IS leaveShop), elites are optional swaps for a rank's battle, and shop/unknown are
+    // side STOPS on the corridor after each cleared rank. kbb-balance drives the engine
+    // seams directly and never sees any of this; its locked targets stand.
+    var SECTION_NAMES = ['The Approach', 'The Scattering Fields', 'The Torn Corridor', 'The Deep Belt', 'The Silent Reach', 'The Core Shadow'];
+    function genMap(s) {
+      var run = s.run;
+      var rng = (s.ctx.rng && s.ctx.rng.fork) ? s.ctx.rng.fork('kbb-map:' + run.seed + ':' + run.section) : null;
+      var nx = rng ? function () { return rng.next(); } : (function () { var x = ((run.seed || 1) + run.section * 97) >>> 0; return function () { x = (x * 1664525 + 1013904223) >>> 0; return x / 4294967296; }; })();
+      var R = CONFIG.roundsPerSection, nodes = [], stops = [];
+      for (var r = 1; r <= R; r++) {
+        var boss = (r === R);
+        nodes.push({ id: 'r' + r + 'b', rank: r, type: boss ? 'boss' : 'battle' });
+        if (!boss && r >= 2 && nx() < 0.45) nodes.push({ id: 'r' + r + 'e', rank: r, type: 'elite' });
+        stops.push({ id: 'w' + r + 's', afterRank: r, type: 'shop', used: false });   // a shop stop after EVERY rank = today's cadence, node-shaped
+        if (nx() < 0.4) stops.push({ id: 'w' + r + 'u', afterRank: r, type: 'unknown', used: false, coins: 12 + Math.floor(nx() * 14) });
+      }
+      return { section: run.section, nodes: nodes, stops: stops, taken: {} };
+    }
+    function ensureMap(s) { if (!s.run.map || s.run.map.section !== s.run.section) { s.run.map = genMap(s); s.mapSel = null; } }
+    function mapXY(node, R) {
+      if (node.rank) return { x: 4 + (node.rank - 0.5) * (88 / R) + (node.type === 'elite' ? 1.5 : 0), y: node.type === 'elite' ? 22 : (node.type === 'boss' ? 44 : 54) };
+      return { x: 4 + node.afterRank * (88 / R) + 1.2, y: node.type === 'shop' ? 80 : 16 };
+    }
+    function saveCheckpointKBB(s) {
+      // (v0.106.0, G2 / v0.114.0, D6) the between-battles exit is the checkpoint —
+      // section/round/squad/artifacts/flags/consumables + the section map itself
+      try {
+        var P2 = s.ctx.persistence;
+        if (P2) {
+          var rq = s.run.squad;
+          var snap = { section: s.run.section, round: s.run.round,
+            squad: { hp: rq.hp, maxHp: rq.maxHp, shield: rq.shield, startShield: rq.startShield || 0, basePower: rq.basePower, block: rq.block, healPower: rq.healPower, coins: rq.coins },
+            artifacts: rq.artifacts.map(function (ai) { return { id: ai.def.id, state: ai.state || {} }; }),
+            flags: s.run.flags || {},
+            depthClearedSection: s.run.depthClearedSection || 0, depthClearedRound: s.run.depthClearedRound || 0,
+            consumables: s.run.consumables.slice(),
+            map: s.run.map || null,
+            label: 'Depth ' + s.run.section + '-' + s.run.round + ' \u00b7 ' + rq.artifacts.length + ' artifacts \u00b7 ' + rq.coins + 'c' };
+          if (P2.update) P2.update(function (p) { p.saves = p.saves || {}; p.saves.KBB = snap; });
+          else if (P2.load && P2.save) P2.load().then(function (p) { p.saves = p.saves || {}; p.saves.KBB = snap; return P2.save(p); }).catch(function () {});
+        }
+      } catch (eCk) {}
+    }
+    function renderMap(s, p) {
+      p.className = 'kbb-main is-map';
+      ensureMap(s);
+      var d = s.doc, run = s.run, m = run.map, R = CONFIG.roundsPerSection;
+      var curRank = run.round;                                  // phase 'shop' = round just cleared
+      var nextRank = (run.round < R) ? run.round + 1 : 0;       // 0 = post-boss corridor to the next section
+      var nextNodes = m.nodes.filter(function (n) { return n.rank === nextRank; });
+      if (!s.mapSel || !nextNodes.some(function (n) { return n.id === s.mapSel; })) {
+        var spine = nextNodes.filter(function (n) { return n.type !== 'elite'; })[0];
+        s.mapSel = spine ? spine.id : null;
+      }
+      var head = el(d, 'div', 'kbb-map-head');
+      head.innerHTML = '<div class="kbb-eyebrow">Kuiper Belt Battle \u00b7 Section ' + m.section + '</div>' +
+        '<div class="kbb-map-name">' + SECTION_NAMES[(m.section - 1) % SECTION_NAMES.length] + '</div>' +
+        (s.mapNote ? '<div class="kbb-map-note">' + s.mapNote + '</div>' : '');
+      p.appendChild(head);
+      var area = el(d, 'div', 'kbb-map'); p.appendChild(area);
+      // path lines under the nodes: traveled solid, choices dotted
+      var seg = '';
+      var prev = null;
+      for (var pr = 1; pr <= curRank; pr++) {
+        var takenType = m.taken[pr] || 'battle';
+        var tn = m.nodes.filter(function (n) { return n.rank === pr && (n.type === takenType || (takenType === 'boss' && n.type === 'boss')); })[0]
+              || m.nodes.filter(function (n) { return n.rank === pr; })[0];
+        if (!tn) continue;   // a resumed save may carry a sparser map — draw what exists
+        var xy = mapXY(tn, R);
+        if (prev) seg += '<line class="trav" x1="' + prev.x + '" y1="' + prev.y + '" x2="' + xy.x + '" y2="' + xy.y + '"/>';
+        prev = xy;
+      }
+      if (prev) {
+        for (var nn = 0; nn < nextNodes.length; nn++) {
+          var xy2 = mapXY(nextNodes[nn], R);
+          seg += '<line class="ahead" x1="' + prev.x + '" y1="' + prev.y + '" x2="' + xy2.x + '" y2="' + xy2.y + '"/>';
+        }
+        var corr = m.stops.filter(function (st) { return st.afterRank === curRank && !st.used; });
+        for (var cs = 0; cs < corr.length; cs++) {
+          var xy3 = mapXY(corr[cs], R);
+          seg += '<line class="stopln" x1="' + prev.x + '" y1="' + prev.y + '" x2="' + xy3.x + '" y2="' + xy3.y + '"/>';
+        }
+      }
+      area.innerHTML = '<svg class="kbb-map-svg" viewBox="0 0 100 100" preserveAspectRatio="none">' + seg + '</svg>';
+      var AS2 = {};
+      try { AS2 = (d.defaultView && d.defaultView.STARNIX_ASSETS) || {}; } catch (eA2) {}
+      function nodeBtn(n) {
+        var xy = mapXY(n, R);
+        var b2 = d.createElement('button'); b2.type = 'button';
+        var cleared = n.rank && n.rank <= curRank;
+        var selectable = n.rank === nextRank && nextRank > 0;
+        var cls = 'kbb-mapnode t-' + n.type;
+        if (cleared) cls += ' cleared';
+        if (n.rank === curRank) cls += ' current';
+        if (selectable) cls += ' pick';
+        if (s.mapSel === n.id) cls += ' sel';
+        b2.className = cls; b2.setAttribute('data-node', n.id); b2.setAttribute('data-type', n.type);
+        b2.style.left = xy.x + '%'; b2.style.top = xy.y + '%';
+        var ic = { battle: '\u2694', elite: '\u2620', boss: '', shop: '\u25CE', unknown: '?' }[n.type] || '\u2694';
+        if (n.type === 'boss' && AS2.kbbBoss) b2.innerHTML = '<img src="' + AS2.kbbBoss + '" alt=""><span class="cap">SECTION BOSS</span>';
+        else b2.innerHTML = '<span class="nic">' + (cleared ? '\u2713' : ic) + '</span>' + (n.rank === curRank ? '<span class="cap here">YOU ARE HERE</span>' : '');
+        if (selectable) b2.onclick = function () { s.mapSel = n.id; renderMain(s); };
+        else b2.disabled = !selectable && !cleared;
+        return b2;
+      }
+      for (var ni = 0; ni < m.nodes.length; ni++) area.appendChild(nodeBtn(m.nodes[ni]));
+      var corr2 = m.stops.filter(function (st) { return st.afterRank === curRank; });
+      for (var si = 0; si < corr2.length; si++) {
+        (function (st) {
+          var xy = mapXY(st, R);
+          var b3 = d.createElement('button'); b3.type = 'button';
+          b3.className = 'kbb-mapnode stop t-' + st.type + (st.used ? ' used' : '');
+          b3.setAttribute('data-node', st.id); b3.setAttribute('data-type', st.type);
+          b3.style.left = xy.x + '%'; b3.style.top = xy.y + '%';
+          b3.innerHTML = '<span class="nic">' + (st.type === 'shop' ? '\u25CE' : '?') + '</span>';
+          b3.disabled = !!st.used;
+          b3.onclick = function () {
+            if (st.used) return;
+            if (st.type === 'shop') { st.used = true; s.mapShop = true; renderMain(s); }
+            else { st.used = true; var got = claimCache(s.run, st.coins); s.mapNote = 'Salvage cache: <b>+' + got + '</b> coins'; renderCoins(s); renderLog(s); renderMain(s); }
+          };
+          area.appendChild(b3);
+        })(corr2[si]);
+      }
+      // dock: squad + artifacts + Embark
+      var dock = el(d, 'div', 'kbb-mapdock');
+      var sqh = '';
+      for (var hi2 = 1; hi2 <= 3; hi2++) { var u2 = AS2['kbbHero' + hi2]; if (u2) sqh += '<img class="kbb-sqspr h' + hi2 + '" src="' + u2 + '" alt="">'; }
+      var arth = '';
+      var arts2 = run.squad.artifacts;
+      for (var ai2 = 0; ai2 < arts2.length; ai2++) arth += '<span class="kbb-map-art" title="' + arts2[ai2].def.name + '" style="border-color:' + (CAT_COLOR[arts2[ai2].def.category] || PALETTE.iris) + '">' + arts2[ai2].def.name.charAt(0) + '</span>';
+      if (arts2.length < CONFIG.maxArtifacts) arth += '<span class="kbb-map-art empty"></span>';
+      var selNode = m.nodes.filter(function (n) { return n.id === s.mapSel; })[0];
+      var nextLbl = nextRank === 0 ? 'Next: Section ' + (m.section + 1)
+        : 'Next: ' + (selNode && selNode.type === 'elite' ? 'Elite battle' : (nextRank === R ? 'Section boss' : 'Battle ' + m.section + '-' + nextRank));
+      dock.innerHTML = '<span class="kbb-mapdock-sq">' + sqh + '</span>' +
+        '<span class="kbb-mapdock-arts"><i>ARTIFACTS</i>' + arth + '</span>' +
+        '<span class="kbb-mapdock-next">' + nextLbl + '</span>';
+      var emb = d.createElement('button'); emb.type = 'button'; emb.className = 'kbb-btn kbb-embark';
+      emb.textContent = (nextRank === 0 ? 'Next section \u25B8' : 'Embark \u25B8');
+      emb.onclick = function () {
+        var sel2 = m.nodes.filter(function (n) { return n.id === s.mapSel; })[0];
+        if (sel2 && sel2.type === 'elite') run.pendingElite = true;
+        if (nextRank > 0) m.taken[nextRank] = sel2 ? sel2.type : 'battle';
+        s.mapSel = null; s.mapNote = '';
+        leaveShop(run);
+        saveCheckpointKBB(s);
+        renderAll(s);
+      };
+      dock.appendChild(emb);
+      p.appendChild(dock);
+    }
     function renderShop(s, p) {
       var run = s.run;
       p.className = 'kbb-main is-shop';        // (v0.78.0, JB2) head + actions pinned, middle scrolls
@@ -2428,8 +2640,8 @@ buildHand(s);   // (v0.113.0, D5) fanned move cards + gem + piles live in the ha
       rb.textContent = 'Reroll ' + run.shop.rerollCost + 'c'; rb.disabled = run.squad.coins < run.shop.rerollCost;
       rb.onclick = function () { shopReroll(s.run); s.ui.replaceOffer = -1; renderMain(s); renderSquad(s); renderCoins(s); };
       var lv = s.doc.createElement('button'); lv.className = 'kbb-btn';
-      lv.textContent = run._preRun ? 'Start run \u25B8' : (run.round < CONFIG.roundsPerSection ? 'Next battle \u2192' : 'Next section \u2192');
-      lv.onclick = function () { onLeaveShop(s); };
+      lv.textContent = run._preRun ? 'Start run \u25B8' : (s.mapShop ? 'Return to map \u25B8' : (run.round < CONFIG.roundsPerSection ? 'Next battle \u2192' : 'Next section \u2192'));
+      lv.onclick = function () { if (!s.run._preRun && s.mapShop) { s.mapShop = false; renderMain(s); } else { onLeaveShop(s); } };   // (v0.114.0, D6) stop-visits return to the map; Embark owns leaveShop
       shoprow.appendChild(rb); shoprow.appendChild(lv); outer.appendChild(shoprow);   // pinned, never scrolls away
     }
     function onBuyArtifact(s, oi, full) {
@@ -2441,24 +2653,7 @@ buildHand(s);   // (v0.113.0, D5) fanned move cards + gem + piles live in the ha
     function onLeaveShop(s) {
       s.ui.replaceOffer = -1;
       if (s.run._preRun) { startDungeon(s.run); } else { leaveShop(s.run); }
-      // (v0.106.0, G2) the shop exit is the checkpoint: section/round/squad/artifacts
-      try {
-        var P2 = s.ctx.persistence;
-        if (P2) {
-          var rq = s.run.squad;
-          // (v0.108.0, G4) full-fidelity snapshot: artifact per-instance STATE (compounding
-          // stacks), once-per-run flags (Lazarus stays burned), and the depth score.
-          var snap = { section: s.run.section, round: s.run.round,
-            squad: { hp: rq.hp, maxHp: rq.maxHp, shield: rq.shield, startShield: rq.startShield || 0, basePower: rq.basePower, block: rq.block, healPower: rq.healPower, coins: rq.coins },
-            artifacts: rq.artifacts.map(function (ai) { return { id: ai.def.id, state: ai.state || {} }; }),
-            flags: s.run.flags || {},
-            depthClearedSection: s.run.depthClearedSection || 0, depthClearedRound: s.run.depthClearedRound || 0,
-            consumables: s.run.consumables.slice(),
-            label: 'Depth ' + s.run.section + '-' + s.run.round + ' \u00b7 ' + rq.artifacts.length + ' artifacts \u00b7 ' + rq.coins + 'c' };
-          if (P2.update) P2.update(function (p) { p.saves = p.saves || {}; p.saves.KBB = snap; });   // (G4 HIGH) live profile
-          else if (P2.load && P2.save) P2.load().then(function (p) { p.saves = p.saves || {}; p.saves.KBB = snap; return P2.save(p); }).catch(function () {});
-        }
-      } catch (eSv) {}
+      saveCheckpointKBB(s);   // (v0.114.0, D6) same G2 checkpoint, shared with the map's Embark
       drawQuestion(s.run); renderAll(s);
     }
 

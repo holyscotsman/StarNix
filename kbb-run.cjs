@@ -333,6 +333,7 @@ function newWindow() {
       if (q('.kbb-opt:not(:disabled)')) return true;
       var c = q('.kbb-cont:not(.kbb-submit)');
       if (c) { c.click(); V.step(2); continue; }
+      var em = q('.kbb-embark'); if (em) { em.click(); V.step(2); continue; }   // (D6) map -> next battle
       if (clickText('.kbb-btn', 'next battle')) { V.step(2); continue; }
       if (clickText('.kbb-btn', 'contin') || clickText('.kbb-btn', 'onward')) { V.step(2); continue; }
       break;
@@ -449,6 +450,11 @@ function newWindow() {
     var run4 = KBB._test.state().run;
     run4.phase = 'shop'; KBB._test.buildShop(run4);
     var c4 = q('.kbb-cont:not(.kbb-submit)'); if (c4) { c4.click(); V.step(2); }
+    // (v0.114.0, D6) the 'shop' phase renders the run map; the shop is a stop on it
+    ok(!!q('.kbb-main.is-map') && !!q('.kbb-embark'), 'D6: between battles the run map renders with an Embark CTA');
+    var shopStop = q('.kbb-mapnode[data-type="shop"]:not(:disabled)');
+    ok(!!shopStop, 'D6: a shop stop is available on the corridor');
+    if (shopStop) { shopStop.click(); V.step(1); }
     var shopP = q('.kbb-main.is-shop');
     var actions = q('.kbb-shop-actions'), scroll = q('.kbb-shop-scroll');
     ok(!!shopP && !!actions && !!scroll && actions.parentNode === shopP && scroll.parentNode === shopP,
@@ -457,9 +463,17 @@ function newWindow() {
     ok(!!handEl && handEl.style.display === 'none', 'D5: the hand strip hides while the shop is up');
     var btns = actions ? actions.querySelectorAll('.kbb-btn') : [];
     var hasRe = false, hasNext = false;
-    for (var bi = 0; bi < btns.length; bi++) { var bt = (btns[bi].textContent || '').toLowerCase(); if (bt.indexOf('reroll') >= 0) hasRe = true; if (bt.indexOf('next') >= 0 || bt.indexOf('start run') >= 0) hasNext = true; }
+    for (var bi = 0; bi < btns.length; bi++) { var bt = (btns[bi].textContent || '').toLowerCase(); if (bt.indexOf('reroll') >= 0) hasRe = true; if (bt.indexOf('next') >= 0 || bt.indexOf('start run') >= 0 || bt.indexOf('return to map') >= 0) hasNext = true; }
     ok(hasRe && hasNext && !scroll.contains(actions),
-       'JB2: Reroll + Next battle live in the pinned row, never inside the scroll');
+       'JB2: Reroll + the exit CTA live in the pinned row, never inside the scroll (D6: exit = Return to map)');
+    // (v0.114.0, D6) leaving a shop STOP returns to the map without burning the rank
+    var rtm = null;
+    for (var bj = 0; bj < btns.length; bj++) { if (/return to map/i.test(btns[bj].textContent || '')) rtm = btns[bj]; }
+    var roundBefore = KBB._test.state().run.round;
+    if (rtm) { rtm.click(); V.step(1); }
+    ok(!!rtm && !!q('.kbb-main.is-map') && KBB._test.state().run.round === roundBefore
+       && !q('.kbb-mapnode[data-type="shop"]:not(:disabled):not(.used)'),
+       'D6: Return to map re-renders the map, round unchanged, the visited stop spent');
   } else {
     ok(false, 'JB2 shop-structure probe could not reach a question');
     ok(false, 'JB2 pinned-row probe unreached');
@@ -511,6 +525,61 @@ function newWindow() {
      'B4: shop actions are sticky-bottom on phones too');
   ok(/tgt\.scrollIntoView\(\{ block: 'center' \}\)/.test(SRC),
      "REVIEW: the how-to tour scrolls each spotlight into view (phone soft-lock fix)");
+})();
+
+/* ============ (v0.114.0, D6) RUN MAP — determinism, elite seam, cache claim ============ */
+(function d6Map() {
+  group('D6: run map — same-seed graphs match, elite battles bite harder, caches pay once');
+  // Engine: same seed with/without the elite flag — the ONLY difference is the buff
+  var eA = newWindow(), eB = newWindow();
+  var ctxA = H.makeCtx(eA.KBB, { seed: 777 }), ctxB = H.makeCtx(eB.KBB, { seed: 777 });
+  var runA = eA.KBB._test.createRun ? null : null;
+  var KA = eA.KBB, KB = eB.KBB;
+  var rA = KA.createRun(ctxA, { seed: 777 }), rB = KB.createRun(ctxB, { seed: 777 });
+  rA.phase = 'shop'; rB.phase = 'shop';
+  rB.pendingElite = true;
+  KA._test.leaveShop ? KA._test.leaveShop(rA) : KA.leaveShop(rA);
+  KB._test.leaveShop ? KB._test.leaveShop(rB) : KB.leaveShop(rB);
+  var e0 = rA.battle.enemy, e1 = rB.battle.enemy;
+  ok(e1.elite === true && !e0.elite && e1.maxHp === Math.round(e0.maxHp * 1.45)
+     && e1.baseIntent === e0.baseIntent + 1 && e1.rewardCoins === Math.round(e0.rewardCoins * 1.8)
+     && rB.pendingElite === false,
+     'D6: pendingElite consumed once — hp ×1.45, intent +1, reward ×1.8 vs the same-seed normal battle');
+  // DOM: deterministic graph + cache claim (JB2 recipe: answer -> force shop -> Continue -> map)
+  function mapOf(seed) {
+    var W2 = newWindow(), ctx2 = H.makeCtx(W2.KBB, { seed: seed });
+    W2.mod.mount(W2.doc.body, ctx2); W2.step(3);
+    var sk2 = Array.prototype.slice.call(W2.doc.querySelectorAll('.kbb-skip')).find(function (b) { return /skip/i.test(b.textContent || ''); });
+    if (sk2) { sk2.click(); W2.step(2); }
+    var ht2 = W2.doc.querySelector('.kbb-ht-skip'); if (ht2) { ht2.click(); W2.step(2); }
+    var st2 = W2.KBB._test.state();
+    var q0 = st2.run.battle.question;
+    var ci0 = (q0 && q0.correctIndices) ? q0.correctIndices : [q0 ? q0.correctIndex : 0];
+    for (var qi = 0; qi < ci0.length; qi++) { var ob = W2.doc.querySelector('.kbb-opt[data-idx="' + ci0[qi] + '"]'); if (ob) ob.click(); }
+    var sb = W2.doc.querySelector('.kbb-submit'); if (sb && !sb.disabled) sb.click();
+    st2.run.phase = 'shop'; W2.KBB._test.buildShop(st2.run);
+    var c2 = W2.doc.querySelector('.kbb-cont:not(.kbb-submit)'); if (c2) { c2.click(); W2.step(1); }
+    var m2 = W2.KBB._test.state().run.map;
+    return { win: W2, map: m2 ? JSON.parse(JSON.stringify({ nodes: m2.nodes, stops: m2.stops.map(function (s3) { return { id: s3.id, afterRank: s3.afterRank, type: s3.type, coins: s3.coins }; }) })) : null };
+  }
+  var g1 = mapOf(4242), g2 = mapOf(4242), g3 = mapOf(9191);
+  ok(!!g1.map && JSON.stringify(g1.map) === JSON.stringify(g2.map),
+     'D6: same seed → the same section graph (nodes + stops byte-identical)');
+  ok(!!g3.map && g3.map.nodes.length >= 5 && g3.map.stops.length >= 5,
+     'D6: a different seed still yields a well-formed graph (5-rank spine + a stop per corridor)');
+  // cache claim: inject an unknown stop on the live corridor, click it, coins land once
+  var W4 = g1.win, doc4 = W4.doc, st4 = W4.KBB._test.state();
+  var coins0 = st4.run.squad.coins;
+  st4.run.map.stops.push({ id: 'wXu', afterRank: st4.run.round, type: 'unknown', used: false, coins: 20 });
+  var selNode = doc4.querySelector('.kbb-mapnode.pick'); if (selNode) { selNode.click(); W4.step(1); }   // any re-render paints the injected stop
+  var unk = doc4.querySelector('.kbb-mapnode[data-node="wXu"]');
+  if (unk) { unk.click(); W4.step(1); }
+  var coins1 = W4.KBB._test.state().run.squad.coins;
+  var unk2 = doc4.querySelector('.kbb-mapnode[data-node="wXu"]');
+  if (unk2 && !unk2.disabled) { unk2.click(); W4.step(1); }
+  var coins2 = W4.KBB._test.state().run.squad.coins;
+  ok(!!unk && coins1 === coins0 + 20 && coins2 === coins1 && (!unk2 || unk2.disabled),
+     'D6: an unknown stop pays its salvage cache exactly once (' + coins0 + ' → ' + coins1 + ' → ' + coins2 + ')');
 })();
 
 H.summary('KBB RUN');

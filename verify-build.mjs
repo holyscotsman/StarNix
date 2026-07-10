@@ -1133,7 +1133,9 @@ async function runFrames(n = 6) {
     SN.core.profile.saves = { KBB: { section: 2, round: 3,
       squad: { hp: 30, maxHp: 40, shield: 0, startShield: 0, basePower: 12, block: 6, healPower: 6, coins: 9 },
       artifacts: [{ id: "compounding-core", state: { f: 7 } }], flags: { lazarusUsed: true },
-      depthClearedSection: 1, depthClearedRound: 2, consumables: [], label: "x" } };
+      depthClearedSection: 1, depthClearedRound: 2, consumables: [],
+      map: { section: 2, nodes: [{ id: "r1b", rank: 1, type: "battle" }], stops: [{ id: "w1s", afterRank: 1, type: "shop", used: true }], taken: { 1: "battle" } },
+      label: "x" } };
     shell.enterGame("KBB");
     [...w.document.querySelectorAll("button")].find(n => /Resume/.test(n.textContent)).click();
     await wait(300);
@@ -1142,6 +1144,8 @@ async function runFrames(n = 6) {
       kR.squad.artifacts.length === 1 && kR.squad.artifacts[0].def.id === "compounding-core"
       && kR.squad.artifacts[0].state.f === 7 && kR.flags.lazarusUsed === true
       && kR.depthClearedSection === 1);
+    ok("D6: resume restores the saved section map (used stop stays used)",
+      !!(kR.map && kR.map.section === 2 && kR.map.stops && kR.map.stops[0] && kR.map.stops[0].used === true));
     // and the WRITE path, driven for real (JB2 recipe): answer -> flip to shop at the
     // feedback -> Continue renders the shop -> Next battle fires onLeaveShop -> checkpoint
     {
@@ -1158,11 +1162,16 @@ async function runFrames(n = 6) {
         const sbW = w.document.querySelector(".kbb-submit"); if (sbW && !sbW.disabled) sbW.click();
         stW.run.phase = "shop"; w.KBB._test.buildShop(stW.run);
         const cW = w.document.querySelector(".kbb-cont:not(.kbb-submit)"); if (cW) cW.click();
-        const nbW = [...w.document.querySelectorAll(".kbb-btn")].find(n => /next battle|start run|next section/i.test(n.textContent || ""));
+        // (v0.114.0, D6) the 'shop' phase now renders the RUN MAP; Embark is the exit
+        const nbW = [...w.document.querySelectorAll(".kbb-btn")].find(n => /embark|next battle|start run|next section/i.test(n.textContent || ""));
         if (nbW) nbW.click();
       }
-      ok("KBB shop exit checkpoints to the LIVE profile synchronously",
+      ok("KBB between-battles exit (map Embark) checkpoints to the LIVE profile synchronously",
         !!(SN.core.profile.saves && SN.core.profile.saves.KBB && SN.core.profile.saves.KBB.section >= 1));
+      const liveMapW = w.KBB._test.state().run.map;
+      ok("D6: the checkpoint carries the run's LIVE section map verbatim",
+        !!(SN.core.profile.saves && SN.core.profile.saves.KBB && SN.core.profile.saves.KBB.map && liveMapW
+           && JSON.stringify(SN.core.profile.saves.KBB.map) === JSON.stringify(liveMapW)));
     }
     shell.exitGame(); await wait(120);
     ok("CC checkpoints each survived gate + clears on SHIP DOWN (source)",

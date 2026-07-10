@@ -229,6 +229,14 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-D6 — Run map (added v0.114.0).** Win a KBB battle: the section map appears — traveled
+  path solid aqua, YOU ARE HERE under the current node, next battle pre-selected and glowing,
+  gold ◎ shop and iris ? cache stops hanging off the corridor, the boss sprite looming right
+  with SECTION BOSS. Visit the shop → exit reads "Return to map" and the round doesn't advance.
+  Claim a ? cache → coins land once, node dims. Pick an elite (peach ☠, when offered) → the
+  enemy panel shows ELITE and it hits noticeably harder for bigger coins. Embark advances.
+  Reduced motion: no node glow/loom/hover scale. WRONG: a map after the shop exit (double map).
+
 - **QA-D5 — Card-hand battle (added v0.113.0).** Enter KBB: battles read as a deckbuilder —
   status pill up top (depth/HP/shield/coins/turn all live), squad sprites + enemy flanking the
   full-width stage, the question center-stage as the played card whose header/stake follow your

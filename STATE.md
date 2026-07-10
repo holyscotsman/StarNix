@@ -101,7 +101,14 @@
 > **v0.6.21:** title screen uses the no-station nebula (`kbbBg`→`nebulaBg`); menu keeps the station vista. KBB shows `nebulaBg` + `bcmShip`. 200/200; art negative-controlled.
 > </details>
 
-## v0.113.0 — D5: KBB card-hand battle shipped
+## v0.114.0 — D6: KBB run map shipped
+
+Deterministic section graph between battles (spine untouched — ranks are rounds, Embark is
+leaveShop, balance gate blind to it); elite swaps + shop/cache stops additive; checkpoint
+moved to Embark and carries the map. Unknown stops = coin caches only (design call open).
+NEXT: D7 exam Testing station (last Batch #6 unit).
+
+> **Earlier this session (v0.113.0):** D5: KBB card-hand battle shipped
 
 Full-width stage (flanks aspect-spread), played-card question framing, fanned move cards +
 energy gem + turn piles, live status pill. NEXT: D6 KBB run map, D7 exam Testing station.
