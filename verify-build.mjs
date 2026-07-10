@@ -1168,6 +1168,13 @@ async function runFrames(n = 6) {
     delete SN.core.profile.saves;
   }
 
+  // D1 (v0.109.0): the ten KBB sprites are inlined and keyed exactly as kbb.js expects
+  {
+    const A10 = w.STARNIX_ASSETS || {};
+    const want = ["kbbHero1", "kbbHero2", "kbbHero3", "kbbEnemy", "kbbBoss", "kbbAsteroid1", "kbbAsteroid2", "kbbAsteroid3", "kbbAsteroid4", "kbbAsteroid5"];
+    ok("D1: all ten kbb sprites inlined as data URIs", want.every(k => typeof A10[k] === "string" && A10[k].indexOf("data:image/png;base64,") === 0));
+  }
+
   // B5 (v0.86.0): Pages must deploy the app-only artifact, never the repo root
   {
     let wf = "";

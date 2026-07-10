@@ -698,6 +698,26 @@ Commit: `v0.76.0 — Boss revamp: lock-on read, living dreadnought, deeper bed`.
 
 ---
 
+## 🎨 BATCH #6 (2026-07-04) — the design handoff (design_handoff_starnix_redesign/)
+
+Revert point: git tag `pre-redesign-v0.108.0` (4a67e8a). CC EXCLUDED by the handoff.
+Owner picks recorded: KBB = 1a+1b together; NIT exam = 1a Testing station.
+Queue (one gated unit each, recreate hi-fi from the .dc.html boards, honest re-pins for
+replaced UI, Playwright shot vs mock, BROWSER_QA entry):
+**(D1)** Inline the ten kbb sprites (kbbHero1-3, kbbEnemy, kbbBoss, kbbAsteroid1-5) into
+assets.js — code paths already keyed. **(D2)** Menu "Bridge command" (mission strips,
+shattered-station shards of armStation, top bar, daily dock, Continue CTA). **(D3)** ARM
+flight HUD "Cockpit-lite" (compass tape + bearing markers, radar disc, left rail, canopy
+vignette; stats panel + banner retired). **(D4)** ARM briefing "Center console" (dash CRT
+with typing transmission, manifest hexes, hardware clusters, physical keys, 1/2/3 keys).
+**(D5)** KBB 1a card-hand battle (sprite squad/enemy staging, status pill, intent badge).
+**(D6)** KBB 1b run map (deterministic ctx.rng section graph, node types, embark strip).
+**(D7)** NIT 1a Testing station (flat ramp, palette rail, radio rows; Study+Sim only,
+Blitz keeps arcade skin). Global: reduced-motion + high-contrast gates, ≥44px touch,
+sprites ≤150KB each inlined.
+
+---
+
 ## 🎮 BATCH #5 (2026-07-03) — Jason's full-campaign list (ARM/CC/KBB/global)
 
 **ARM**: (A1) remove Consumables. (A2) Fire Rate upgrades add slight bullet spread + ~0.1%

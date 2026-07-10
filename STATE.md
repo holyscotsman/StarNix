@@ -101,7 +101,13 @@
 > **v0.6.21:** title screen uses the no-station nebula (`kbbBg`→`nebulaBg`); menu keeps the station vista. KBB shows `nebulaBg` + `bcmShip`. 200/200; art negative-controlled.
 > </details>
 
-## v0.108.0 — G4 repair: split-brain profile fix (spec 01 v1.7), wall laser revived, honest resume pins — BATCH #5 COMPLETE
+## v0.109.0 — BATCH #6 (design handoff): the ten KBB sprites inlined (D1)
+
+Handoff picks: Menu Bridge-command, ARM Cockpit-lite + Center-console (chosen by design);
+KBB 1a+1b, NIT 1a Testing station (Jason picked today). CC excluded. Revert tag:
+pre-redesign-v0.108.0. NEXT: D2 Menu, D3 ARM HUD, D4 briefing, D5/D6 KBB, D7 exam.
+
+> **Earlier this session (v0.108.0):** G4 repair: split-brain profile fix (spec 01 v1.7), wall laser revived, honest resume pins — BATCH #5 COMPLETE
 
 All 35 batch items + 22 scan findings shipped (v0.92–v0.108, 17 releases). Gate: 16 suites,
 ~490 pins, exit-code clean. OWED BY JASON: browser QA v0.92–v0.108 (checklist current),
