@@ -101,7 +101,12 @@
 > **v0.6.21:** title screen uses the no-station nebula (`kbbBg`→`nebulaBg`); menu keeps the station vista. KBB shows `nebulaBg` + `bcmShip`. 200/200; art negative-controlled.
 > </details>
 
-## v0.112.0 — D4: Center-console briefing shipped
+## v0.113.0 — D5: KBB card-hand battle shipped
+
+Full-width stage (flanks aspect-spread), played-card question framing, fanned move cards +
+energy gem + turn piles, live status pill. NEXT: D6 KBB run map, D7 exam Testing station.
+
+> **Earlier this session (v0.112.0):** D4: Center-console briefing shipped
 
 Cockpit scene wraps the CRT comms (canopy shards + manifest hexes + console keys, 1/2/3).
 Typing effect deferred (pin-safety) — noted in CHANGELOG. NEXT: D5 KBB card-hand battle,

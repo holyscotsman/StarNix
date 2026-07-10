@@ -302,6 +302,25 @@ function newWindow() {
   V.step(2);
   ok(!q('.kbb-howto') && doc.querySelectorAll('.kbb-opt').length > 0, 'skipping the tour leaves the live first battle ready');
   ok(doc.querySelectorAll('.kbb-action').length === 3 && !!q('.kbb-act-hint'), 'action row + hint render');
+  // ============ (v0.113.0, D5) card-hand battle — behavioral pins ============
+  ok(!!q('.kbb-hand') && q('.kbb-hand').querySelectorAll('.kbb-action').length === 3
+     && !!q('.kbb-hand .kbb-gem') && q('.kbb-hand').querySelectorAll('.kbb-pile').length === 2,
+     'D5: the hand strip holds the 3 fanned move cards + energy gem + turn piles');
+  ok(!!q('.kbb-main .kbb-play-head') && !!q('.kbb-main .kbb-play-stake'),
+     'D5: the question is framed as the played card (header + stake line)');
+  var stake0 = (q('.kbb-main .kbb-play-stake') || {}).innerHTML || '';
+  var braceCard = q('.kbb-hand .kbb-action[data-act="brace"]');
+  if (braceCard) { braceCard.click(); V.step(1); }
+  var stake1 = (q('.kbb-main .kbb-play-stake') || {}).innerHTML || '';
+  ok(!!braceCard && stake1 !== stake0 && /shield/i.test(stake1) && braceCard.classList.contains('on'),
+     'D5: playing Brace re-frames the played card (stake flips to shield, card lifts .on)');
+  var atkCard = q('.kbb-hand .kbb-action[data-act="attack"]');
+  if (atkCard) { atkCard.click(); V.step(1); }
+  ok(/fire/i.test((q('.kbb-main .kbb-play-stake') || {}).innerHTML || ''),
+     'D5: switching back to Attack restores the volley stake');
+  var pillHp = q('.kbb-top .pv.hp b');
+  ok(!!pillHp && pillHp.textContent === String(KBB._test.state().run.squad.hp),
+     'D5: the top pill mirrors live squad HP');
   // (v0.78.0, JB2) the left panel is 5 always-visible artifact slots; a fresh run = all empty
   var slots0 = doc.querySelectorAll('.kbb-arts-card .kbb-slot');
   ok(slots0.length === 5 && doc.querySelectorAll('.kbb-arts-card .kbb-slot.empty').length === 5,
@@ -434,6 +453,8 @@ function newWindow() {
     var actions = q('.kbb-shop-actions'), scroll = q('.kbb-shop-scroll');
     ok(!!shopP && !!actions && !!scroll && actions.parentNode === shopP && scroll.parentNode === shopP,
        'JB2: shop renders with a scroll region and a PINNED action row (both direct children)');
+    var handEl = q('.kbb-hand');
+    ok(!!handEl && handEl.style.display === 'none', 'D5: the hand strip hides while the shop is up');
     var btns = actions ? actions.querySelectorAll('.kbb-btn') : [];
     var hasRe = false, hasNext = false;
     for (var bi = 0; bi < btns.length; bi++) { var bt = (btns[bi].textContent || '').toLowerCase(); if (bt.indexOf('reroll') >= 0) hasRe = true; if (bt.indexOf('next') >= 0 || bt.indexOf('start run') >= 0) hasNext = true; }
@@ -483,9 +504,9 @@ function newWindow() {
 (function phoneStack() {
   group('PHONE: question panel under combat, sticky shop actions');
   var SRC = H.KBB_SRC;
-  ok(/\.kbb-main\{overflow:visible;order:2;\}/.test(SRC) && /\.kbb-combat\{height:250px;flex:none;order:1;\}/.test(SRC)
-     && /\.kbb-leftcol\{min-height:0;order:4;\}/.test(SRC),
-     'B4: <=820px stack order is combat(1) -> questions(2) -> enemy(3) -> artifacts(4)');
+  ok(/\.kbb-main\{overflow:visible;order:2;[^}]*\}/.test(SRC) && /\.kbb-combat\{height:250px;flex:none;order:1;\}/.test(SRC)
+     && /\.kbb-hand\{order:3;[^}]*\}/.test(SRC) && /\.kbb-leftcol\{min-height:0;order:5;[^}]*\}/.test(SRC),
+     'B4: <=820px stack order is combat(1) -> questions(2) -> hand(3) -> enemy(4) -> artifacts(5) (D5)');
   ok(/\.kbb-shop-actions\{position:sticky;bottom:0/.test(SRC),
      'B4: shop actions are sticky-bottom on phones too');
   ok(/tgt\.scrollIntoView\(\{ block: 'center' \}\)/.test(SRC),

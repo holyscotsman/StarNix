@@ -830,11 +830,11 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
     if (doc.getElementById('kbb-styles')) return;
     var st = doc.createElement('style'); st.id = 'kbb-styles';
     var P = PALETTE, css = [];
-    css.push('.kbb-root{position:relative;width:100%;height:100%;overflow:hidden;color:' + P.text + ';font-family:Montserrat,Arial,sans-serif;background:radial-gradient(130% 110% at 50% -10%,#15152a 0%,#0a0a16 55%,#050509 100%);box-sizing:border-box;padding:12px;display:grid;gap:12px;--kbb-green:320px;--kbb-enemy:288px;grid-template-columns:[green] var(--kbb-green) [center] minmax(0,1fr) [enemy] var(--kbb-enemy);grid-template-rows:[head] auto [top] minmax(190px,4fr) [quest] minmax(190px,4fr);grid-template-areas:"head head head" "green combat enemy" "green quest quest";}');
+    css.push('.kbb-root{position:relative;width:100%;height:100%;overflow:hidden;color:' + P.text + ';font-family:Montserrat,Arial,sans-serif;background:radial-gradient(130% 110% at 50% -10%,#15152a 0%,#0a0a16 55%,#050509 100%);box-sizing:border-box;padding:12px;display:grid;gap:12px;--kbb-green:320px;--kbb-enemy:288px;grid-template-columns:minmax(0,1fr);grid-template-rows:[head] auto [stage] minmax(0,1fr) [hand] auto;grid-template-areas:"head" "stage" "hand";}');
     css.push('.kbb-root *{box-sizing:border-box;}');
     css.push('.kbb-top{grid-area:head;justify-self:center;align-self:center;z-index:6;display:flex;gap:14px;justify-content:center;align-items:center;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:' + P.dim + ';background:rgba(13,13,24,.6);border:1px solid ' + P.border + ';border-radius:999px;padding:5px 15px;max-width:100%;white-space:nowrap;overflow:hidden;}');
     css.push('.kbb-top b{color:' + P.text + ';}');
-    css.push('.kbb-leftcol{grid-area:green;min-height:0;min-width:0;z-index:6;display:flex;flex-direction:column;gap:10px;}');
+    css.push('.kbb-leftcol{grid-area:stage;justify-self:start;align-self:start;z-index:6;display:flex;flex-direction:column;gap:10px;width:252px;max-height:calc(100% - 16px);margin:8px;min-height:0;min-width:0;}');
     css.push('.kbb-panel{background:rgba(20,20,29,.72);border:1px solid ' + P.border + ';border-radius:12px;padding:11px 13px;}');
     css.push('.kbb-eyebrow{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:' + P.dim + ';}');
     css.push('.kbb-crew{font-weight:800;font-size:18px;color:' + P.iris300 + ';margin:1px 0 9px;}');
@@ -853,11 +853,29 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
     css.push('.kbb-ring .rt{fill:' + P.text + ';font-size:22px;font-weight:800;text-anchor:middle;font-family:Montserrat,Arial,sans-serif;}');
     css.push('.kbb-ring .rt.sm{font-size:18px;}.kbb-ring .rt.tiny{font-size:10px;font-weight:600;fill:' + P.dim + ';}');
     css.push('.kbb-actions{display:flex;gap:8px;margin:0 0 10px;}');
-    css.push('.kbb-action{flex:1;background:rgba(255,255,255,.05);border:1.5px solid ' + P.border + ';border-radius:10px;padding:9px 6px;color:' + P.dim + ';font:700 12.5px Montserrat,Arial,sans-serif;cursor:pointer;transition:border-color .12s,color .12s;}');
-    css.push('.kbb-action.on{border-color:' + P.aqua + ';color:' + P.text + ';background:rgba(31,221,233,.10);}');
-    css.push('.kbb-action[data-act=brace].on{border-color:' + P.iris300 + ';background:rgba(120,85,250,.14);}');
-    css.push('.kbb-action[data-act=repair].on{border-color:' + P.mantis + ';background:rgba(146,221,35,.10);}');
-    css.push('.kbb-combat{grid-area:combat;position:relative;min-width:0;min-height:0;border:1px solid ' + P.border + ';border-radius:12px;overflow:hidden;background:#06060c;}');
+    css.push('.kbb-action{position:relative;width:140px;height:148px;flex:none;background:linear-gradient(#191926,#101018);border:1.5px solid ' + P.border + ';border-radius:12px;padding:8px 10px;color:' + P.dim + ';font-family:inherit;cursor:pointer;transition:transform .14s,border-color .14s,box-shadow .14s;transform-origin:50% 100%;display:flex;flex-direction:column;align-items:center;gap:4px;}');
+    css.push('.kbb-action.t-pe{background:linear-gradient(#231627,#160e18);}');
+    css.push('.kbb-action.t-ir{background:linear-gradient(#1a1630,#110e1e);}');
+    css.push('.kbb-action.t-ma{background:linear-gradient(#182310,#0d1408);}');
+    css.push('.kbb-action.c0{transform:rotate(-7deg) translateY(7px);}');
+    css.push('.kbb-action.c2{transform:rotate(7deg) translateY(7px);}');
+    css.push('.kbb-root:not(.kbb-reduced) .kbb-action:hover{transform:translateY(-8px);z-index:2;}');
+    css.push('.kbb-root:not(.kbb-reduced) .kbb-action.c0:hover{transform:rotate(-7deg) translateY(-6px);}');
+    css.push('.kbb-root:not(.kbb-reduced) .kbb-action.c2:hover{transform:rotate(7deg) translateY(-6px);}');
+    css.push('.kbb-action.on{border-color:' + P.aqua + ';color:' + P.text + ';box-shadow:0 0 18px rgba(31,221,233,.25);transform:translateY(-10px);}');
+    css.push('.kbb-action.c0.on{transform:rotate(-7deg) translateY(-9px);}');
+    css.push('.kbb-action.c2.on{transform:rotate(7deg) translateY(-9px);}');
+    css.push('.kbb-action[data-act=brace].on{border-color:' + P.iris300 + ';box-shadow:0 0 18px rgba(120,85,250,.3);}');
+    css.push('.kbb-action[data-act=repair].on{border-color:' + P.mantis + ';box-shadow:0 0 18px rgba(146,221,35,.25);}');
+    css.push('.kbb-reduced .kbb-action{transition:none;}');
+    css.push('.kbb-action .cc{position:absolute;top:6px;left:6px;width:20px;height:20px;border-radius:6px;border:1px solid ' + P.aqua + ';color:' + P.aqua + ';font-weight:800;font-size:11px;display:flex;align-items:center;justify-content:center;background:rgba(31,221,233,.08);}');
+    css.push('.kbb-action .cn{font-weight:800;font-size:12px;color:' + P.text + ';margin-top:2px;}');
+    css.push('.kbb-action .ci{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:19px;background:rgba(255,255,255,.05);flex:none;}');
+    css.push('.kbb-action.t-pe .ci{background:rgba(255,107,91,.14);}.kbb-action.t-ir .ci{background:rgba(120,85,250,.16);}.kbb-action.t-ma .ci{background:rgba(146,221,35,.12);}');
+    css.push('.kbb-action .ce{font-weight:600;font-size:9.5px;line-height:1.4;color:' + P.mid + ';text-align:center;}');
+    css.push('.kbb-action .ce b{color:' + P.gold + ';}');
+    css.push('.kbb-action .cf{margin-top:auto;font-weight:800;font-size:8px;letter-spacing:.14em;color:' + P.dim + ';}');
+    css.push('.kbb-combat{grid-area:stage;position:relative;min-width:0;min-height:0;border:1px solid ' + P.border + ';border-radius:12px;overflow:hidden;background:#06060c;}');
     css.push('.kbb-combat.is-cine{position:absolute;inset:0;z-index:40;border-radius:0;border:none;width:auto;height:auto;grid-column:1 / -1;grid-row:1 / -1;}');   // (P2·3, PLAYTEST A6) abs-pos GRID items resolve inset against their grid AREA — span the whole grid so the cinematic truly goes full-bleed instead of floating over a blank battle panel
     css.push('.kbb-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background:transparent;}');
     css.push('.kbb-3d{position:absolute;inset:0;width:100%;height:100%;display:block;}');
@@ -871,7 +889,7 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
     css.push('.kbb-en-strike{animation:kbbStrike .55s ease-out;}');
     css.push('@keyframes kbbStrike{0%{box-shadow:0 0 0 0 rgba(255,107,91,.0);}18%{box-shadow:0 0 0 3px rgba(255,107,91,.85),0 0 22px rgba(255,107,91,.5);}100%{box-shadow:0 0 0 0 rgba(255,107,91,0);}}');
     css.push('@media (prefers-reduced-motion: reduce){.kbb-en-strike,.kbb-statline .final{animation:none;}}');
-    css.push('.kbb-enemy{grid-area:enemy;align-self:start;min-width:0;z-index:6;background:rgba(20,20,29,.72);border:1px solid ' + P.border + ';border-radius:12px;padding:11px 13px;display:flex;align-items:center;gap:12px;justify-content:space-between;}');
+    css.push('.kbb-enemy{grid-area:stage;justify-self:end;align-self:start;width:288px;margin:8px;min-width:0;z-index:6;background:rgba(14,14,24,.82);border:1px solid ' + P.border + ';border-radius:12px;padding:11px 13px;display:flex;align-items:center;gap:12px;justify-content:space-between;}');
     css.push('.kbb-enemy .entext{text-align:left;min-width:0;flex:1;}');
     css.push('.kbb-enemy .ennm{font-weight:800;font-size:17px;color:' + P.gold + ';margin:1px 0 7px;overflow:hidden;text-overflow:ellipsis;}');
     css.push('.kbb-statline{display:flex;gap:12px;font-size:11px;color:' + P.dim + ';margin-top:7px;}');
@@ -883,7 +901,37 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
     css.push('.kbb-intent.alert{animation:kbbAlert 1.2s ease-in-out infinite;}');
     css.push('.kbb-reduced .kbb-intent.alert{animation:none;box-shadow:0 0 12px 2px rgba(255,107,91,.6);}');
     css.push('@media (prefers-reduced-motion: reduce){.kbb-intent.alert{animation:none;box-shadow:0 0 12px 2px rgba(255,107,91,.6);}}');
-    css.push('.kbb-main{grid-area:quest;min-width:0;min-height:0;overflow:auto;z-index:6;background:rgba(20,20,29,.72);border:1px solid ' + P.border + ';border-radius:12px;padding:13px 15px;}');
+    css.push('.kbb-main{grid-area:stage;justify-self:center;align-self:end;z-index:7;width:min(560px,92%);max-height:calc(100% - 16px);margin:0 0 8px;min-width:0;min-height:0;overflow:auto;background:linear-gradient(rgba(12,17,24,.94),rgba(8,10,16,.96));border:1.5px solid rgba(31,221,233,.5);border-radius:14px;padding:13px 15px;box-shadow:0 0 26px rgba(31,221,233,.12),0 14px 40px rgba(0,0,0,.5);}');
+    // ---- (v0.113.0, D5) card-hand battle: top pill values, hand strip, fanned move
+    // cards, energy gem, turn piles, played-card framing, hero sprite trio ----
+    css.push('.kbb-top>span:not(:last-of-type){border-right:1px solid #26263a;padding-right:14px;}');
+    css.push('.kbb-top .pv.hp b{color:' + P.mantis + ';}.kbb-top .pv.sh b{color:' + P.aqua + ';}.kbb-top .pv.cn b{color:' + P.gold + ';}.kbb-top .pv.tn b{color:' + P.text + ';}');
+    css.push('.kbb-main.is-shop{width:min(880px,96%);align-self:center;border:1px solid ' + P.border + ';box-shadow:none;}');
+    css.push('.kbb-hand{grid-area:hand;position:relative;display:flex;align-items:flex-end;gap:14px;padding:20px 6px 2px;min-height:170px;}');
+    css.push('.kbb-hand .kbb-act-hint{position:absolute;left:50%;top:0;transform:translateX(-50%);margin:0;pointer-events:none;white-space:nowrap;}');
+    css.push('.kbb-gem{position:relative;width:58px;height:66px;flex:none;align-self:center;text-align:center;}');
+    css.push('.kbb-gem svg{position:absolute;inset:0;width:100%;height:100%;animation:kbbGem 2.6s ease-in-out infinite;}');
+    css.push('.kbb-gem .gv{position:relative;display:block;margin-top:17px;font-weight:800;font-size:17px;color:' + P.aqua + ';}');
+    css.push('.kbb-gem .gc{position:relative;display:block;font-weight:700;font-size:8px;letter-spacing:.18em;color:' + P.dim + ';}');
+    css.push('@keyframes kbbGem{0%,100%{opacity:.6;}50%{opacity:1;}}');
+    css.push('.kbb-reduced .kbb-gem svg{animation:none;}');
+    css.push('.kbb-fan{flex:1;display:flex;justify-content:center;align-items:flex-end;gap:12px;min-width:0;}');
+    css.push('.kbb-fan.spent .kbb-action{opacity:.45;pointer-events:none;}');
+    css.push('.kbb-piles{flex:none;display:flex;gap:8px;align-self:center;}');
+    css.push('.kbb-pile{width:52px;height:68px;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-weight:800;font-size:15px;color:' + P.iris300 + ';background:#14141f;border:1px solid ' + P.border + ';box-shadow:2px 2px 0 #0c0c14,4px 4px 0 #0a0a10;}');
+    css.push('.kbb-pile.disc{border-style:dashed;color:' + P.dim + ';box-shadow:none;}');
+    css.push('.kbb-pile i{font-weight:700;font-size:7.5px;letter-spacing:.12em;text-transform:uppercase;font-style:normal;color:' + P.dim + ';}');
+    css.push('.kbb-play-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;}');
+    css.push('.kbb-play-head .pic{width:26px;height:26px;border-radius:8px;background:rgba(31,221,233,.1);border:1px solid rgba(31,221,233,.4);display:flex;align-items:center;justify-content:center;font-size:13px;flex:none;}');
+    css.push('.kbb-play-head .pnm{font-weight:800;font-size:13px;}');
+    css.push('.kbb-play-head .prs{margin-left:auto;font-weight:800;font-size:9px;letter-spacing:.16em;color:' + P.aqua + ';}');
+    css.push('.kbb-play-stake{font-weight:600;font-size:11.5px;line-height:1.5;color:' + P.mid + ';margin-bottom:9px;}');
+    css.push('.kbb-play-stake b{color:' + P.peach + ';}');
+    css.push('.kbb-sqrow{display:flex;gap:10px;justify-content:center;margin:4px 0 8px;}');
+    css.push('.kbb-sqspr{width:44px;height:44px;object-fit:contain;}');
+    css.push('.kbb-sqspr.h1{filter:drop-shadow(0 0 6px rgba(255,107,91,.55));}');
+    css.push('.kbb-sqspr.h2{filter:drop-shadow(0 0 6px rgba(120,85,250,.6));}');
+    css.push('.kbb-sqspr.h3{filter:drop-shadow(0 0 6px rgba(146,221,35,.5));}');
     css.push('.kbb-stem{font-size:15px;line-height:1.45;margin:2px 0 12px;font-weight:600;}');
     css.push('.kbb-exhibit-warn{margin:0 0 10px;padding:6px 9px;border-left:2px solid ' + P.gold + ';background:rgba(255,200,87,.1);font-size:12px;color:' + P.gold + ';}');
     css.push('.kbb-opts{display:flex;flex-direction:column;gap:8px;}');
@@ -1005,7 +1053,7 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
     // (v0.85.0, B4) phone stack: the QUESTION panel sits directly under the combat view (no
     // per-turn scrolling past artifacts/enemy), and shop actions stay sticky at the viewport
     // bottom. CSS order diverges from DOM order here by design — flagged in BROWSER_QA.
-    css.push('@media (max-width:820px){.kbb-root{display:flex;flex-direction:column;height:auto;min-height:100%;overflow:auto;}.kbb-top{align-self:center;order:0;}.kbb-combat{height:250px;flex:none;order:1;}.kbb-combat.is-cine{height:auto;}.kbb-main{overflow:visible;order:2;}.kbb-enemy{align-self:stretch;order:3;}.kbb-leftcol{min-height:0;order:4;}.kbb-arts-card{flex:none;overflow:visible;}.kbb-main.is-shop{display:block;overflow:visible;}.kbb-shop-scroll{overflow:visible;}.kbb-shop-actions{position:sticky;bottom:0;background:rgba(20,20,29,.96);z-index:4;padding-bottom:8px;}}');
+    css.push('@media (max-width:820px){.kbb-root{display:flex;flex-direction:column;height:auto;min-height:100%;overflow:auto;}.kbb-top{align-self:center;order:0;}.kbb-combat{height:250px;flex:none;order:1;}.kbb-combat.is-cine{height:auto;}.kbb-main{overflow:visible;order:2;width:auto;max-height:none;align-self:stretch;margin:0;}.kbb-hand{order:3;flex-wrap:wrap;justify-content:center;min-height:0;padding-top:24px;}.kbb-enemy{align-self:stretch;order:4;width:auto;margin:0;}.kbb-leftcol{min-height:0;order:5;width:auto;max-height:none;margin:0;}.kbb-arts-card{flex:none;overflow:visible;}.kbb-main.is-shop{display:block;overflow:visible;width:auto;}.kbb-shop-scroll{overflow:visible;}.kbb-shop-actions{position:sticky;bottom:0;background:rgba(20,20,29,.96);z-index:4;padding-bottom:8px;}}');
     st.textContent = css.join('');
     (doc.head || doc.documentElement).appendChild(st);
   }
@@ -1093,10 +1141,22 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
       s.squadPanel = el(doc, 'div', 'kbb-panel kbb-squad');
       s.squadPanel.innerHTML =
         '<div class="kbb-eyebrow">NX-SRC squad</div><div class="kbb-crew">Starlight crew</div>' +
+        '<div class="kbb-sqrow"></div>' +
         '<div class="kbb-plwrap"><svg class="kbb-ring kbb-ring-pl" viewBox="0 0 100 100">' +
         '<circle cx="50" cy="50" r="46" class="trk"/><circle cx="50" cy="50" r="46" class="arc shield" transform="rotate(-90 50 50)"/>' +
         '<circle cx="50" cy="50" r="34" class="trk"/><circle cx="50" cy="50" r="34" class="arc hp" transform="rotate(-90 50 50)"/>' +
         '<text x="50" y="57" class="rt">--</text></svg><div class="kbb-pltext"></div></div>';
+      (function () {   // (v0.113.0, D5) hero sprite trio, per-hero glow — same art the stage draws
+        try {
+          var AS = (doc.defaultView && doc.defaultView.STARNIX_ASSETS) || {};
+          var row = s.squadPanel.querySelector('.kbb-sqrow');
+          for (var hi = 1; hi <= 3 && row; hi++) {
+            var u = AS['kbbHero' + hi]; if (!u) continue;
+            var im = doc.createElement('img'); im.className = 'kbb-sqspr h' + hi; im.alt = ''; im.src = u;
+            row.appendChild(im);
+          }
+        } catch (eSq) {}
+      })();
       s.artPanel = el(doc, 'div', 'kbb-panel kbb-arts-card');
       s.coinPanel = el(doc, 'div', 'kbb-coins');
       s.leftCol.appendChild(s.squadPanel); s.leftCol.appendChild(s.artPanel); s.leftCol.appendChild(s.coinPanel);
@@ -1108,6 +1168,7 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
         '<text x="50" y="49" class="rt sm">--</text><text x="50" y="64" class="rt tiny"></text></svg>';
 
       s.mainPanel = el(doc, 'div', 'kbb-main'); container.appendChild(s.mainPanel);           // YELLOW
+      s.hand = el(doc, 'div', 'kbb-hand'); container.appendChild(s.hand);                     // (v0.113.0, D5) the card hand
 
       s.tipEl = el(doc, 'div', 'kbb-tip'); container.appendChild(s.tipEl);                    // shared tooltip
 
@@ -1511,7 +1572,7 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
       drawBackdrop(g, s, W, H);
       drawBelt(g, s, W, H, ts, s.reduced);
       var b = s.run.battle;
-      var yShip = Math.round(H * 0.54), cxL = Math.round(W * 0.24), cxR = Math.round(W * 0.78);
+      var yShip = Math.round(H * 0.54), cxL = Math.round(W * 0.17), cxR = Math.round(W * 0.84);   // (v0.113.0, D5) flank the played card
       var sc = clamp(H / 95, 1.6, 3.4), L = { cxL: cxL, cxR: cxR, yShip: yShip, W: W };
       drawHeroes(g, s, cxL, yShip, sc, ts, s.reduced);
       // (v0.80.0, JB3) keep the dying hull on screen through the staged kill — it breaks up
@@ -1721,8 +1782,9 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
       try {
         var dt = T.last ? Math.min(0.05, (ts - T.last) / 1000) : 0.016; T.last = ts;
         var i, sp;
+        var spr2 = Math.max(1, ((T.camera && T.camera.aspect) || 1.9) / 1.9);
         for (i = 0; i < T.roids.length; i++) {
-          sp = T.roids[i]; sp.position.x += sp.userData.vx * dt; if (sp.position.x < -5.2) sp.position.x = 5.2;
+          sp = T.roids[i]; sp.position.x += sp.userData.vx * dt; if (sp.position.x < -5.2 * spr2) sp.position.x = 5.2 * spr2;
           sp.material.rotation += dt * 0.4 * ((i % 2) ? 1 : -1);
         }
         T.stars.rotation.z += dt * 0.01;
@@ -1730,9 +1792,12 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
         var poff = plunge ? Math.sin((ts - plunge.start) / plunge.dur * Math.PI) * 0.7 : 0;
         var eoff = elunge ? Math.sin((ts - elunge.start) / elunge.dur * Math.PI) * 0.7 : 0;
         var kIn3 = battleEase(s, ts), exit3 = heroExitDx(s, ts) / 60;   // world units
+        // (v0.113.0, D5) the stage is full-width now — spread the flanks with the camera
+        // aspect so squad/enemy frame the played card instead of hiding behind it
+        var spr = Math.max(1, ((T.camera && T.camera.aspect) || 1.9) / 1.9);
         for (i = 0; i < T.heroes.length; i++) {
           var h = HERO_3D[i];
-          T.heroes[i].position.x = h.x + poff * h.lf - (1 - kIn3) * 9 + exit3;
+          T.heroes[i].position.x = h.x * spr + poff * h.lf - (1 - kIn3) * 9 + exit3;
           T.heroes[i].position.y = h.y + Math.sin(ts / 680 + h.ph) * 0.08;
         }
         var b = s.run.battle, hasEnemy = !!(b && b.enemy && (!b.over || (s.deathAt && ts < s.deathAt)));   // (JB3) hull persists through the staged kill
@@ -1740,7 +1805,7 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
         if (hasEnemy) {
           var boss = !!b.enemy.boss;
           if (T.enemyBoss !== boss) { T.enemy.material.map = boss ? T.enemyTexB : T.enemyTexN; T.enemy.material.needsUpdate = true; T.enemy.scale.setScalar(boss ? 2.3 : 1.9); T.enemyBoss = boss; }
-          T.enemy.position.x = 2.4 - eoff + (1 - kIn3) * 9; T.enemy.position.y = Math.sin(ts / 520) * 0.1;
+          T.enemy.position.x = 2.4 * spr - eoff + (1 - kIn3) * 9; T.enemy.position.y = Math.sin(ts / 520) * 0.1;
           var flash = fxActive(s, ts, 'flash', 'enemy');
           T.enemy.material.color.setScalar(flash ? 1.0 + (1 - (ts - flash.start) / flash.dur) * 1.4 : 1.0);
         }
@@ -1757,9 +1822,9 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
             var k3 = Math.max(1, T.W / 320);                      // author-space: fx are sized for the 320-wide 2D arena
             fg.setTransform(s.fxPr * k3, 0, 0, s.fxPr * k3, 0, 0);
             var pv = T._pv || (T._pv = new THREE.Vector3());      // cached scratch — no per-frame allocation
-            pv.set(-3, 0, 0); pv.project(T.camera);
+            pv.set(-3 * spr, 0, 0); pv.project(T.camera);
             var pxL = (pv.x * 0.5 + 0.5) * T.W / k3;
-            pv.set(2.4, 0, 0); pv.project(T.camera);
+            pv.set(2.4 * spr, 0, 0); pv.project(T.camera);
             var pxR = (pv.x * 0.5 + 0.5) * T.W / k3, pyS = (-pv.y * 0.5 + 0.5) * T.H / k3;
             fxRenderOverlays(s, ts, { cxL: pxL, cxR: pxR, yShip: pyS, W: T.W / k3 }, fg);
           }
@@ -1883,17 +1948,19 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
       renderTop(s); renderEnemy(s); renderSquad(s); renderArtifacts(s); renderCoins(s); renderMain(s); renderLog(s);
     }
     function renderTop(s) {
+      // (v0.113.0, D5) the one-line status pill: depth · HP · shield · coins · turn · best
       var t = s.topBar; t.textContent = '';
-      var run = s.run;
-      var left = s.doc.createElement('span');
-      left.innerHTML = 'Kuiper Belt Battle &nbsp; depth <b>' + run.section + '-' + run.round + '</b>';
+      var run = s.run, b = run.battle, sq = run.squad;
+      function seg(html, cls) { var sp = s.doc.createElement('span'); if (cls) sp.className = cls; sp.innerHTML = html; t.appendChild(sp); return sp; }
+      seg('depth <b>' + run.section + '-' + run.round + '</b>');
+      s.pillHp = seg('\u2665 <b>' + sq.hp + '</b>/' + sq.maxHp, 'pv hp');
+      s.pillSh = seg('\u26E8 <b>' + sq.shield + '</b>', 'pv sh');
+      s.pillCoin = seg('\u25CE <b>' + sq.coins + '</b>', 'pv cn');
+      s.pillTurn = seg('turn <b>' + (b && b.enemy && !b.over ? (b.attackIndex + 1) : '\u2013') + '</b>', 'pv tn');
+      seg('best <b>' + bestLabel(s.best) + '</b>');
       var replay = s.doc.createElement('button'); replay.className = 'kbb-skip'; replay.style.position = 'static'; replay.style.padding = '2px 8px'; replay.textContent = '\u21BB intro';
       replay.onclick = function () { playIntro(s, function () { drawQuestion(s.run); renderAll(s); }); };
-      left.appendChild(replay);
-      var right = s.doc.createElement('span');
-      var cleared = run.depthClearedSection + '-' + run.depthClearedRound;
-      right.innerHTML = 'cleared <b>' + cleared + '</b> &nbsp; best <b>' + bestLabel(s.best) + '</b>';
-      t.appendChild(left); t.appendChild(right);
+      t.appendChild(replay);
     }
     function bestLabel(score) { if (!score) return '-'; return Math.floor(score / 100) + '-' + (score % 100); }
 
@@ -1939,6 +2006,7 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
         ((b.attackIndex + 1 >= b.maxAttacks)
           ? '<div class="kbb-statline"><span class="final">FINAL ATTACK \u00b7 ' + (b.attackIndex + 1) + '/' + b.maxAttacks + ' \u2014 finish it or it escapes</span></div>'
           : '<div class="kbb-statline"><span>attack <b>' + (b.attackIndex + 1) + '</b>/' + b.maxAttacks + '</span></div>');
+      if (s.pillTurn) s.pillTurn.innerHTML = 'turn <b>' + (b.over || e.hp <= 0 ? '\u2013' : (b.attackIndex + 1)) + '</b>';
     }
 
     function renderSquad(s) {
@@ -1948,6 +2016,8 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
         '<div class="lg"><span class="dt" style="background:' + PALETTE.mantis + '"></span>HP <b>' + sq.hp + '</b> / ' + sq.maxHp + '</div>' +
         '<div class="lg"><span class="dt" style="background:' + PALETTE.aqua + '"></span>Shield <b>' + sq.shield + '</b></div>' +
         '<div class="st">power <b>' + sq.basePower + '</b> &nbsp; block <b>' + sq.block + '</b></div>';
+      if (s.pillHp) s.pillHp.innerHTML = '\u2665 <b>' + sq.hp + '</b>/' + sq.maxHp;
+      if (s.pillSh) s.pillSh.innerHTML = '\u26E8 <b>' + sq.shield + '</b>';
     }
 
     function renderArtifacts(s) {
@@ -1987,11 +2057,13 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
 
     function renderCoins(s) {
       s.coinPanel.innerHTML = '<span class="kbb-eyebrow">Coins</span><span class="v">\u25CE ' + s.run.squad.coins + '</span>';
+      if (s.pillCoin) s.pillCoin.innerHTML = '\u25CE <b>' + s.run.squad.coins + '</b>';
     }
 
     function renderMain(s) {
       if (s.run.phase !== 'lost') clearLost(s);
       var p = s.mainPanel; p.className = 'kbb-main'; p.textContent = '';
+      if (s.hand) s.hand.style.display = (s.run.phase === 'battle') ? '' : 'none';   // (v0.113.0, D5)
       if (s.run.phase === 'lost') { renderLost(s); return; }
       if (s.run.phase === 'shop') return renderShop(s, p);
       return renderBattle(s, p);
@@ -2020,6 +2092,59 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
       renderAll(s);
     }
 
+    // (v0.113.0, D5) the hand: three fanned move cards (same .kbb-action contract —
+    // class, data-act, .on toggle, s.pendingAction — only the body moved out of the
+    // question panel), an energy gem (1 play per turn — today's real rule), and the
+    // turn piles (draw = window turns left, discard = turns spent; honest counts).
+    function actMeta(s) {
+      var sq = s.run.squad;
+      return [
+        { id: 'attack', ic: '\u2694', name: 'Attack', tint: 'pe', eff: 'Fire the volley for <b>' + sq.basePower + '</b>+ damage.', foot: 'ATTACK \u00b7 MOVE' },
+        { id: 'brace', ic: '\uD83D\uDEE1', name: 'Brace', tint: 'ir', eff: 'Raise <b>+' + sq.block + '</b> shield before the counter.', foot: 'BRACE \u00b7 MOVE' },
+        { id: 'repair', ic: '\u271A', name: 'Repair', tint: 'ma', eff: 'Patch the hull for <b>+' + sq.healPower + '</b> HP.', foot: 'REPAIR \u00b7 MOVE' }
+      ];
+    }
+    function stakeLine(s, act) {
+      var sq = s.run.squad;
+      if (act === 'brace') return 'Answer correctly to raise <b>+' + sq.block + '</b> shield. Miss and the enemy strikes free.';
+      if (act === 'repair') return 'Answer correctly to restore <b>+' + sq.healPower + '</b> HP. Miss and the enemy strikes free.';
+      return 'Answer correctly to fire for <b>' + sq.basePower + '</b>+ damage. Miss and the volley fizzles.';
+    }
+    function buildHand(s) {
+      var h = s.hand; if (!h) return; h.textContent = '';
+      var b = s.run.battle;
+      var gem = el(s.doc, 'div', 'kbb-gem');
+      gem.innerHTML = '<svg viewBox="0 0 60 66" aria-hidden="true"><polygon points="30,2 57,17 57,49 30,64 3,49 3,17" fill="none" stroke="' + PALETTE.aqua + '" stroke-width="2"/></svg><span class="gv">1/1</span><span class="gc">ENERGY</span>';
+      s.gemVal = gem.querySelector('.gv');
+      h.appendChild(gem);
+      var fan = el(s.doc, 'div', 'kbb-fan'); s.fanEl = fan;
+      var acts = actMeta(s);
+      s.pendingAction = 'attack';
+      for (var ai = 0; ai < acts.length; ai++) {
+        (function (a, i2) {
+          var ab = s.doc.createElement('button');
+          ab.className = 'kbb-action kbb-card c' + i2 + ' t-' + a.tint + (a.id === 'attack' ? ' on' : ''); ab.type = 'button';
+          ab.setAttribute('data-act', a.id);
+          ab.innerHTML = '<span class="cc">1</span><span class="cn">' + a.name + '</span><span class="ci">' + a.ic + '</span><span class="ce">' + a.eff + '</span><span class="cf">' + a.foot + '</span>';
+          ab.onclick = function () {
+            if (s.locked) return;
+            s.pendingAction = a.id;
+            var all = fan.querySelectorAll('.kbb-action');
+            for (var bi = 0; bi < all.length; bi++) all[bi].classList.toggle('on', all[bi].getAttribute('data-act') === a.id);
+            if (s.stakeEl) s.stakeEl.innerHTML = stakeLine(s, a.id);
+            if (s.playIc) s.playIc.textContent = a.ic;
+            if (s.playNm) s.playNm.textContent = a.name;
+          };
+          fan.appendChild(ab);
+        })(acts[ai], ai);
+      }
+      h.appendChild(fan);
+      var side = el(s.doc, 'div', 'kbb-piles');
+      var leftN = b ? Math.max(0, b.maxAttacks - b.attackIndex) : 0;
+      side.innerHTML = '<div class="kbb-pile draw"><b>' + leftN + '</b><i>turns left</i></div><div class="kbb-pile disc"><b>' + (b ? b.attackIndex : 0) + '</b><i>spent</i></div>';
+      h.appendChild(side);
+      h.appendChild(el(s.doc, 'div', 'kbb-act-hint', 'Correct fires your action \u00b7 Wrong = the enemy strikes free'));
+    }
     function renderBattle(s, p) {
       if (s.enemyPanel && s.enemyPanel.classList) s.enemyPanel.classList.remove('kbb-en-strike');   // (v0.48.0) telegraph resets with the fresh question
       var b = s.run.battle;
@@ -2029,6 +2154,11 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
       s.qShownAt = nowMs(s);
       s.locked = false;
       var multi = isMultiQ(q); s.multiSel = []; s.submitEl = null;
+      var head = el(s.doc, 'div', 'kbb-play-head');   // (v0.113.0, D5) played-card header mirrors the selected move
+      head.innerHTML = '<span class="pic">\u2694</span><span class="pnm">Attack</span><span class="prs">AWAITING ANSWER</span>';
+      s.playIc = head.querySelector('.pic'); s.playNm = head.querySelector('.pnm'); s.playRs = head.querySelector('.prs');
+      p.appendChild(head);
+      var stake = el(s.doc, 'div', 'kbb-play-stake'); stake.innerHTML = stakeLine(s, 'attack'); s.stakeEl = stake; p.appendChild(stake);
       p.appendChild(el(s.doc, 'div', 'kbb-stem', q.stem));
       if (q.image) p.appendChild(el(s.doc, 'div', 'kbb-exhibit-warn', '\u26A0 Exhibit question served in error \u2014 its image only renders in Study/Exam.'));   // (v0.91.0) loud leak guard
       var opts = s.doc.createElement('div'); opts.className = 'kbb-opts';
@@ -2054,30 +2184,7 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
           opts.appendChild(btn);
         })(i);
       }
-      // (K5) pre-answer action choice: a correct answer executes the selected action.
-      var actRow = el(s.doc, 'div', 'kbb-actions');
-      var acts = [
-        { id: 'attack', label: '\u2694 Attack' },
-        { id: 'brace', label: '\uD83D\uDEE1 Brace +' + s.run.squad.block },
-        { id: 'repair', label: '\u271A Repair +' + s.run.squad.healPower }
-      ];
-      s.pendingAction = 'attack';
-      for (var ai = 0; ai < acts.length; ai++) {
-        (function (a) {
-          var ab = s.doc.createElement('button');
-          ab.className = 'kbb-action' + (a.id === 'attack' ? ' on' : ''); ab.type = 'button'; ab.textContent = a.label;
-          ab.setAttribute('data-act', a.id);
-          ab.onclick = function () {
-            if (s.locked) return;
-            s.pendingAction = a.id;
-            var all = actRow.querySelectorAll('.kbb-action');
-            for (var bi = 0; bi < all.length; bi++) all[bi].classList.toggle('on', all[bi].getAttribute('data-act') === a.id);
-          };
-          actRow.appendChild(ab);
-        })(acts[ai]);
-      }
-      p.appendChild(actRow);
-      p.appendChild(el(s.doc, 'div', 'kbb-act-hint', 'Correct fires your action \u00b7 Wrong = the enemy strikes free'));   // (v0.48.0) the loop in one line
+buildHand(s);   // (v0.113.0, D5) fanned move cards + gem + piles live in the hand strip
       p.appendChild(opts);
       if (multi) {
         p.appendChild(el(s.doc, 'div', 'kbb-multi-hint', 'Select all that apply (' + q.correctIndices.length + '), then submit.'));
@@ -2094,6 +2201,9 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
       if (s.paused) return;
       if (s.locked || s.run.phase !== 'battle') return;
       s.locked = true; hideTip(s);
+      if (s.gemVal) s.gemVal.textContent = '0/1';                       // (v0.113.0, D5) the turn's one play is spent
+      if (s.fanEl && s.fanEl.classList) s.fanEl.classList.add('spent');
+      if (s.playRs) s.playRs.textContent = 'RESOLVING\u2026';
       if (s.submitEl) s.submitEl.disabled = true;
       var q = s.run.battle.question;
       var multi = isMultiQ(q);
@@ -2363,6 +2473,7 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
         { ref: 'enemyPanel', t: 'The enemy',         pos: 'bottom', x: 'The BCM you\u2019re fighting. Its ring is its HP, and its incoming attack is flagged here so you can brace for it.' },
         { ref: 'combat',     t: 'Battle arena',      pos: 'bottom', x: 'The fight plays out here \u2014 your hits and the enemy\u2019s strikes animate in this view.' },
         { ref: 'mainPanel',  t: 'Questions & shop',  pos: 'top',    x: 'The panel that drives the game: answer the exam question to attack, and spend coins in the shop between battles.' },
+        { ref: 'hand',       t: 'Your hand',         pos: 'top',    x: 'Your three moves fan out here \u2014 pick Attack, Brace, or Repair, then answer to fire it. The gem is your one play per turn.' },
         { ref: 'artPanel',   t: 'Artifacts & coins', pos: 'bottom', x: 'Artifacts are permanent perks you\u2019ve earned; your coins (just below) buy more in the shop.' },
         { ref: 'topBar',     t: 'Depth & best',      pos: 'bottom', x: 'How deep into the belt you are, and your best depth so far. Your score is the depth you reach.' }
       ];

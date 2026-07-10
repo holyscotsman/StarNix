@@ -229,6 +229,13 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-D5 — Card-hand battle (added v0.113.0).** Enter KBB: battles read as a deckbuilder —
+  status pill up top (depth/HP/shield/coins/turn all live), squad sprites + enemy flanking the
+  full-width stage, the question center-stage as the played card whose header/stake follow your
+  selected move, and three fanned move cards at the bottom with the energy gem (1/1 → 0/1 on
+  answer) and turn piles. Hover lifts cards; Brace/Repair ring iris/mantis. Shop hides the hand.
+  Reduced motion: no gem pulse or card lifts. WRONG: sprites hiding behind the question card.
+
 - **QA-D4 — Center-console briefing (added v0.112.0).** Enter ARM: the briefing sits in a
   cockpit — the broken station hangs in the canopy (shards + ember), CORE MANIFEST hexes fill
   1→5 as Vega covers cores, the transmission lives in a CRT bezel, and 1/2/3 press the console
