@@ -466,17 +466,35 @@
       cv = mk("canvas", "arm-canvas"); wrap.appendChild(cv);
       c2d = cv.getContext ? cv.getContext("2d") : null;
 
+      // (v0.111.0, D3 — "Cockpit-lite", ARM Flight Proposals #1b, CHOSEN) canopy vignette:
+      // pure dressing, pointer-events none; skipped in high-contrast mode for readability.
+      if (!highContrast) wrap.appendChild(mk("div", "arm-vignette"));
       banner = mk("div", "arm-banner"); wrap.appendChild(banner);
       gear = btn("arm-gear", "⚙ Menu", function () { ensureAudio(); sfx("click"); showSettings(); }); wrap.appendChild(gear);
 
-      stats = mk("div", "arm-stats");
-      stats.appendChild(srow("Sector", sSector = mk("b", null, "1/" + SECTORS)));
-      stats.appendChild(srow("Tier", sTier = mk("b", null, TIER_NAMES[0])));
-      stats.appendChild(srow("Station", sStation = mk("b", null, "0/" + TOTAL)));
-      stats.appendChild(srow("Cargo", sCargo = mk("b", null, "0/" + CORES_PER_SECTOR)));
-      stats.appendChild(srow("Coins", sCoins = mk("b", "gold", "0")));
-      stats.appendChild(meterRow("Shields", "shield"));
-      stats.appendChild(meterRow("Charge", "ammo"));
+      // (v0.111.0, D3) the 7-row stats panel becomes the compact left status rail:
+      // icon rows (shield / charge / coins), divider, then the sector text block.
+      stats = mk("div", "arm-stats arm-rail");
+      var rShield = mk("div", "arm-rrow"); rShield.title = "Shields";
+      rShield.appendChild(mk("span", "arm-ric", "\u26E8"));
+      var mS = mk("span", "arm-meter arm-m-shield"); mShield = mk("i"); mShield.style.width = "100%"; mS.appendChild(mShield); rShield.appendChild(mS);
+      stats.appendChild(rShield);
+      var rCharge = mk("div", "arm-rrow"); rCharge.title = "Fire charge";
+      rCharge.appendChild(mk("span", "arm-ric gold", "\u26A1"));
+      var mA = mk("span", "arm-meter arm-m-ammo"); mCharge = mk("i"); mCharge.style.width = "100%"; mA.appendChild(mCharge); rCharge.appendChild(mA);
+      stats.appendChild(rCharge);
+      var rCoins = mk("div", "arm-rrow"); rCoins.title = "Coins";
+      rCoins.appendChild(mk("span", "arm-ric gold", "\u25CE"));
+      rCoins.appendChild(sCoins = mk("b", "gold", "0"));
+      stats.appendChild(rCoins);
+      stats.appendChild(mk("div", "arm-rdiv"));
+      var rTxt = mk("div", "arm-rtext");
+      var l1 = mk("div"); l1.appendChild(mk("span", null, "Sector ")); l1.appendChild(sSector = mk("b", null, "1/" + SECTORS)); rTxt.appendChild(l1);
+      var l2 = mk("div"); l2.appendChild(mk("span", null, "Cargo ")); l2.appendChild(sCargo = mk("b", null, "0/" + CORES_PER_SECTOR)); rTxt.appendChild(l2);
+      var l3 = mk("div"); l3.appendChild(mk("span", null, "Station ")); l3.appendChild(sStation = mk("b", null, "0/" + TOTAL)); rTxt.appendChild(l3);
+      sTier = mk("b", null, TIER_NAMES[0]); sTier.style.display = "none"; rTxt.appendChild(sTier);   // tier folds into the sector tooltip
+      l1.title = "Difficulty tier: " + TIER_NAMES[0];
+      stats.appendChild(rTxt);
       wrap.appendChild(stats);
 
       steer = mk("div", "arm-steer");
@@ -2577,6 +2595,96 @@
       if (bossActive) drawArenaFrame();
       if (bossActive && boss && boss.dying) drawDeathOverlay();
       drawCompass();
+      drawCockpitHud();
+    }
+    // (v0.111.0, D3) Cockpit-lite HUD: compass tape (top center) + radar disc (above FIRE).
+    // Screen-space, allocation-free; markers — aqua hex = pending core, mantis star = the
+    // EXPOSED core (extract), peach triangle = threat.
+    var wrapAng = function (d) { while (d > Math.PI) d -= TAU; while (d < -Math.PI) d += TAU; return d; };
+    function tapeMarker(x, ty, kind, pulse) {
+      c2d.save(); c2d.translate(x, ty);
+      if (kind === 0) { c2d.strokeStyle = COL.aqua; c2d.shadowColor = COL.aqua; c2d.shadowBlur = 8; c2d.lineWidth = 1.6; c2d.beginPath(); for (var p6 = 0; p6 < 6; p6++) { var a6 = p6 / 6 * TAU - Math.PI / 2; var px6 = Math.cos(a6) * 6, py6 = Math.sin(a6) * 6; if (p6 === 0) c2d.moveTo(px6, py6); else c2d.lineTo(px6, py6); } c2d.closePath(); c2d.stroke(); }
+      else if (kind === 1) { c2d.fillStyle = COL.green; c2d.shadowColor = COL.green; c2d.shadowBlur = 10; c2d.beginPath(); for (var p4 = 0; p4 < 8; p4++) { var a4 = p4 / 8 * TAU - Math.PI / 2, r4 = (p4 % 2 === 0) ? 7 : 3; var px4 = Math.cos(a4) * r4, py4 = Math.sin(a4) * r4; if (p4 === 0) c2d.moveTo(px4, py4); else c2d.lineTo(px4, py4); } c2d.closePath(); c2d.fill(); }
+      else { c2d.globalAlpha = pulse; c2d.fillStyle = COL.peach; c2d.shadowColor = COL.peach; c2d.shadowBlur = 8; c2d.beginPath(); c2d.moveTo(0, -6); c2d.lineTo(6, 5); c2d.lineTo(-6, 5); c2d.closePath(); c2d.fill(); }
+      c2d.restore(); c2d.globalAlpha = 1; c2d.shadowBlur = 0;
+    }
+    function drawCockpitHud() {
+      if (!c2d || state === "HOME" || state === "INTRO" || state === "BRIEF" || state === "WARP") return;
+      var tW = Math.min(460, W - 220), tX = W / 2 - tW / 2, tY = 12, tH = 38;
+      var tNow = now() / 1000, pulse = reducedMotion ? 1 : 0.55 + 0.45 * Math.sin(tNow * 4.5);
+      var headingDeg = ((ship.angle * 180 / Math.PI) + 90 + 720) % 360;
+      if (bossActive) { drawRadarOnly(tNow, pulse); return; }   // (D3) the arena has its own banner; the tape would sit ON the dreadnought
+      c2d.save();
+      c2d.fillStyle = "rgba(8,8,14,.78)"; c2d.strokeStyle = "#26263a"; c2d.lineWidth = 1;
+      if (c2d.roundRect) { c2d.beginPath(); c2d.roundRect(tX, tY, tW, tH, 10); c2d.fill(); c2d.stroke(); }
+      else { c2d.fillRect(tX, tY, tW, tH); c2d.strokeRect(tX, tY, tW, tH); }
+      c2d.beginPath(); c2d.rect(tX + 2, tY + 2, tW - 4, tH - 4); c2d.clip();
+      var pxPerDeg = 46 / 15, off = (headingDeg % 15) * pxPerDeg;
+      for (var tk = -1; tk * 46 - off < tW + 46; tk++) {
+        var xk = tX + tk * 46 - off;
+        c2d.strokeStyle = "rgba(255,255,255,.14)"; c2d.beginPath(); c2d.moveTo(xk, tY + 6); c2d.lineTo(xk, tY + tH - 12); c2d.stroke();
+        var degAt = Math.round((headingDeg - (tW / 2 - (tk * 46 - off)) / pxPerDeg) / 15) * 15;
+        degAt = ((degAt % 360) + 360) % 360;
+        if (degAt % 30 === 0) {
+          c2d.fillStyle = "rgba(255,255,255,.4)"; c2d.font = "700 10px Montserrat,Arial,sans-serif"; c2d.textAlign = "center";
+          c2d.fillText(degAt === 0 ? "N" : degAt === 90 ? "E" : degAt === 180 ? "S" : degAt === 270 ? "W" : String(degAt), xk, tY + tH - 4);
+        }
+      }
+      var mkY = tY + 14, shown = 0, i2, nearDist = -1;
+      for (i2 = 0; i2 < cores.length && shown < 3; i2++) {
+        var c9 = cores[i2]; if (c9.state === "collected" || c9.state === "lost") continue;
+        var dA9 = wrapAng(Math.atan2(c9.y - ship.y, c9.x - ship.x) - ship.angle);
+        var mx9 = W / 2 + (dA9 / Math.PI) * (tW / 2 - 10);
+        if (mx9 < tX + 10) mx9 = tX + 10; if (mx9 > tX + tW - 10) mx9 = tX + tW - 10;
+        tapeMarker(mx9, mkY, c9.state === "unlocked" ? 1 : 0, 1); shown++;
+        var dd9 = Math.sqrt((c9.x - ship.x) * (c9.x - ship.x) + (c9.y - ship.y) * (c9.y - ship.y));
+        if (nearDist < 0 || dd9 < nearDist) nearDist = dd9;
+      }
+      for (i2 = 0; i2 < enemies.length; i2++) {
+        var e9 = enemies[i2];
+        var dAe = wrapAng(Math.atan2(e9.y - ship.y, e9.x - ship.x) - ship.angle);
+        var mxe = W / 2 + (dAe / Math.PI) * (tW / 2 - 10);
+        if (mxe < tX + 10) mxe = tX + 10; if (mxe > tX + tW - 10) mxe = tX + tW - 10;
+        tapeMarker(mxe, mkY, 2, pulse);
+      }
+      c2d.restore();
+      c2d.save(); c2d.strokeStyle = "#fff"; c2d.shadowColor = COL.aqua; c2d.shadowBlur = 8; c2d.lineWidth = 2;
+      c2d.beginPath(); c2d.moveTo(W / 2, tY + 3); c2d.lineTo(W / 2, tY + tH - 3); c2d.stroke(); c2d.restore(); c2d.shadowBlur = 0;
+      c2d.fillStyle = "rgba(109,109,128,.9)"; c2d.font = "600 10px Montserrat,Arial,sans-serif"; c2d.textAlign = "center";
+      c2d.fillText(("heading " + Math.round(headingDeg) + (nearDist >= 0 ? " \u00b7 nearest core " + Math.round(nearDist / 4) + "m" : "")).toUpperCase(), W / 2, tY + tH + 12);
+      drawRadarOnly(tNow, pulse);
+    }
+    function drawRadarOnly(tNow, pulse) {
+      var rX = W - 92, rY = H - 236, rR = 62, R_WORLD = 900;
+      c2d.save();
+      c2d.fillStyle = "rgba(8,8,14,.78)"; c2d.strokeStyle = "#26263a";
+      c2d.beginPath(); c2d.arc(rX, rY, rR + 4, 0, TAU); c2d.fill(); c2d.stroke();
+      c2d.strokeStyle = "rgba(255,255,255,.07)";
+      c2d.beginPath(); c2d.arc(rX, rY, 21, 0, TAU); c2d.stroke();
+      c2d.beginPath(); c2d.arc(rX, rY, 42, 0, TAU); c2d.stroke();
+      c2d.beginPath(); c2d.arc(rX, rY, 62, 0, TAU); c2d.stroke();
+      c2d.strokeStyle = "rgba(255,255,255,.05)";
+      c2d.beginPath(); c2d.moveTo(rX - rR, rY); c2d.lineTo(rX + rR, rY); c2d.moveTo(rX, rY - rR); c2d.lineTo(rX, rY + rR); c2d.stroke();
+      var swA = reducedMotion ? -Math.PI / 3 : (tNow / 3.5 % 1) * TAU;
+      c2d.strokeStyle = COL.aqua; c2d.globalAlpha = 0.55; c2d.shadowColor = COL.aqua; c2d.shadowBlur = 10; c2d.lineWidth = 2;
+      c2d.beginPath(); c2d.moveTo(rX, rY); c2d.lineTo(rX + Math.cos(swA) * rR, rY + Math.sin(swA) * rR); c2d.stroke();
+      c2d.globalAlpha = 1; c2d.shadowBlur = 0;
+      c2d.fillStyle = "#fff"; c2d.beginPath(); c2d.arc(rX, rY, 2.5, 0, TAU); c2d.fill();
+      for (i2 = 0; i2 < cores.length; i2++) {
+        var cb = cores[i2]; if (cb.state === "collected" || cb.state === "lost") continue;
+        var bx = (cb.x - ship.x) / R_WORLD * rR, by = (cb.y - ship.y) / R_WORLD * rR;
+        var bl = Math.sqrt(bx * bx + by * by); if (bl > rR - 4) { bx *= (rR - 4) / bl; by *= (rR - 4) / bl; }
+        if (cb.state === "unlocked") { c2d.fillStyle = COL.green; c2d.beginPath(); c2d.arc(rX + bx, rY + by, 4, 0, TAU); c2d.fill(); }
+        else { c2d.fillStyle = COL.aqua; c2d.fillRect(rX + bx - 3.5, rY + by - 3.5, 7, 7); }
+      }
+      c2d.globalAlpha = reducedMotion ? 1 : pulse;
+      for (i2 = 0; i2 < enemies.length; i2++) {
+        var eb = enemies[i2];
+        var ex2 = (eb.x - ship.x) / R_WORLD * rR, ey2 = (eb.y - ship.y) / R_WORLD * rR;
+        var el2 = Math.sqrt(ex2 * ex2 + ey2 * ey2); if (el2 > rR - 4) { ex2 *= (rR - 4) / el2; ey2 *= (rR - 4) / el2; }
+        c2d.fillStyle = COL.peach; c2d.beginPath(); c2d.moveTo(rX + ex2, rY + ey2 - 4); c2d.lineTo(rX + ex2 + 4, rY + ey2 + 3); c2d.lineTo(rX + ex2 - 4, rY + ey2 + 3); c2d.closePath(); c2d.fill();
+      }
+      c2d.restore(); c2d.globalAlpha = 1;
     }
     function drawCompass() {
       if (!c2d) return;
@@ -2890,17 +2998,24 @@
       "background:radial-gradient(130% 110% at 50% -10%, #15152a 0%, #0a0a16 55%, #050509 100%);-webkit-tap-highlight-color:transparent;user-select:none;}",
       ".arm-wrap *{box-sizing:border-box;}",
       ".arm-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;}",
-      ".arm-banner{position:absolute;top:16px;left:50%;transform:translateX(-50%);z-index:5;display:none;font-size:12.5px;letter-spacing:.12em;text-transform:uppercase;color:" + C.aqua + ";text-align:center;text-shadow:0 0 16px rgba(31,221,233,.55);pointer-events:none;background:rgba(10,10,18,.5);padding:6px 14px;border-radius:999px;border:1px solid rgba(31,221,233,.25);max-width:90%;}",
+      ".arm-banner{position:absolute;top:64px;left:50%;transform:translateX(-50%);z-index:5;display:none;font-size:12.5px;letter-spacing:.12em;text-transform:uppercase;color:" + C.aqua + ";text-align:center;text-shadow:0 0 16px rgba(31,221,233,.55);pointer-events:none;background:rgba(10,10,18,.5);padding:6px 14px;border-radius:999px;border:1px solid rgba(31,221,233,.25);max-width:90%;}",
       ".arm-gear{position:absolute;top:14px;right:14px;z-index:7;border:1px solid #34344a;background:rgba(10,10,17,.92);border-radius:10px;color:" + C.mid + ";font-family:inherit;font-size:13px;font-weight:600;padding:8px 11px;cursor:pointer;display:none;letter-spacing:.04em;box-shadow:0 2px 10px rgba(0,0,0,.5);}",   // (P2·3, PLAYTEST A5) near-opaque backdrop + drop shadow: world markers scrolling beneath read as UNDER the HUD, not colliding with it
       ".arm-gear:hover{border-color:" + C.iris + ";color:" + C.text + ";}",
-      ".arm-stats{position:absolute;left:12px;bottom:14px;z-index:6;display:none;flex-direction:column;gap:6px;background:rgba(16,16,24,.72);border:1px solid #34344a;border-radius:12px;padding:11px 13px;min-width:172px;box-shadow:0 0 22px rgba(120,85,250,.12);}",
+      ".arm-stats{position:absolute;left:16px;top:50%;transform:translateY(-50%);z-index:6;display:none;flex-direction:column;gap:8px;background:rgba(8,8,14,.72);border:1px solid #26263a;border-radius:14px;padding:12px;width:118px;}",
+      ".arm-rrow{display:flex;align-items:center;gap:7px;}",
+      ".arm-ric{font-size:13px;color:" + C.aqua + ";width:16px;text-align:center;} .arm-ric.gold{color:" + C.gold + ";}",
+      ".arm-rrow .arm-meter{flex:1;height:6px;} .arm-rrow b{font-size:13px;}",
+      ".arm-rdiv{height:1px;background:#26263a;margin:2px 0;}",
+      ".arm-rtext{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:" + C.dim + ";display:flex;flex-direction:column;gap:3px;}",
+      ".arm-rtext b{color:" + C.iris300 + ";font-size:12px;letter-spacing:0;}",
+      ".arm-vignette{position:absolute;inset:0;z-index:4;pointer-events:none;background:radial-gradient(120% 120% at 50% 45%, transparent 62%, rgba(4,4,10,.55) 88%, rgba(4,4,10,.85) 100%);}",
       ".arm-srow{display:flex;justify-content:space-between;align-items:center;gap:14px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:" + C.mid + ";}",
       ".arm-srow b{color:" + C.text + ";font-weight:700;font-size:12.5px;letter-spacing:.02em;}.arm-srow b.gold{color:" + C.gold + ";}",
       ".arm-meter{width:88px;height:8px;border-radius:5px;border:1px solid #33334a;overflow:hidden;}.arm-meter>i{display:block;height:100%;border-radius:5px;}",
       ".arm-m-shield>i{background:linear-gradient(90deg," + C.aqua + ",#19a9b3);box-shadow:0 0 10px rgba(31,221,233,.6);}",
       ".arm-m-ammo>i{background:linear-gradient(90deg," + C.gold + ",#e0a838);}",
       ".arm-steer{position:absolute;left:50%;transform:translateX(-50%);bottom:18px;z-index:6;display:none;gap:11px;}",
-      ".arm-key{width:58px;height:58px;border-radius:50%;background:rgba(28,28,40,.5);border:1.5px solid " + C.iris + ";color:" + C.iris300 + ";font-size:21px;display:flex;align-items:center;justify-content:center;touch-action:none;cursor:pointer;}",
+      ".arm-key{width:58px;height:58px;border-radius:50%;background:rgba(20,20,30,.45);border:1.5px solid rgba(120,85,250,.55);color:" + C.iris300 + ";font-size:21px;display:flex;align-items:center;justify-content:center;touch-action:none;cursor:pointer;}",   // (D3) quieter skin
       ".arm-key.thrust{border-color:" + C.aqua + ";color:" + C.aqua + ";}.arm-key:active{background:rgba(120,85,250,.3);transform:scale(.92);}",
       ".arm-action{position:absolute;right:16px;bottom:18px;z-index:6;display:none;width:78px;height:78px;border-radius:50%;background:rgba(40,18,18,.5);border:2px solid " + C.peach + ";color:" + C.peach + ";font-size:14px;font-weight:700;letter-spacing:.05em;align-items:center;justify-content:center;text-align:center;line-height:1.05;touch-action:none;cursor:pointer;box-shadow:0 0 18px rgba(255,107,91,.3);}",
       ".arm-action:active{transform:scale(.93);}.arm-action.warp{border-color:" + C.aqua + ";color:" + C.aqua + ";background:rgba(18,36,40,.55);box-shadow:0 0 26px rgba(31,221,233,.45);}",

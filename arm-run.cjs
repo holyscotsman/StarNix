@@ -241,6 +241,10 @@ var detSector3 = null;   // captured for the determinism probe against window 2
   ok(/BOSS_FLOW = 920/.test(H.ARM_SRC) && /bt \* BOSS_FLOW \* depth/.test(H.ARM_SRC)
      && /bossActive\) drawBossRush\(\)/.test(H.ARM_SRC) && /three static faint shafts/.test(H.ARM_SRC),
      'boss arena rushes upward: BOSS_FLOW streaks behind the world, calm under reduced motion');
+  // (v0.111.0, D3) Cockpit-lite HUD sources: tape+radar draw fn, rail rows, HC-gated vignette
+  ok(/function drawCockpitHud\(\)/.test(H.ARM_SRC) && /drawCompass\(\);\s*\n\s*drawCockpitHud\(\);/.test(H.ARM_SRC)
+     && /arm-rrow/.test(H.ARM_SRC) && /if \(!highContrast\) wrap\.appendChild\(mk\("div", "arm-vignette"\)\)/.test(H.ARM_SRC),
+     'D3: cockpit HUD wired (tape/radar in the draw loop, icon rail, vignette skipped in high contrast)');
   // (v0.108.0, G4 HIGH) the wall laser must produce a FINITE gap (bossArena has .l, not .x —
   // gapX was NaN and the wall mode was completely inert since v0.97)
   (function () {

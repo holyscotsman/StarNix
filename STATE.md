@@ -101,7 +101,12 @@
 > **v0.6.21:** title screen uses the no-station nebula (`kbbBg`→`nebulaBg`); menu keeps the station vista. KBB shows `nebulaBg` + `bcmShip`. 200/200; art negative-controlled.
 > </details>
 
-## v0.110.0 — D2: the Bridge menu shipped (Menu Proposals #1a)
+## v0.111.0 — D3: Cockpit-lite flight HUD shipped
+
+Compass tape + radar + rail + vignette. NEXT: D4 Center-console briefing, D5/D6 KBB,
+D7 exam Testing station.
+
+> **Earlier this session (v0.110.0):** D2: the Bridge menu shipped (Menu Proposals #1a)
 
 Mission strips + shattered station + dock. NEXT: D3 ARM Cockpit-lite HUD, D4 Center-console
 briefing, D5/D6 KBB card-hand + run map, D7 NIT Testing station.
