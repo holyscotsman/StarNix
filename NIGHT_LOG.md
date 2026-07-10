@@ -700,6 +700,13 @@ Commit: `v0.76.0 — Boss revamp: lock-on read, living dreadnought, deeper bed`.
 
 ## 🎨 BATCH #6 (2026-07-04) — the design handoff (design_handoff_starnix_redesign/)
 
+**☀️ COMPLETE: all seven units shipped, v0.109.0 → v0.115.0, every one gate-green with a
+bite-proven negative control.** D1 sprites · D2 Bridge menu · D3 cockpit HUD · D4 console
+briefing · D5 card-hand battle · D6 run map · D7 Testing station. Browser QA owed:
+QA-D2–QA-D7 (BROWSER_QA.md). Deviations logged in CHANGELOG: D4 per-char typing deferred
+(pin-safety — CRT reveal shipped instead); D6 unknown stops pay coin caches only (event
+design unspecified in the handoff — Jason's call). Playwright evidence: shots 90–99.
+
 Revert point: git tag `pre-redesign-v0.108.0` (4a67e8a). CC EXCLUDED by the handoff.
 Owner picks recorded: KBB = 1a+1b together; NIT exam = 1a Testing station.
 Queue (one gated unit each, recreate hi-fi from the .dc.html boards, honest re-pins for
