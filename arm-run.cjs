@@ -253,6 +253,8 @@ var detSector3 = null;   // captured for the determinism probe against window 2
      'R1: reduced motion kills the briefing ember pulse too (.bem had its own animation)');
   ok(/var TAPE_TXT = \["N", "30"/.test(H.ARM_SRC) && /hudCapStr = "", hudCapDeg = -1/.test(H.ARM_SRC),
      'R1: cockpit HUD draws from cached label table + heading caption (no per-frame string churn)');
+  ok(/mm\.life = 9; sfx\("missile"\);/.test(H.ARM_SRC),
+     'v0.121.0: the dreadnought MISSILE fires its own sfx("missile"), NOT the laser-charge zap (Jason)');
   // (v0.111.0, D3) Cockpit-lite HUD sources: tape+radar draw fn, rail rows, HC-gated vignette
   ok(/function drawCockpitHud\(\)/.test(H.ARM_SRC) && /drawCompass\(\);\s*\n\s*drawCockpitHud\(\);/.test(H.ARM_SRC)
      && /arm-rrow/.test(H.ARM_SRC) && /if \(!highContrast\) wrap\.appendChild\(mk\("div", "arm-vignette"\)\)/.test(H.ARM_SRC),

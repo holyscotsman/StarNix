@@ -101,7 +101,12 @@
 > **v0.6.21:** title screen uses the no-station nebula (`kbbBg`→`nebulaBg`); menu keeps the station vista. KBB shows `nebulaBg` + `bcmShip`. 200/200; art negative-controlled.
 > </details>
 
-## v0.120.0 — Menu: removed the shattered-station vista (Jason)
+## v0.121.0 — ARM boss: unique missile launch sound (Jason)
+
+The dreadnought's missile fires sfx("missile") (ignition thump + motor whoosh), no longer the
+laser-charge zap. Ear-blind — owed a listen (QA-ARM-SND).
+
+> **Earlier this session (v0.120.0):** ## Menu: removed the shattered-station vista (Jason)
 
 The blown-up station shard-group is gone from the Bridge menu; the photo background stays.
 ARM progress still shows on the ARM strip. In-app reduced-motion now freezes the bg drift.

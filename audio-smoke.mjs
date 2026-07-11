@@ -264,8 +264,21 @@ console.log("\nLead melody (catchiness pass):");
 }
 
 console.log("\nSFX:");
-for (const s of ["fire", "laser", "collect", "correct", "wrong", "click", "hit", "explode", "hyperdrive", "warp", "solve", "count1", "count2", "count3", "totally-unknown"]) {
+for (const s of ["fire", "laser", "missile", "lasercharge", "laserfire", "collect", "correct", "wrong", "click", "hit", "explode", "hyperdrive", "warp", "solve", "count1", "count2", "count3", "totally-unknown"]) {
   let e = null; try { A.sfx(s); } catch (ex) { e = ex; } ok('sfx "' + s + '" plays clean', !e); if (e) errs.push(e);
+}
+
+// (v0.121.0, Jason) the missile is a REAL, DISTINCT sound — not a no-op alias of the laser
+{
+  function nodeCount(name) {
+    let n = 0; const oO = AC.createOscillator, oB = AC.createBufferSource;
+    AC.createOscillator = function () { n++; return oO.call(AC); };
+    AC.createBufferSource = function () { n++; return oB.call(AC); };
+    try { A.sfx(name); } catch (e) {} finally { AC.createOscillator = oO; AC.createBufferSource = oB; }
+    return n;
+  }
+  const nMissile = nodeCount("missile"), nUnknown = nodeCount("totally-unknown");
+  ok("sfx 'missile' is a real, richer defined sound than the generic fallback (more synth nodes)", nMissile >= 3 && nMissile > nUnknown);
 }
 
 console.log("\nMix controls:");

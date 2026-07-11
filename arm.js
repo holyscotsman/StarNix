@@ -1318,7 +1318,7 @@
           var msrc = randomLiveWp(), ma = Math.atan2(ship.y - msrc.y, ship.x - msrc.x);
           var mm = null;
           for (var mi0 = 0; mi0 < missiles.length; mi0++) { if (!missiles[mi0].active) { mm = missiles[mi0]; break; } }
-          if (mm) { mm.active = true; mm.x = msrc.x; mm.y = msrc.y; mm.ang = ma; mm.vx = Math.cos(ma) * MISSILE_SPEED; mm.vy = Math.sin(ma) * MISSILE_SPEED; mm.life = 9; sfx("lasercharge"); }
+          if (mm) { mm.active = true; mm.x = msrc.x; mm.y = msrc.y; mm.ang = ma; mm.vx = Math.cos(ma) * MISSILE_SPEED; mm.vy = Math.sin(ma) * MISSILE_SPEED; mm.life = 9; sfx("missile"); }   // (v0.121.0, Jason) a unique launch, not the laser
         }
       }
       updateMissiles(dt);

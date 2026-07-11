@@ -1023,6 +1023,22 @@
       pq.connect(pg); pg.connect(plp); plp.connect(sfxBus);
       pq.start(t); pq.stop(t + lc); plfo.start(t); plfo.stop(t + lc); return;
     }
+    if (type === "missile") {   // (v0.121.0, Jason) the dreadnought's MISSILE launch — a rocket, NOT the laser zap:
+      var md = 0.5;             // an ignition THUMP + a rising motor WHOOSH + a thin projectile tone screaming away
+      var mth = AC.createOscillator(); mth.type = "sine";
+      mth.frequency.setValueAtTime(180, t); mth.frequency.exponentialRampToValueAtTime(46, t + 0.16);
+      var mtg = AC.createGain(); mtg.gain.setValueAtTime(0.0001, t); mtg.gain.linearRampToValueAtTime(0.42, t + 0.012); mtg.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+      mth.connect(mtg); mtg.connect(sfxBus); mth.start(t); mth.stop(t + 0.24);
+      var mn = AC.createBufferSource(); mn.buffer = noiseBuf;
+      var mbf = AC.createBiquadFilter(); mbf.type = "bandpass"; mbf.Q.value = 1.1;
+      mbf.frequency.setValueAtTime(300, t); mbf.frequency.exponentialRampToValueAtTime(2600, t + md);
+      var mng = AC.createGain(); mng.gain.setValueAtTime(0.0001, t); mng.gain.linearRampToValueAtTime(0.24, t + 0.05); mng.gain.exponentialRampToValueAtTime(0.0001, t + md);
+      mn.connect(mbf); mbf.connect(mng); mng.connect(sfxBus); mn.start(t); mn.stop(t + md);
+      var mt2 = AC.createOscillator(); mt2.type = "triangle";
+      mt2.frequency.setValueAtTime(420, t); mt2.frequency.exponentialRampToValueAtTime(1100, t + md * 0.9);
+      var mt2g = AC.createGain(); mt2g.gain.setValueAtTime(0.0001, t); mt2g.gain.linearRampToValueAtTime(0.09, t + 0.06); mt2g.gain.exponentialRampToValueAtTime(0.0001, t + md);
+      mt2.connect(mt2g); mt2g.connect(sfxBus); mt2.start(t); mt2.stop(t + md); return;
+    }
     if (type === "laserfire" || type === "laserhit") {   // BZZZT + boom; "laserhit" punches a bigger, deeper boom
       var loud = (type === "laserhit"), bd = 0.42;
       var bz = AC.createOscillator(); bz.type = "square"; bz.frequency.setValueAtTime(190, t); bz.frequency.linearRampToValueAtTime(115, t + bd);

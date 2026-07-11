@@ -229,6 +229,10 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-ARM-SND — boss missile sound (added v0.121.0; EAR-BLIND).** In an ARM boss fight, the
+  dreadnought's missiles now sound like rockets (ignition thump + whoosh), distinct from the laser
+  weapon's zap. Confirm by ear that missile vs laser are clearly different attacks. WRONG: both sound identical.
+
 - **QA-CC3 — edge ticks retire after 5 km (added v0.119.0; browser-VERIFIED).** The aqua dashed
   lines down the corridor edges show for the first 5 km, thin out over the next 600 m, and are gone
   after — confirmed in-browser (present ~1 km, gone 6.2 km). The gold collectible cells stay. WRONG:

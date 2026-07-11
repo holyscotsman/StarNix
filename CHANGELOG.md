@@ -6,6 +6,10 @@ Sections per entry: **Added · Changed · Fixed · Removed**. Each line: `<what>
 
 ---
 
+## [0.121.0] - 2026-07-04
+
+- **ARM boss — the missile launch has its own sound (Jason).** The dreadnought's seeking missile used to fire on `sfx("lasercharge")` — the same rising zap as the laser weapon, so the two attacks sounded identical. It now fires a dedicated `sfx("missile")`: an ignition thump (low sine drop) + a rising motor whoosh (bandpass-swept noise) + a thin projectile tone screaming away — clearly a rocket, not a laser. Pins: audio-smoke (missile is a real, richer synth sound than the generic fallback) + arm-run source (the missile-fire path calls `sfx("missile")`, not the laser). Controls: fire reverted to `lasercharge` → arm-run pin fell; missile def disabled → audio pin fell; both restored, gate 0. EAR-BLIND — owed a listen. Files: audio.js, arm.js, audio-smoke.mjs, arm-run.cjs. Tests: gate exit 0.
+
 ## [0.120.0] - 2026-07-04
 
 - **Menu — the shattered MCI-station vista is gone (Jason).** The Bridge menu's blown-up station (the `armStation` art split into drifting clip-path shards + ember + core-progress cap on the right) is removed; the photo background stays exactly as it was. The ARM campaign progress it carried still reads on the ARM mission strip (`Station n/60`), so no information is lost. Cleanup: the station markup, its shard-art wiring, ~20 CSS rules and four keyframes (`sxStationBob`/`sxShardFlick`/`sxEmber`/`sxHexDrift`) all deleted; the `.sx-reduced` in-app reduced-motion hook now freezes the background photo drift instead (a real R1 tightening — the in-app toggle previously left the bg panning). Pins: verify-build's Bridge pin flipped to assert the station is ABSENT (0 shards, no `.sx-station-group`) with strips + dock still present; the R1 reduced-motion source pin repointed to the bg-drift kill. Control: station markup re-added → the "GONE" pin fell → restored, gate 0. Browser-verified (shot 103). Files: starnix-shell.js, verify-build.mjs. Tests: gate exit 0.
