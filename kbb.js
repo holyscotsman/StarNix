@@ -475,6 +475,7 @@
       lastDamage: 0, lastIncoming: 0, lastToHp: 0
     };
     run.phase = 'battle';
+    run.misses = [];   // (v0.140.0, V1.1 KBB#2) each battle collects its own debrief
     run.squad.shield = run.squad.startShield || 0;   // (v0.99.0, K10) fittings can raise the floor; no carry-over otherwise
     fireSide(run, 'onBattleStart', {});
     run._api.addShield(run.squad.block);
@@ -560,6 +561,16 @@
       fireSide(run, 'onAttackResolved', { answerMs: answerMs });
     } else {
       b.wrongCount++; b.correctStreak = 0;
+      // (v0.140.0, V1.1 KBB#2) debrief collection: capture the miss as TEXT now, while the
+      // shuffled presentation is in hand — indexes would be meaningless by map time.
+      if (run.misses && run.misses.length < 5) {
+        var mCt = isMultiQ(q)
+          ? q.correctIndices.map(function (ci) { return q.options[ci]; }).join(' \u00b7 ')
+          : q.options[q.correctIndex];
+        var mEx = String(q.explanation || '');
+        var mCut = mEx.indexOf('. ');
+        run.misses.push({ id: q.id, stem: q.stem, correctText: mCt, expl: mCut > 0 ? mEx.slice(0, mCut + 1) : mEx.slice(0, 160) });
+      }
       fireSide(run, 'onWrong', { answerMs: answerMs });
       fireSide(run, 'onAttackResolved', { answerMs: answerMs });
     }
@@ -978,6 +989,12 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
     css.push('.kbb-map-head{flex:none;}');
     css.push('.kbb-map-name{font-weight:800;font-size:24px;margin:2px 0 4px;}');
     css.push('.kbb-map-note{font-size:12px;color:' + P.gold + ';margin-bottom:2px;}.kbb-map-note b{color:' + P.gold + ';}');
+    css.push('.kbb-debrief{flex:none;margin:6px 0 4px;background:rgba(13,13,26,.72);border:1px solid ' + P.border + ';border-radius:12px;padding:8px 12px;max-width:560px;overflow:auto;max-height:180px;}');
+    css.push('.kbb-debrief summary{cursor:pointer;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:' + P.gold + ';}');
+    css.push('.kbb-debrief-row{margin:8px 0 2px;border-left:3px solid ' + P.peach + ';padding-left:10px;}');
+    css.push('.kbb-debrief-stem{font-size:12.5px;color:' + P.text + ';}');
+    css.push('.kbb-debrief-ans{font-size:12px;color:' + P.mantis + ';margin-top:2px;}');
+    css.push('.kbb-debrief-expl{font-size:11.5px;color:' + P.dim + ';margin-top:2px;}');
     css.push('.kbb-map{position:relative;flex:1;min-height:210px;margin:6px 0;border:1px solid rgba(52,52,74,.6);border-radius:12px;background:radial-gradient(120% 120% at 30% 20%,#121222 0%,#0a0a14 70%);overflow:hidden;}');
     css.push('.kbb-map-svg{position:absolute;inset:0;width:100%;height:100%;}');
     css.push('.kbb-map-svg .trav{stroke:' + P.aqua + ';stroke-width:2.5;vector-effect:non-scaling-stroke;}');
@@ -2505,6 +2522,21 @@ buildHand(s);   // (v0.113.0, D5) fanned move cards + gem + piles live in the ha
         '<div class="kbb-map-name">' + SECTION_NAMES[(m.section - 1) % SECTION_NAMES.length] + '</div>' +
         (s.mapNote ? '<div class="kbb-map-note">' + s.mapNote + '</div>' : '');
       p.appendChild(head);
+      // (v0.140.0, V1.1 KBB#2) post-battle debrief: the misses you just made, recapped right
+      // here where the run pauses — a second exposure while the error is still warm.
+      if (run.misses && run.misses.length) {
+        var deb = el(d, 'details', 'kbb-debrief'); deb.open = true;
+        deb.appendChild(el(d, 'summary', null, 'Debrief \u00b7 ' + run.misses.length + ' missed'));
+        for (var dm = 0; dm < run.misses.length; dm++) {
+          var ms = run.misses[dm];
+          var mrow = el(d, 'div', 'kbb-debrief-row');
+          mrow.appendChild(el(d, 'div', 'kbb-debrief-stem', ms.stem));
+          mrow.appendChild(el(d, 'div', 'kbb-debrief-ans', '\u2714 ' + ms.correctText));
+          if (ms.expl) mrow.appendChild(el(d, 'div', 'kbb-debrief-expl', ms.expl));
+          deb.appendChild(mrow);
+        }
+        p.appendChild(deb);
+      }
       var area = el(d, 'div', 'kbb-map'); p.appendChild(area);
       // path lines under the nodes: traveled solid, choices dotted
       var seg = '';

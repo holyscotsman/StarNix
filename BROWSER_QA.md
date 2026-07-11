@@ -229,6 +229,13 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-KBB-DEBRIEF — the map recaps your misses (added v0.140.0).** Miss a question or two in
+  a KBB battle, win it, cross the shop to the section map: a gold "Debrief · N missed" card sits
+  between the header and the corridor — each miss shows the stem, the right answer in green, and
+  one explanation line. A clean battle shows no card; the next battle starts a fresh debrief.
+  WRONG: stale misses from an earlier battle, or answers that don't match what the question
+  actually keyed.
+
 - **QA-CC-CHARGE — the boost is earned (added v0.139.0).** In CC, watch the new gold "Boost"
   bar beside the shield pips: a correct gate answer half-fills it (glow when one correct from
   full), the second correct fires the boost on resume and the bar switches to the aqua/iris

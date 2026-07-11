@@ -279,6 +279,39 @@ function newWindow() {
 })();
 
 /* ================= 2) DOM ================= */
+(function debriefCollect() {
+  group('KBB#2: post-battle debrief — misses collected as text, per battle, capped');
+  var V = newWindow(), K = V.KBB;
+  var right = function (q) { return q.multi ? q.correctIndices.slice() : q.correctIndex; };
+  var wrongA = function (q) { return q.multi ? [q.correctIndices[0]] : ((q.correctIndex + 1) % q.options.length); };
+  var run = K.createRun(H.makeCtx(K, { seed: SEED + 40 }), { seed: SEED + 40 });
+  ok(Array.isArray(run.misses) && run.misses.length === 0, 'a fresh battle opens with an empty miss list');
+  var d1 = K.drawQuestion(run), q1 = d1.question;
+  K.submitAnswer(run, wrongA(q1), 3000, 'attack');
+  ok(run.misses.length === 1 && run.misses[0].id === q1.id, 'a wrong answer lands ONE debrief entry carrying the question id');
+  var expAns = q1.multi ? q1.correctIndices.map(function (ci) { return q1.options[ci]; }).join(' \u00b7 ') : q1.options[q1.correctIndex];
+  ok(run.misses[0].stem === q1.stem && run.misses[0].correctText === expAns,
+     'the entry stores stem + right-answer TEXT resolved against the shuffled presentation (index-proof)');
+  ok(run.misses[0].expl.length <= 170, 'the explanation is clipped to a first-line recap, not the whole essay');
+  var d2 = K.drawQuestion(run), q2 = d2.question;
+  K.submitAnswer(run, right(q2), 900, 'attack');
+  ok(run.misses.length === 1, 'a correct answer adds nothing to the debrief');
+  run.misses = [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }, { id: 'e' }];
+  var d3 = K.drawQuestion(run), q3 = d3.question;
+  if (q3) K.submitAnswer(run, wrongA(q3), 3000, 'attack');
+  ok(run.misses.length === 5, 'the list caps at 5 (no unbounded growth in a grindy battle)');
+  // reset: crossing into the NEXT battle wipes the previous debrief
+  var run2 = K.createRun(H.makeCtx(K, { seed: SEED + 41 }), { seed: SEED + 41 });
+  run2.misses.push({ id: 'stale', stem: 's', correctText: 'c', expl: '' });
+  var crossed = false;
+  for (var ct = 0; ct < 60 && !crossed; ct++) {
+    var dd = K.drawQuestion(run2), qq = dd && dd.question;
+    if (!qq) { if (typeof K.leaveShop === 'function') { try { K.leaveShop(run2); } catch (e) {} crossed = true; } continue; }
+    K.submitAnswer(run2, (qq.multi ? qq.correctIndices.slice() : qq.correctIndex), 900, 'attack');
+  }
+  ok(crossed && run2.misses.length === 0, 'starting the next battle clears the previous debrief');
+})();
+
 (function domFlow() {
   group('DOM: mount -> skip intro -> Start run -> answered turns -> boss music -> unmount');
   var V = newWindow(), doc = V.doc, KBB = V.KBB;
@@ -453,6 +486,17 @@ function newWindow() {
     var c4 = q('.kbb-cont:not(.kbb-submit)'); if (c4) { c4.click(); V.step(2); }
     // (v0.114.0, D6) the 'shop' phase renders the run map; the shop is a stop on it
     ok(!!q('.kbb-main.is-map') && !!q('.kbb-embark'), 'D6: between battles the run map renders with an Embark CTA');
+    // (v0.140.0, KBB#2) the debrief card: absent without misses; present with stem + answer after
+    // (the drive above answered an arbitrary option, so clear the real misses first)
+    run4.misses = [];
+    var pick4 = q('.kbb-mapnode.pick'); if (pick4) { pick4.click(); V.step(1); }   // any re-render repaints
+    ok(!q('.kbb-debrief'), 'KBB#2: a clean battle leaves NO debrief card on the map');
+    run4.misses = [{ id: 'probe', stem: 'DEBRIEF STEM PROBE', correctText: 'THE RIGHT ANSWER', expl: 'One line.' }];
+    if (pick4) { pick4.click(); V.step(1); }
+    var debC = q('.kbb-debrief');
+    ok(!!debC && /DEBRIEF STEM PROBE/.test(debC.textContent) && /THE RIGHT ANSWER/.test(debC.textContent),
+       'KBB#2: the map shows the debrief card with the missed stem and the right answer');
+    run4.misses = [];
     var shopStop = q('.kbb-mapnode[data-type="shop"]:not(:disabled)');
     ok(!!shopStop, 'D6: a shop stop is available on the corridor');
     if (shopStop) { shopStop.click(); V.step(1); }
