@@ -124,6 +124,9 @@ async function runFrames(n = 6) {
     ok("auto-advanced to menu at end", SN.shell.screen === "menu");
     ok("menu track played on cinematic end", calls.indexOf("track:menu") !== -1);
     ok("no cinematic residue (canvas gone)", !w.document.querySelector(".sx-cine-canvas"));
+    ok("cinematic flies our REAL ARM art (armStation / bcmShip / armEnemyDive) with vector fallback (v0.124.0, Jason)",
+      html.includes('cineImg("armStation")') && html.includes('cineImg("bcmShip")') && html.includes('cineImg("armEnemyDive")')
+      && html.includes("stationA && stationA.ready") && html.includes("warshipA && warshipA.ready") && html.includes("diveA && diveA.ready"));
   }
 
   console.log("\nC. Menu");

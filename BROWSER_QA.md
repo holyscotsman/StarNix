@@ -229,6 +229,12 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-CINE — intro cinematic art (added v0.124.0; browser-VERIFIED).** Watch the cold open: the
+  MCI Station is the real armStation sprite, the BCM warship that fires the Disruptor + jumps is the
+  real bcmShip, and the squadron diving on the planet is the real armEnemyDive fighters. Confirmed
+  via shots 107-110. WRONG: wireframe polygon station, vector dart warship, or triangle fighters
+  (that's the fallback — means the assets didn't load).
+
 - **QA-ARM-BOSS — boss look & feel (added v0.123.0; browser-VERIFIED still).** In an ARM boss
   fight: the dreadnought is fully visible with a red danger-aura behind it, the objective banner
   sits at the BOTTOM (not on the ship), and during a WALL laser the safe column is a clear

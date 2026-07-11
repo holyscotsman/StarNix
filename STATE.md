@@ -101,7 +101,15 @@
 > **v0.6.21:** title screen uses the no-station nebula (`kbbBg`→`nebulaBg`); menu keeps the station vista. KBB shows `nebulaBg` + `bcmShip`. 200/200; art negative-controlled.
 > </details>
 
-## v0.123.0 — ARM boss fight: look & feel pass (Jason)
+## v0.124.0 — Intro cinematic: real ARM art (Jason)
+
+The cold open now flies armStation (the station), bcmShip (the BCM warship firing the Disruptor +
+jumping to the belt), and armEnemyDive (the squadron diving on the planet) — asset-gated, vector
+fallback kept. Shatter shards + belt asteroids stay procedural (no art for those yet). Browser-
+verified (shots 107-110). Completes Jason's 5-part request (menu station, missile sfx, dubstep
+boss music, boss look/feel, cinematic art).
+
+> **Earlier this session (v0.123.0):** ## ARM boss fight: look & feel pass (Jason)
 
 Banner off the dreadnought (bottom), a red danger-aura behind the boss, and a clearly-readable
 green safe lane during the wall laser. Presentation only — gapX/collision unchanged. Browser-

@@ -262,6 +262,14 @@
 
     var planetImg = null, planetReady = false;
     try { var psrc = (global.STARNIX_ASSETS && global.STARNIX_ASSETS.planet) || ""; if (psrc) { planetImg = new Image(); planetImg.onload = function () { planetReady = true; }; planetImg.src = psrc; } } catch (e) {}
+    // (v0.124.0, Jason) the cinematic now flies our REAL art where it has it: the MCI Station
+    // (armStation), the BCM warship that fires the Disruptor + jumps to the belt (bcmShip), and
+    // the BCM squadron that dives on the planet (armEnemyDive — authored for exactly this beat).
+    // Each is asset-gated; the original vector art is the fallback (and what jsdom/tests see).
+    function cineImg(key) {
+      try { var s = (global.STARNIX_ASSETS && global.STARNIX_ASSETS[key]) || ""; if (!s) return null; var im = new Image(); var o = { img: im, ready: false }; im.onload = function () { o.ready = true; }; im.src = s; return o; } catch (e) { return null; }
+    }
+    var stationA = cineImg("armStation"), warshipA = cineImg("bcmShip"), diveA = cineImg("armEnemyDive");
 
     // -------- beat timeline (seconds): station | beam | shatter | belt | planet | mission --------
     var B = reduced
@@ -293,6 +301,13 @@
     function regPoly(x, y, r, sides, rot) { ctx.beginPath(); for (var p = 0; p < sides; p++) { var an = rot + (p / sides) * Math.PI * 2; var px = x + Math.cos(an) * r, py = y + Math.sin(an) * r; if (p === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); } ctx.closePath(); }
 
     function drawStation(alpha, sx, sy) {
+      if (stationA && stationA.ready) {   // (v0.124.0) the real MCI Station art
+        ctx.save(); ctx.translate(cx + (sx || 0), cy + (sy || 0)); ctx.rotate(T * 0.1); ctx.globalAlpha = alpha;
+        var sw2 = 300 * scale, sh2 = sw2 * (stationA.img.naturalHeight / stationA.img.naturalWidth || 0.66);
+        if (!reduced) { ctx.shadowColor = "#1FDDE9"; ctx.shadowBlur = 20; }
+        ctx.drawImage(stationA.img, -sw2 / 2, -sh2 / 2, sw2, sh2);
+        ctx.restore(); ctx.globalAlpha = 1; ctx.shadowBlur = 0; return;
+      }
       ctx.save(); ctx.translate(cx + (sx || 0), cy + (sy || 0)); ctx.rotate(T * 0.16); ctx.scale(scale, scale); ctx.globalAlpha = alpha;
       for (var p = 0; p < STATION.length; p++) { var pg = STATION[p]; drawPolyPts(pg.pts, pg.fill, pg.stroke, pg.glow, pg.lw); }
       ctx.restore(); ctx.globalAlpha = 1;
@@ -310,10 +325,17 @@
         ctx.beginPath(); ctx.moveTo(noseX, wsy); ctx.lineTo(cx, cy); ctx.stroke(); ctx.restore(); ctx.globalAlpha = 1; ctx.shadowBlur = 0;
         if (!reduced) { ctx.fillStyle = "rgba(255,107,91," + (0.05 + fk * 0.12) + ")"; ctx.fillRect(0, 0, W, H); }
       }
-      ctx.save(); ctx.translate(wsx, wsy); ctx.scale(-sc, sc);
-      if (!reduced) { ctx.shadowColor = "#FF6B5B"; ctx.shadowBlur = 10; }
-      drawPolyPts(WARSHIP, "#3a1d22", "#FF6B5B", "#FF6B5B", 1.6);
-      ctx.beginPath(); ctx.arc(8, 0, 3, 0, 6.283); ctx.fillStyle = "#FFC857"; ctx.fill();
+      ctx.save(); ctx.translate(wsx, wsy);
+      if (warshipA && warshipA.ready) {   // (v0.124.0) the real BCM warship
+        var ww = 108 * sc / 1.1, wh = ww * (warshipA.img.naturalHeight / warshipA.img.naturalWidth || 0.6);
+        if (!reduced) { ctx.shadowColor = "#FF6B5B"; ctx.shadowBlur = 14; }
+        ctx.scale(-1, 1); ctx.drawImage(warshipA.img, -ww / 2, -wh / 2, ww, wh);
+      } else {
+        ctx.scale(-sc, sc);
+        if (!reduced) { ctx.shadowColor = "#FF6B5B"; ctx.shadowBlur = 10; }
+        drawPolyPts(WARSHIP, "#3a1d22", "#FF6B5B", "#FF6B5B", 1.6);
+        ctx.beginPath(); ctx.arc(8, 0, 3, 0, 6.283); ctx.fillStyle = "#FFC857"; ctx.fill();
+      }
       ctx.restore(); ctx.shadowBlur = 0;
     }
     function drawShards(k) {
@@ -335,7 +357,18 @@
         for (var rr = 0; rr < ROCK_N; rr++) { var o = rocks[rr]; var px = ((o.x - bk * 0.05 * o.z) % 1 + 1) % 1; var x = px * W, y = o.y * H, sz = o.sz * scale * o.z * 0.6; ctx.save(); ctx.translate(x, y); ctx.rotate(o.rot + o.spin * bk); ctx.globalAlpha = clamp(bk * 1.6, 0, 0.92); if (!reduced) { ctx.shadowColor = "#3a3a5a"; ctx.shadowBlur = 6; } regPoly(0, 0, sz, o.sides, 0); ctx.fillStyle = "#2b2b3e"; ctx.fill(); ctx.strokeStyle = "#5a5a78"; ctx.lineWidth = 1; ctx.stroke(); ctx.restore(); }
         ctx.globalAlpha = 1; ctx.shadowBlur = 0;
         var ek = clamp(bk / 1.4, 0, 1), wsc = scale * (1.1 - ek * 0.92);
-        if (wsc > 0.05) { ctx.save(); ctx.translate(cx, cy - 10 * scale); ctx.scale(-wsc, wsc); ctx.globalAlpha = clamp(1 - ek, 0, 1); if (!reduced) { ctx.shadowColor = "#FF6B5B"; ctx.shadowBlur = 12; } drawPolyPts(WARSHIP, "#3a1d22", "#FF6B5B", "#FF6B5B", 1.5); ctx.restore(); ctx.globalAlpha = 1; ctx.shadowBlur = 0; }
+        if (wsc > 0.05) {
+          ctx.save(); ctx.translate(cx, cy - 10 * scale); ctx.globalAlpha = clamp(1 - ek, 0, 1);
+          if (warshipA && warshipA.ready) {   // (v0.124.0) the real BCM warship jumping away
+            var rw = 108 * wsc / 1.1, rh = rw * (warshipA.img.naturalHeight / warshipA.img.naturalWidth || 0.6);
+            if (!reduced) { ctx.shadowColor = "#FF6B5B"; ctx.shadowBlur = 14; }
+            ctx.scale(-1, 1); ctx.drawImage(warshipA.img, -rw / 2, -rh / 2, rw, rh);
+          } else {
+            ctx.scale(-wsc, wsc); if (!reduced) { ctx.shadowColor = "#FF6B5B"; ctx.shadowBlur = 12; }
+            drawPolyPts(WARSHIP, "#3a1d22", "#FF6B5B", "#FF6B5B", 1.5);
+          }
+          ctx.restore(); ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+        }
       }
     }
     function drawPlanetSquad(k) {
@@ -346,7 +379,20 @@
       ctx.restore();
       ctx.save(); ctx.strokeStyle = "rgba(172,155,253,0.45)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(pcx, pcy, pr, 0, 6.283); ctx.stroke(); ctx.restore();
       var sk = clamp((k - 0.4) / 2.2, 0, 1), startY = cy * 0.5, endY = pcy - pr - 18 * scale;
-      for (var q = 0; q < SQ_N; q++) { var o = squad[q]; var qx = cx + o.dx * scale, qy = lerp(startY, endY, sk) + Math.sin(T * 3 + o.ph) * 3; ctx.save(); ctx.translate(qx, qy); if (!reduced) { ctx.shadowColor = "#FF6B5B"; ctx.shadowBlur = 10; } ctx.fillStyle = "#FF6B5B"; ctx.beginPath(); ctx.moveTo(0, 8); ctx.lineTo(6, -6); ctx.lineTo(-6, -6); ctx.closePath(); ctx.fill(); ctx.fillStyle = "#FFC857"; ctx.fillRect(-1.5, -2, 3, 3); ctx.restore(); ctx.shadowBlur = 0; }
+      for (var q = 0; q < SQ_N; q++) {
+        var o = squad[q]; var qx = cx + o.dx * scale, qy = lerp(startY, endY, sk) + Math.sin(T * 3 + o.ph) * 3;
+        ctx.save(); ctx.translate(qx, qy);
+        if (diveA && diveA.ready) {   // (v0.124.0) the real BCM dive enemy (authored nose-down for this beat)
+          var dw = 30 * scale, dh = dw * (diveA.img.naturalHeight / diveA.img.naturalWidth || 1);
+          if (!reduced) { ctx.shadowColor = "#FF6B5B"; ctx.shadowBlur = 10; }
+          ctx.drawImage(diveA.img, -dw / 2, -dh / 2, dw, dh);
+        } else {
+          if (!reduced) { ctx.shadowColor = "#FF6B5B"; ctx.shadowBlur = 10; }
+          ctx.fillStyle = "#FF6B5B"; ctx.beginPath(); ctx.moveTo(0, 8); ctx.lineTo(6, -6); ctx.lineTo(-6, -6); ctx.closePath(); ctx.fill();
+          ctx.fillStyle = "#FFC857"; ctx.fillRect(-1.5, -2, 3, 3);
+        }
+        ctx.restore(); ctx.shadowBlur = 0;
+      }
     }
 
     var T = 0, last = global.performance.now();
