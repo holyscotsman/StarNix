@@ -101,7 +101,14 @@
 > **v0.6.21:** title screen uses the no-station nebula (`kbbBg`→`nebulaBg`); menu keeps the station vista. KBB shows `nebulaBg` + `bcmShip`. 200/200; art negative-controlled.
 > </details>
 
-## v0.117.0 — Chasm Chase: mountain texture + pause-freeze fixes (Jason)
+## v0.118.0 — Chasm Chase mountains: rock read + clear-center composition (Jason)
+
+Rotated the rock map so strata run vertically (was wood-grain rings), craggier + darker cones,
+and pushed the inner peaks out so the range flanks the chasm with clear sky over the corridor
+opening (was capping it). Bounded the wrap re-jitter to each peak's home so it stays clear.
+Browser-verified. Builds on v0.117 (far-ridge texture match + pause-freeze).
+
+> **Earlier this session (v0.117.0):** ## Chasm Chase: mountain texture + pause-freeze fixes (Jason)
 
 Far ridge now shares the near ridge's rock map (was flat "default gray"); peak parallax drifts
 by the world-distance clock so it freezes with the walls during a question. Texture browser-

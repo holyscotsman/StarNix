@@ -199,7 +199,10 @@ if (view) {
       !!view._peakMatNear.map && view._peakMatFar.map === view._peakMatNear.map);
     const src = fs.readFileSync("./cc.js", "utf8");
     ok("peaks: crag amplitude + height-segmented cones pinned at source (the no-op-jitter root cause)",
-      /CRAG_AMT = 0\.42/.test(src) && /ConeGeometry\(r, h, 7, 4\)/.test(src) && /ConeGeometry\(rk, hk, 6, 3\)/.test(src));
+      /CRAG_AMT = 0\.52/.test(src) && /ConeGeometry\(r, h, 9, 5\)/.test(src) && /ConeGeometry\(rk, hk, 8, 4\)/.test(src));
+    // (v0.118.0) rock strata run VERTICALLY (rotated map) instead of horizontal wood-grain rings
+    ok("peaks: the rock map is rotated 90deg so strata run down the slopes (not wood-grain rings)",
+      /matNear\.map\.rotation = Math\.PI \/ 2/.test(src));
     // (P2·3, PLAYTEST A7) corridor end-cap: fog-colored, fog-exempt plane sealing the vanishing point
     ok("end-cap: fog-colored plane seals the corridor (no bare backdrop column)",
       !!view._endCap && !!view._endCap.material && view._endCap.material.fog === false
@@ -273,6 +276,19 @@ if (view) {
     sim.player.ducking = false; sim.player.duckT = 0;
     for (let f = 0; f < 40; f++) view.render(1 / 60);
     ok("pitch releases when the duck ends", view.ship.rotation.x < 0.05);
+  }
+
+  // (v0.118.0, Jason) the range flanks the chasm — no peak's lateral HOME sits over the central
+  // corridor opening, and the per-lap re-jitter is bounded to that home so it never wanders in.
+  {
+    const minHome = Math.min.apply(null, view.peaks.children.map((m) => Math.abs(m.userData.x0)));
+    ok("peaks: every peak's lateral home clears the central corridor (>= 24)", minHome >= 24);
+    // the per-lap re-jitter is anchored to each peak's lateral HOME (x0), so it can never
+    // random-walk toward the centre over a long run (source pin — the drift is deterministic
+    // and stays near home in practice, so only the invariant itself is a reliable control).
+    const src2 = fs.readFileSync("./cc.js", "utf8");
+    ok("peaks: per-lap re-jitter is anchored to x0 (bounded), not an unbounded walk toward center",
+      /pm\.position\.x = \(pu\.x0 !== undefined \? pu\.x0 : pm\.position\.x\) \+ \(pn - 0\.5\) \* 6/.test(src2));
   }
 
   // (v0.117.0, Jason) the pass-by mountains ride the world-distance clock, so they FREEZE the

@@ -229,6 +229,13 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-CC2 — mountain texture + composition (added v0.118.0; browser-VERIFIED).** The rim range now
+  reads as rock: strata run vertically down the slopes (not horizontal wood-grain), the peaks are
+  craggier and darker, and — critically — the mountains flank left/right with CLEAR SKY over the
+  central corridor opening (they no longer cap the vanishing point). Confirmed in-browser (band + full
+  crops). WRONG: any peak sitting over the center corridor, horizontal wood-grain banding, or smooth
+  untextured cones. (Still owed the QA-CC1 human pass: the peaks FREEZE with the walls during a question.)
+
 - **QA-CC1 — mountain fixes (added v0.117.0; texture browser-VERIFIED, freeze headless-pinned).**
   Chasm Chase: the rim mountains (both near and far ridges) now carry the same layered rock as the
   canyon walls — confirmed in-browser, shots 101/101b, no flat-gray peaks. Still owed a human pass:

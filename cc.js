@@ -1336,14 +1336,19 @@
     // (P2·2) near row opts OUT of the distance fog so it keeps its true dark rock value —
     // the fog was washing BOTH rows to the same pale tint and erasing the layered read
     // QA-C1 asks for. Far row stays fogged: that wash IS the haze.
-    var matNear = new THREE.MeshStandardMaterial({ color: 0x4a4056, roughness: 1.0, metalness: 0.0, fog: false });
-    var matFar = new THREE.MeshStandardMaterial({ color: 0x2c2536, roughness: 1.0, metalness: 0.0 });
+    var matNear = new THREE.MeshStandardMaterial({ color: 0x39313f, roughness: 1.0, metalness: 0.0, fog: false });
+    var matFar = new THREE.MeshStandardMaterial({ color: 0x241d2c, roughness: 1.0, metalness: 0.0 });
     // (v0.105.0, C5, Jason: "better texture") rock texture on the near ridge when the asset
     // exists — tinted by the same pinned color, so flat-color fallback and pins are unchanged.
     try {
       var Apk = this._A || {};
       if (Apk.ccRock || Apk.ccSurface) {
-        matNear.map = this._tex(Apk.ccRock || Apk.ccSurface, 3, 2, true); if (matNear.needsUpdate !== undefined) matNear.needsUpdate = true;
+        matNear.map = this._tex(Apk.ccRock || Apk.ccSurface, 4, 4, true);
+        // (v0.118.0) run the rock strata VERTICALLY (down the slopes) instead of wrapping them
+        // horizontally around the cone — the horizontal rings read as wood-grain, not rock.
+        if (matNear.map.center && matNear.map.center.set) matNear.map.center.set(0.5, 0.5);
+        matNear.map.rotation = Math.PI / 2;
+        if (matNear.needsUpdate !== undefined) matNear.needsUpdate = true;
         // (v0.117.0, Jason) the FAR ridge was flat "default gray" (color only) beside the textured
         // near ridge — give it the SAME rock map, tinted by its own darker color + still fogged, so
         // the mountains you pass read as one range instead of textured-vs-plastic.
@@ -1359,7 +1364,7 @@
     // Cones now carry height segments (rings between base and tip), and those rings get BOTH
     // radial jitter (silhouette breaks) and a height wobble (jagged shoulders). Base ring
     // stays planted; the apex gets a lateral kink so summits stop being perfect spikes.
-    var CRAG_AMT = 0.42;                          // radial jitter amplitude (near row; far row runs lower)
+    var CRAG_AMT = 0.52;                          // radial jitter amplitude (near row; far row runs lower)
     function crag(geo, amt, h) {                  // deterministic; guarded for the headless mock
       var pa = geo.attributes && geo.attributes.position;
       if (!pa || !pa.array) return geo;
@@ -1389,14 +1394,14 @@
         var r = 5.5 + ((i * 23) % 5) + h * 0.16;                  // wider bases under taller peaks
         // (v0.105.0, C5, Jason) near ridge pushed OUT (+9) so no peak ever reads as
         // crossing the chasm from the raised intro camera; heights unchanged.
-        var xOff = lip + 21 + f * 58 + ((i * 13) % 6);            // |x| ~30..88
+        var xOff = lip + 26 + f * 58 + ((i * 13) % 6);            // (v0.118.0) inner pushed out -> clear sky over the corridor
         var z = -22 - f * 40 - ((i * 7) % 9);                     // z ~-22..-70
-        var g = this._track(crag(new THREE.ConeGeometry(r, h, 7, 4), CRAG_AMT, h));   // 4 height segs = 3 craggable rings
+        var g = this._track(crag(new THREE.ConeGeometry(r, h, 9, 5), CRAG_AMT, h));   // (v0.118.0) 9 radial x 5 height -> jaggeder silhouette
         var m = new THREE.Mesh(g, matNear);
         m.position.set(side * xOff, RIM_Y + h / 2 - 0.8, z);
         if (m.rotation) m.rotation.y = i * 1.1;
         if (m.scale) m.scale.set(1 + ((i * 17) % 4) * 0.12, 1, 0.8 + ((i * 11) % 3) * 0.18);   // asymmetric footprints
-        m.userData = m.userData || {}; m.userData.par = 0.30; m.userData.z0 = z; m.userData.wrap = 96;   // (v0.105.0, C8) pass-by parallax
+        m.userData = m.userData || {}; m.userData.par = 0.30; m.userData.z0 = z; m.userData.x0 = side * xOff; m.userData.wrap = 96;   // (v0.105.0, C8) pass-by parallax; x0 = lateral home (v0.118.0)
         grp.add(m);
       }
       // far ridge: 6 tall dark silhouettes sitting in the fog band — the hazed range on the horizon
@@ -1404,14 +1409,14 @@
         var fk = k / 5;
         var hk = 16 + ((k * 29) % 15);                            // 16..30
         var rk = 11 + ((k * 19) % 7) + hk * 0.2;
-        var xk = lip + 8 + fk * 74 + ((k * 31) % 10);             // |x| ~17..99 (can sit closer laterally — depth separates it)
+        var xk = lip + 24 + fk * 56 + ((k * 31) % 10);            // (v0.118.0) inner pushed OUT hard — the shallow far peaks were capping the chasm opening
         var zk = -62 - fk * 44 - ((k * 5) % 7);                   // z ~-62..-110 (deep in the fog)
-        var gk = this._track(crag(new THREE.ConeGeometry(rk, hk, 6, 3), CRAG_AMT * 0.6, hk));   // softer far-row crags (haze does the rest)
+        var gk = this._track(crag(new THREE.ConeGeometry(rk, hk, 8, 4), CRAG_AMT * 0.6, hk));   // (v0.118.0) softer far-row crags, more facets
         var mk = new THREE.Mesh(gk, matFar);
         mk.position.set(side * xk, RIM_Y + hk / 2 - 1.2, zk);
         if (mk.rotation) mk.rotation.y = k * 0.9 + 0.4;
         if (mk.scale) mk.scale.set(1.15, 1, 0.75);                // flattened toward the camera = layered backdrop
-        mk.userData = mk.userData || {}; mk.userData.par = 0.12; mk.userData.z0 = zk; mk.userData.wrap = 96;   // (C8) far row crawls
+        mk.userData = mk.userData || {}; mk.userData.par = 0.12; mk.userData.z0 = zk; mk.userData.x0 = side * xk; mk.userData.wrap = 96;   // (C8) far row crawls; x0 = lateral home (v0.118.0)
         grp.add(mk);
       }
     }
@@ -1780,7 +1785,7 @@
           pm.position.z -= pu.wrap;
           var ph2 = Math.sin((pm.position.x + pm.position.z) * 12.9898 + pi * 78.233) * 43758.5453;
           var pn = ph2 - Math.floor(ph2);
-          pm.position.x += (pn - 0.5) * 6;                      // fresh silhouette each lap
+          pm.position.x = (pu.x0 !== undefined ? pu.x0 : pm.position.x) + (pn - 0.5) * 6;   // (v0.118.0) re-jitter around the lateral HOME, never wander toward center
           if (pm.rotation) pm.rotation.y += pn * 2.4;
         }
       }
