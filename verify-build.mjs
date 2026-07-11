@@ -1250,7 +1250,29 @@ async function runFrames(n = 6) {
       // Settings surfaces Export/Import
       shell.showSettings(); await wait(10);
       const btns130 = [...w.document.querySelectorAll(".sx-data .sx-btn")].map(b => b.textContent);
-      ok("Backend#1: Settings Data section offers Export + Import + Reset",
+      // ============ (v0.134.0, V1.1 Flow#1) post-sortie debrief ============
+    {
+      delete SN.core.profile.saves; SN.core.telemetry.clear();
+      shell.enterGame("KBB"); await wait(10);
+      { const sk = [...w.document.querySelectorAll(".kbb-skip")].find(b => /skip/i.test(b.textContent || "")); if (sk) sk.click(); }
+      await wait(10);
+      { const ht = w.document.querySelector(".kbb-ht-skip"); if (ht) ht.click(); }
+      await wait(10);
+      const opt134 = w.document.querySelector(".kbb-opt:not(:disabled)");
+      if (opt134) opt134.click();                       // one graded answer -> telemetry fires
+      await wait(10);
+      shell.exitGame(); await wait(10);
+      const deb = w.document.querySelector(".sx-debrief");
+      ok("Flow#1: exiting a sortie with answers floats the debrief over the menu",
+        shell.screen === "menu" && !!deb && /answered/.test(deb.textContent) && /XP/.test(deb.textContent));
+      const dis = w.document.querySelector(".sx-debrief-done"); if (dis) dis.click(); await wait(10);
+      ok("Flow#1: Dismiss clears the debrief", !w.document.querySelector(".sx-debrief"));
+      shell.enterGame("KBB"); await wait(10);
+      shell.exitGame(); await wait(10);
+      ok("Flow#1: an exit with NO answered questions shows no debrief (no empty ceremony)",
+        shell.screen === "menu" && !w.document.querySelector(".sx-debrief"));
+    }
+    ok("Backend#1: Settings Data section offers Export + Import + Reset",
         btns130.some(t => /Export progress/.test(t)) && btns130.some(t => /Import progress/.test(t)) && btns130.some(t => /Reset all progress/.test(t)));
       shell.showMenu(); await wait(10);
     }

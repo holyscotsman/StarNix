@@ -229,6 +229,12 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-DEBRIEF — post-sortie card (added v0.134.0).** Play any game, answer a few questions,
+  exit to menu: a Sortie debrief card should float in — answered/correct/accuracy/+XP and up to
+  3 missed-question stems. Fly again relaunches; Escape/Dismiss/backdrop closes. Exit without
+  answering anything: no card. WRONG: a card on an answer-free exit, or missed stems that you
+  actually got right.
+
 - **QA-KBB-EVENTS — the ? stop deck (added v0.133.0).** Visit several ? stops across KBB runs:
   outcomes should vary — coin caches, supply drops (consumable appears in the left card), field
   repairs (+HP), and the occasional gamble that pays +30 or stings -4 HP. The map note narrates

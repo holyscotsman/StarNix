@@ -1280,6 +1280,8 @@
     this._clearScreen();
     this.screen = "game:" + id;
     this.lastGameId = id;
+    // (v0.134.0, V1.1 Flow#1) sortie marker: the debrief diffs telemetry + xp from here
+    try { this._sortie = { id: id, evStart: StarNix.core.telemetry.events().length, xp0: StarNix.core.profile.xp | 0 }; } catch (eSo) { this._sortie = null; }
     // (v0.128.0, V1.1 Menu#1) Continue must survive a reload — persist the last game
     try {
       var profLG = StarNix.core.profile;
@@ -1420,7 +1422,56 @@
     if (this.currentGameRoot && this.currentGameRoot.parentNode) this.currentGameRoot.parentNode.removeChild(this.currentGameRoot);
     this.currentGameRoot = null;
     try { StarNix.core.audio.playTrack("menu"); } catch (e) {}
+    // (v0.134.0, V1.1 Flow#1) post-sortie debrief: answered/correct/XP + the questions you
+    // missed, floated over the menu (screen stays "menu" — every exit path lands home).
+    var deb = null;
+    try {
+      var so = this._sortie; this._sortie = null;
+      if (so) {
+        var evs = StarNix.core.telemetry.events().slice(so.evStart);
+        var qa = []; for (var di = 0; di < evs.length; di++) { var ev = evs[di]; if (ev && ev.t === "question_answered") qa.push(ev); }
+        var correct = 0, missed = [];
+        for (var dj = 0; dj < qa.length; dj++) { if (qa[dj].correct) correct++; else if (qa[dj].id) missed.push(qa[dj].id); }
+        var xpGain = (StarNix.core.profile.xp | 0) - so.xp0;
+        if (qa.length > 0) deb = { id: so.id, answered: qa.length, correct: correct, missed: missed.slice(-3), xp: Math.max(0, xpGain) };
+      }
+    } catch (eDb) { deb = null; }
     this.showMenu();
+    if (deb) this._showDebrief(deb);
+  };
+  Shell.prototype._showDebrief = function (d) {
+    var self = this;
+    var core = StarNix.core;
+    var ov = el("div", "sx-debrief");
+    var acc = d.answered ? Math.round(d.correct / d.answered * 100) : 0;
+    var title = (GAME_META[d.id] && GAME_META[d.id].title) || d.id;
+    var missedHtml = "";
+    try {
+      if (d.missed.length && core.questions && core.questions.byId) {
+        missedHtml = '<div class="sx-debrief-misslbl">Worth another look</div>';
+        for (var mi = 0; mi < d.missed.length; mi++) {
+          var mq = core.questions.byId(d.missed[mi]);
+          if (mq) missedHtml += '<div class="sx-debrief-miss">' + StarNix._internal.escapeHTML(mq.stem).slice(0, 110) + '\u2026</div>';
+        }
+      }
+    } catch (eMh) {}
+    ov.innerHTML = '<div class="sx-debrief-card">'
+      + '<div class="sx-eyebrow">Sortie debrief \u00b7 ' + title + '</div>'
+      + '<div class="sx-debrief-stats">'
+      + '<span><b>' + d.answered + '</b> answered</span>'
+      + '<span><b class="ok">' + d.correct + '</b> correct</span>'
+      + '<span><b>' + acc + '%</b> accuracy</span>'
+      + '<span><b class="xp">+' + d.xp + '</b> XP</span>'
+      + '</div>' + missedHtml
+      + '<div class="sx-row"><button class="sx-btn sx-btn-iris sx-debrief-again" type="button">Fly again \u25b8</button>'
+      + '<button class="sx-btn sx-btn-ghost sx-debrief-done" type="button">Dismiss</button></div></div>';
+    this.stage.appendChild(ov);
+    var close = function () { if (ov.parentNode) ov.parentNode.removeChild(ov); };
+    this._on(ov.querySelector(".sx-debrief-done"), "click", close);
+    this._on(ov.querySelector(".sx-debrief-again"), "click", function () { close(); self.enterGame(d.id); });
+    this._on(ov, "click", function (e) { if (e.target === ov) close(); });
+    this._on(global, "keydown", function (e) { if (e.key === "Escape" || e.key === "Esc") close(); });
+    try { ov.querySelector(".sx-debrief-done").focus(); } catch (eF) {}
   };
 
   /* =================================================================== *
@@ -1567,6 +1618,14 @@
       ".sx-data-row{display:flex;gap:10px;margin-bottom:10px;}",
       ".sx-data-json{width:100%;font:12px/1.4 ui-monospace,Menlo,monospace;color:var(--text);background:rgba(10,10,18,.8);border:1px solid var(--border);border-radius:10px;padding:10px;resize:vertical;}",
       ".sx-data-note{font-size:11.5px;color:var(--mid);margin:6px 0 10px;}",
+      ".sx-debrief{position:absolute;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:rgba(5,5,11,.62);}",
+      ".sx-debrief-card{width:min(480px,92%);background:rgba(16,16,26,.97);border:1px solid var(--border);border-radius:16px;padding:22px 24px;box-shadow:0 18px 60px rgba(0,0,0,.6);}",
+      ".sx-debrief-stats{display:flex;gap:18px;flex-wrap:wrap;margin:12px 0 6px;font-size:13px;color:var(--mid);}",
+      ".sx-debrief-stats b{font-size:19px;color:var(--text);display:block;font-variant-numeric:tabular-nums;}",
+      ".sx-debrief-stats b.ok{color:var(--mantis);} .sx-debrief-stats b.xp{color:var(--gold);}",
+      ".sx-debrief-misslbl{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:10px 0 6px;}",
+      ".sx-debrief-miss{font-size:12px;color:var(--mid);border-left:3px solid var(--peach);padding:5px 0 5px 10px;margin-bottom:6px;}",
+      ".sx-debrief .sx-row{margin-top:14px;display:flex;gap:10px;}",
       ".sx-eyebrow{font-size:11px;letter-spacing:.24em;text-transform:uppercase;font-weight:700;color:var(--iris300);margin-bottom:8px;}",
       ".sx-stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:14px 0;}",
       ".sx-stat{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center;}",
