@@ -308,6 +308,17 @@ if (view) {
       zPaused === zRun && zResumed !== zPaused);
   }
 
+  // (v0.119.0, Jason) the aqua edge speed-ticks guide only the first 5 km, then thin out
+  // over 600 m and vanish — keyed to scoreDistance (the HUD km), so resume past 5 km stays clear.
+  {
+    sim.phase = "RUN"; sim.pending = null;
+    sim.scoreDistance = 2000; view.render(1 / 60); const tEarly = view._tickVisN;
+    sim.scoreDistance = 5300; view.render(1 / 60); const tMid = view._tickVisN;
+    sim.scoreDistance = 6000; view.render(1 / 60); const tLate = view._tickVisN;
+    ok("ticks: full for the first 5 km (" + tEarly + "), thinning after 5 km (" + tMid + "), gone past ~5.6 km (" + tLate + ")",
+      tEarly === view._tickN && tMid > 0 && tMid < tEarly && tLate === 0);
+  }
+
   let dispErr = null;
   try { view.dispose(); } catch (e) { dispErr = e; }
   ok("dispose runs clean (frees disposables, nulls scene/camera/renderer)", !dispErr);

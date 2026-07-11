@@ -1726,8 +1726,13 @@
 
     // (04 task 2) edge speed-ticks: stream toward the camera. Real z-motion = strongest speed cue.
     var tk = 0, tickN = this._tickN, spc = this._tickSpacing, ex = this._tickEdgeX, total = tickN * spc;
+    // (v0.119.0, Jason) the edge ticks only guide the first 5 km; then they thin out over the
+    // next 600 m and vanish (scoreDistance = the HUD km, so a resumed run past 5 km stays clear).
+    var overTick = sim.scoreDistance - 5000;
+    var visTicks = overTick <= 0 ? tickN : (overTick >= 600 ? 0 : Math.round(tickN * (1 - overTick / 600)));
+    this._tickVisN = visTicks;
     var phase = sim.distance - Math.floor(sim.distance / spc) * spc;
-    for (i = 0; i < tickN; i++) {
+    for (i = 0; i < visTicks; i++) {
       var zc = i * spc - phase; if (zc < 0) zc += total;          // wrap the just-passed tick to the far end
       setPos(sm, sp, sq, ss, -ex, 0.04, -zc); this.iTick.setMatrixAt(tk++, sm);
       setPos(sm, sp, sq, ss, ex, 0.04, -zc); this.iTick.setMatrixAt(tk++, sm);

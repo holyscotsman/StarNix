@@ -229,6 +229,11 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-CC3 — edge ticks retire after 5 km (added v0.119.0; browser-VERIFIED).** The aqua dashed
+  lines down the corridor edges show for the first 5 km, thin out over the next 600 m, and are gone
+  after — confirmed in-browser (present ~1 km, gone 6.2 km). The gold collectible cells stay. WRONG:
+  ticks still streaming past ~5.6 km, or the gold cells disappearing.
+
 - **QA-CC2 — mountain texture + composition (added v0.118.0; browser-VERIFIED).** The rim range now
   reads as rock: strata run vertically down the slopes (not horizontal wood-grain), the peaks are
   craggier and darker, and — critically — the mountains flank left/right with CLEAR SKY over the

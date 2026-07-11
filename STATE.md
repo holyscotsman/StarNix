@@ -101,7 +101,12 @@
 > **v0.6.21:** title screen uses the no-station nebula (`kbbBg`→`nebulaBg`); menu keeps the station vista. KBB shows `nebulaBg` + `bcmShip`. 200/200; art negative-controlled.
 > </details>
 
-## v0.118.0 — Chasm Chase mountains: rock read + clear-center composition (Jason)
+## v0.119.0 — Chasm Chase: edge speed-ticks retire after 5 km (Jason)
+
+The aqua dashed edge lines guide only the first 5 km, then thin out over 600 m and vanish
+(keyed to the HUD km, so resume stays clear). Gold cells untouched. Browser-verified.
+
+> **Earlier this session (v0.118.0):** ## Chasm Chase mountains: rock read + clear-center composition (Jason)
 
 Rotated the rock map so strata run vertically (was wood-grain rings), craggier + darker cones,
 and pushed the inner peaks out so the range flanks the chasm with clear sky over the corridor
