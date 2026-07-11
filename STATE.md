@@ -101,7 +101,18 @@
 > **v0.6.21:** title screen uses the no-station nebula (`kbbBg`→`nebulaBg`); menu keeps the station vista. KBB shows `nebulaBg` + `bcmShip`. 200/200; art negative-controlled.
 > </details>
 
-## v0.127.0 — KBB: artifact cards in the hand, move buttons by the ships (Jason)
+## VERSION 1.1 PLANNED — VERSION_1_1.md is the next-tasks list (Jason)
+
+Development paused for planning: **`VERSION_1_1.md`** holds 80 vetted tasks (10 per area x 8
+areas: cinematic/menu, ARM, CC, KBB, NIT, flow, backend, front-end UI). Every item was proposed
+from a code/spec read and then verified against the codebase (already-shipped and vague items
+replaced); items carry file/line refs and are priority-ordered per section. Notable finds during
+vetting: 3 live explanations reference options by letter (wrong under shuffle — NIT #1), ARM's
+lost-core resurfacing pool silently discards (ARM #1), CC's 90° turns are almost never seen at
+TURN_KM 250 under the boost cadence (CC #2), Continue doesn't survive reload (Menu #1), and the
+save layer has no flush-on-close/backup (Backend #1). Work v1.1 items as standard gated units.
+
+> **Earlier this session (v0.127.0):** ## KBB: artifact cards in the hand, move buttons by the ships (Jason)
 
 The fanned bottom cards now display the artifact collection (5 slots, filled = full card with
 category/rarity colors); Attack/Brace/Repair are compact buttons atop the played card. Left
