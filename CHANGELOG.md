@@ -6,6 +6,10 @@ Sections per entry: **Added · Changed · Fixed · Removed**. Each line: `<what>
 
 ---
 
+## [0.137.0] - 2026-07-04
+
+- **V1.1 Backend#2 — bank-freshness gate.** `questions.js` is generated from `starnix_questions.md`, but nothing stopped an edit to the source shipping with a stale generated bank. `import-questions.mjs` gains a `--check` mode: it regenerates the full output in memory and byte-compares against the shipped `questions.js` — on drift it prints "STALE — run: npm run bank" and exits 1, writing nothing (the side-report is also write-suppressed in check mode). Wired into `npm run check` right after bank-lint, so the gate is now **18 suites** and a source/bank mismatch can never ship. Control: a one-word source edit without regeneration → the check exited 1 naming the fix → restored, gate 0. Files: import-questions.mjs, package.json. Tests: gate exit 0.
+
 ## [0.136.0] - 2026-07-04
 
 - **V1.1 FE#2 — Settings surface cleanup.** Two leaks fixed: (1) the **Dev · Jukebox** (one button per synth track, exact playback) rendered in Settings for every player — it's now gated behind the same devMode detection ARM's dev tools use (`STARNIX_DEV` / `?dev`), so players never see it; (2) the **Upbeat/Chill music-style toggle** only existed inside the pause card — a player who never pauses couldn't find it. The genre row is extracted into a shared `_buildGenreRow` (identical behavior incl. the J3 uppercase-id fix and the live-bed retrigger, which no-ops on the menu) and now renders in BOTH the pause card and Settings → Audio. Pins: verify-build — Jukebox absent without dev mode; Settings shows the Music-style row; the whole JB1 jukebox suite now runs under `STARNIX_DEV` and switches it off after (a stale-handle slider drive was re-queried in the process). Control: the jukebox un-gated → the hidden-from-players pin fell → restored, gate 0. Files: starnix-shell.js, verify-build.mjs. Tests: gate exit 0.

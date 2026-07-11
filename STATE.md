@@ -103,7 +103,7 @@
 
 ## V1.1 IN PROGRESS — wave 1 (top item per area)
 
-Working VERSION_1_1.md as gated units. WAVE 1 COMPLETE (v0.128-135, top item per area). WAVE 2 IN FLIGHT: FE#2 settings cleanup (v0.136.0). NEXT: Backend#2 bank freshness, Menu#2 due-chip promotion, CC#1 answer-charged boost, KBB#2 battle debrief, Flow#2 flight plan, ARM#2 boss phases, NIT#2 quarantine (keys stay quarantined per the hard rule — investigate holds only).
+Working VERSION_1_1.md as gated units. WAVE 1 COMPLETE (v0.128-135, top item per area). WAVE 2 IN FLIGHT: FE#2 (v0.136.0), Backend#2 bank freshness — gate is 18 suites (v0.137.0). NEXT: Menu#2 due-chip promotion, CC#1 answer-charged boost, KBB#2 battle debrief, Flow#2 flight plan, ARM#2 boss phases, NIT#2 quarantine holds.
 NEXT: NIT#1 bank lint, Backend#1 save safety net, ARM#1 lost-core pool, CC#2 turns, KBB#1
 event deck, Flow#1 debrief, FE#1 focus.
 
