@@ -561,12 +561,22 @@
     var top = s.querySelector(".sx-menu-top");
     function topBtn(label, fn) { var b = el("button", "sx-btn sx-btn-ghost", label); self._on(b, "click", fn); top.appendChild(b); }
     // (v0.128.0, V1.1 Menu#1) the top Continue deduped away — the dock CTA is the one Continue
-    // (v0.87.0, L1) the due queue becomes playable: one tap -> Study mode on exactly those cards
+    // (v0.87.0, L1 / v0.138.0, V1.1 Menu#2) the due queue is the highest-learning-value CTA in
+    // the app — it now reads like one: a gold banner in the dock, escalating to a full-width
+    // strip above the missions when the queue is heavy (>= 10). Same .sx-due-chip wiring (QA-E9).
     var dueQs = this._dueQuestions(30);
     if (dueQs.length) {
-      var dueBtn = el("button", "sx-btn sx-btn-ghost sx-due-chip", "\u23F0 " + dueQs.length + " due \u00b7 Review \u25b8");
+      var heavy = dueQs.length >= 10;
+      var dueBtn = el("button", "sx-btn sx-due-chip " + (heavy ? "sx-due-strip" : "sx-due-dock"),
+        "\u23F0 " + dueQs.length + " question" + (dueQs.length === 1 ? "" : "s") + " due for review \u00b7 " + (heavy ? "Clear the queue \u25b8" : "Review \u25b8"));
       this._on(dueBtn, "click", function () { self.showExam(null, { questions: dueQs, mode: "study" }); });
-      top.appendChild(dueBtn);
+      if (heavy) {
+        var cardsHost = s.querySelector(".sx-cards");
+        cardsHost.parentNode.insertBefore(dueBtn, cardsHost);
+      } else {
+        var dock0 = s.querySelector(".sx-bridge-dock");
+        dock0.insertBefore(dueBtn, dock0.firstChild);
+      }
     }
     topBtn("Stats / Codex", function () { self.showStats(); });
     topBtn("Settings", function () { self.showSettings(); });
@@ -1628,6 +1638,8 @@
       ".sx-reduced .sx-menu-photo.on,.sx-reduced .sx-title-photo.on{animation:none;transform:scale(1.04);}",
       ".sx-due-chip{border-color:var(--gold);color:var(--gold);}",
       ".sx-due-chip:hover{background:rgba(255,200,87,.12);}",
+      ".sx-due-dock{flex:none;background:rgba(255,200,87,.1);border:1px solid var(--gold);font-weight:800;}",
+      ".sx-due-strip{display:block;width:100%;text-align:left;margin:0 0 12px;padding:13px 18px;font-size:14px;font-weight:800;background:rgba(255,200,87,.12);border:1px solid var(--gold);border-left:4px solid var(--gold);border-radius:14px;}",
       ".sx-cards{display:flex;flex-direction:column;align-items:center;gap:14px;width:100%;max-width:480px;margin:0 auto;}",
       ".sx-card{width:100%;max-width:440px;text-align:left;background:rgba(20,20,29,.9);border:1px solid var(--border);border-radius:16px;padding:20px;cursor:pointer;font-family:inherit;color:var(--text);transition:transform .08s,border-color .12s,box-shadow .12s;}",
       ".sx-card:hover{transform:translateY(-3px);}",

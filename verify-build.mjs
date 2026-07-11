@@ -1369,10 +1369,32 @@ async function runFrames(n = 6) {
       shell.showMenu();
       const chip = w.document.querySelector(".sx-due-chip");
       ok("menu shows the gold due chip with the count", !!chip && /3|due/.test(chip.textContent));
+      // (v0.138.0, V1.1 Menu#2) placement: light queue -> a dock banner; heavy queue (>=10) ->
+      // a full-width strip ABOVE the mission cards
+      ok("Menu#2: a light due queue renders as the dock banner (not top-bar chrome)",
+        chip.classList.contains("sx-due-dock") && !!chip.closest(".sx-bridge-dock"));
       chip.click();
       ok("chip launches Study mode on exactly the due subset",
         shell.screen === "exam" && shell._exam._state.mode === "study" && shell._exam._state.order.length >= 3);
       shell.showMenu();
+      {
+        // direct store mutation (K-series pattern) — due without record()'s xp/achievement side-effects
+        const poolH = SN.core.questions.pool();
+        const mapH = SN.core.mastery.all();
+        const addedH = [];
+        for (let hq = 3; hq < 13; hq++) {
+          const idH = poolH[hq].id;
+          if (!mapH[idH]) { mapH[idH] = { bucket: 1, lastSeen: 0, streak: 0, misses: 1, seen: 1 }; addedH.push(idH); }
+          else { mapH[idH].bucket = Math.max(1, mapH[idH].bucket); mapH[idH].lastSeen = 0; }
+        }
+        shell.showMenu(); await wait(10);
+        const strip = w.document.querySelector(".sx-due-chip");
+        ok("Menu#2: a heavy due queue (>=10) escalates to a full-width strip above the missions",
+          !!strip && strip.classList.contains("sx-due-strip")
+          && strip.nextElementSibling && strip.nextElementSibling.classList.contains("sx-cards"));
+        addedH.forEach(idH => { delete mapH[idH]; });                    // state-neutral for downstream drives
+        shell.showMenu(); await wait(10);
+      }
 
       const cR = w.document.createElement("div"); w.document.body.appendChild(cR);
       let redrilled = null;

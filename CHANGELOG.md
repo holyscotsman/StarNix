@@ -6,6 +6,10 @@ Sections per entry: **Added · Changed · Fixed · Removed**. Each line: `<what>
 
 ---
 
+## [0.138.0] - 2026-07-04
+
+- **V1.1 Menu#2 — the due-review queue reads like what it is.** The "⏰ N due · Review" chip — the single highest-learning-value CTA in the app — sat in the top-right ghost-button row styled as tertiary chrome next to Settings. Now: a light queue renders as a **gold banner at the head of the bridge dock** (first thing in the daily row); a heavy queue (≥ 10 due) escalates to a **full-width gold strip directly above the mission cards** ("N questions due for review · Clear the queue ▸"). Same `.sx-due-chip` behavioral class and one-tap-to-Study wiring (QA-E9 stays valid). Spaced retrieval only works if the queue gets tapped daily — presentation is the lever. Pins: verify-build +2 (light → dock banner inside `.sx-bridge-dock`; heavy → `.sx-due-strip` immediately above `.sx-cards`), with the heavy drive using direct mastery-store mutation (the K-series pattern) so it stays state-neutral for the downstream achievement drives — seeding via `record()` initially broke two of them, caught and fixed. Control: escalation forced off → the heavy pin fell → restored, gate 0. Files: starnix-shell.js, verify-build.mjs. Tests: gate exit 0.
+
 ## [0.137.0] - 2026-07-04
 
 - **V1.1 Backend#2 — bank-freshness gate.** `questions.js` is generated from `starnix_questions.md`, but nothing stopped an edit to the source shipping with a stale generated bank. `import-questions.mjs` gains a `--check` mode: it regenerates the full output in memory and byte-compares against the shipped `questions.js` — on drift it prints "STALE — run: npm run bank" and exits 1, writing nothing (the side-report is also write-suppressed in check mode). Wired into `npm run check` right after bank-lint, so the gate is now **18 suites** and a source/bank mismatch can never ship. Control: a one-word source edit without regeneration → the check exited 1 naming the fix → restored, gate 0. Files: import-questions.mjs, package.json. Tests: gate exit 0.
