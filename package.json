@@ -10,7 +10,7 @@
   "scripts": {
     "build": "node build.mjs",
     "verify": "node build.mjs && node verify-build.mjs",
-    "check": "node build.mjs && node verify-build.mjs && node audio-smoke.mjs && node cc-view-smoke.mjs && node cc-fairness-check.mjs && node exhibit-check.mjs && node scheduler-test.mjs && node multi-answer-test.mjs && node shuffle-test.mjs && node timer-test.mjs && node arm-run.cjs && node cc-run.cjs && node cc-death-paths.cjs && KBB_ASSERT=1 node kbb-balance.cjs && node kbb-run.cjs && node kbb-draw.cjs",
+    "check": "node build.mjs && node verify-build.mjs && node audio-smoke.mjs && node cc-view-smoke.mjs && node cc-fairness-check.mjs && node exhibit-check.mjs && node bank-lint.mjs && node scheduler-test.mjs && node multi-answer-test.mjs && node shuffle-test.mjs && node timer-test.mjs && node arm-run.cjs && node cc-run.cjs && node cc-death-paths.cjs && KBB_ASSERT=1 node kbb-balance.cjs && node kbb-run.cjs && node kbb-draw.cjs",
     "bank": "node import-questions.mjs",
     "test": "npm run check"
   },
