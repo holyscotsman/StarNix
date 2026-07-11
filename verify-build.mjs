@@ -331,7 +331,14 @@ async function runFrames(n = 6) {
     ok("advancing increments the sector", armT.sectorNum() === 2);
     ok("each new sector re-briefs the commander", armT.state() === "BRIEF" && armT.briefInfo().core === -1);
     const s2qids = armT.coreQids();
-    ok("sector 2 draws fresh questions (no-reuse across sectors)", s2qids.length === 5 && s2qids.every(id => !s1qids.includes(id)));
+    // (v0.131.0, ARM#1) recovered cores are INTENTIONAL repeats — the resurfacing pool re-serves
+    // sector-1 losses. No-reuse now applies to the non-recovered draws; any repeat must be flagged.
+    {
+      const rIdx = armT.recoveredIdx ? armT.recoveredIdx() : [];
+      const freshOK = s2qids.every((id, i) => rIdx.includes(i) ? s1qids.includes(id) : !s1qids.includes(id));
+      ok("sector 2: non-recovered cores are fresh; recovered cores repeat EXACTLY the sector-1 losses (ARM#1)",
+        s2qids.length === 5 && freshOK);
+    }
     ok("difficulty ceiling never drops sector-to-sector", armT.bandCeil(0) >= s1ceil0);
     ok("difficulty ceiling rises across tiers (Hard > Medium > Easy)", armT.bandCeilAt(9, 0) > armT.bandCeilAt(5, 0) && armT.bandCeilAt(5, 0) > armT.bandCeilAt(1, 0));
     // (v0.91.0) opener variety: sector 1 stays the gentle [1,1] intro; sector 2+ openers

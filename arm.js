@@ -177,6 +177,7 @@
     var NEBULA = null;                                        // P6a parallax backdrop blobs
     var dq = [], dqi = 0, dIn = 0, dLost = 0, dCoins = 0;
     var sectorLost = [];              // collect-fails this attempt (commit on home)
+    var lostPool = [];                // (v0.131.0, V1.1 ARM#1) run-level resurfacing pool — lost cores COME BACK
     var reducedMotion = false, extraTime = false, musicOn = true, sfxOn = true, highContrast = false;
     var shieldRegenDelay = 4, shieldRegenRate = 18;   // (v0.93.0, A8) Shield Cell upgrades these
     var runSeq = 0;   // (v0.91.0) per-mount run counter: "Fly again"/sector replays draw fresh questions
@@ -338,6 +339,10 @@
         sector = rz.sector; coins = rz.coins | 0; stationBuild = rz.stationBuild | 0;
         if (rz.lvl) for (var rk2 in lvl) { if (Object.prototype.hasOwnProperty.call(rz.lvl, rk2)) lvl[rk2] = rz.lvl[rk2] | 0; }
         if (rz.usedIds && rz.usedIds.length) usedIds = rz.usedIds.slice();
+        if (rz.lostIds && rz.lostIds.length && ctx.questions && ctx.questions.byId) {   // (ARM#1) the pool survives resume
+          lostPool = [];
+          for (var rl = 0; rl < rz.lostIds.length; rl++) { var rq2 = ctx.questions.byId(rz.lostIds[rl]); if (rq2) lostPool.push(rq2); }
+        }
         deriveStats(); resumePending = true;
       }
       musicOn = SET.music !== false; sfxOn = SET.sfx !== false;
@@ -755,20 +760,39 @@
     /* ---------------------------------------------------------------------- */
     /* sector setup                                                           */
     /* ---------------------------------------------------------------------- */
+    // (v0.131.0, V1.1 ARM#1) lost cores resurface: field losses + depot fails join a run-level
+    // pool (deduped, capped) and later sectors re-serve them FIRST, marked as recovered cores.
+    // This is the Leitner promise — missed material comes back — inside the campaign itself.
+    function commitLost() {
+      for (var li = 0; li < sectorLost.length; li++) {
+        var lq = sectorLost[li], dup = false;
+        for (var lj = 0; lj < lostPool.length; lj++) if (lostPool[lj].id === lq.id) { dup = true; break; }
+        if (!dup) lostPool.push(lq);
+      }
+      if (lostPool.length > 12) lostPool = lostPool.slice(lostPool.length - 12);
+      sectorLost = [];
+    }
     function drawCoreQuestions() {
       // one question per core, distinct across the WHOLE run (usedIds persists between sectors).
       // No domain filter: a single domain has too few questions for multi-sector no-reuse.
       cores = []; bossQueue = []; bossActive = isBossSector(sector);   // boss sectors (3/6/9/12): the boss holds the cores
       var ptypes = runRng.shuffle(PUZZLE_TYPES.slice()), pj = 0;   // per-sector puzzle order (runRng is forked per sector)
       var pos = randomCorePositions(runRng);                      // seeded core positions, regenerated each sector
+      commitLost();                                              // harvest any stragglers (defensive: nextSector path)
+      var recoveredN = 0;
       for (var i = 0; i < LAYOUT.length; i++) {
         var L = LAYOUT[i];
-        var draw = Q.next({ game: "ARM", difficultyBand: bandFor(i), excludeIds: usedIds, rng: runRng, shuffle: true });
-        var q = draw.question;
-        usedIds.push(q.id);
+        var q, recovered = false;
+        if (!bossActive && recoveredN < 2 && lostPool.length) {   // (ARM#1) re-serve up to 2 lost cores per standard sector
+          q = lostPool.shift(); recovered = true; recoveredN++;
+        } else {
+          var draw = Q.next({ game: "ARM", difficultyBand: bandFor(i), excludeIds: usedIds, rng: runRng, shuffle: true });
+          q = draw.question;
+          usedIds.push(q.id);
+        }
         if (bossActive) { bossQueue.push(q); continue; }   // boss holds it; shed one per weakpoint break (no open core)
         cores.push({
-          idx: i, q: q, x: pos[i].x, y: pos[i].y, r: 26, pulse: runRng.next() * TAU,
+          idx: i, q: q, recovered: recovered, x: pos[i].x, y: pos[i].y, r: 26, pulse: runRng.next() * TAU,
           ch: L, state: (L.kind === "combat") ? "locked" : "unlocked",
           gateActive: false, qOpen: false,
           puzType: (L.kind === "puzzle") ? ptypes[pj++ % ptypes.length] : null,
@@ -954,7 +978,7 @@
       disarmPuzzleTimer(); puzzleCore = null; puzzleDoneFlag = false;
       lvl.engine = lvl.maneuver = lvl.capacitor = lvl.shieldCell = lvl.rapid = 0;
       charges = undefined; shields = undefined; deriveStats(); charges = maxCharges; shields = maxShields; rechargeTimer = rechargeTime;
-      held = []; stationBuild = 0; sectorLost = []; usedIds = [];
+      held = []; stationBuild = 0; sectorLost = []; usedIds = []; lostPool = [];
       runRng = RNG.fork("arm-run-" + sector + ":" + (runSeq++));   // deterministic per run; (v0.91.0) runSeq varies retries/replays
       makeStars();
       startBriefing();
@@ -1410,8 +1434,7 @@
     function enterHome() {
       shakeAmt = 0;   // (v0.69.0, J1) the home station is calm water
       enemies = []; clearProjectiles(); asteroids = []; clearParticles();
-      // commit this attempt's lost cores to the (Increment-2) resurfacing pool
-      sectorLost = [];
+      commitLost();   // (v0.131.0, V1.1 ARM#1) the Increment-2 promise, finally kept
       ship.x = HOME_ENTRY_X; ship.y = HOME_ENTRY_Y; ship.vx = ship.vy = 0; ship.angle = -Math.PI / 2;
       setState("HOME"); setBanner("⬢ Fly to the MCI Station and dock to deliver your " + held.length + " core" + (held.length === 1 ? "" : "s")); hud();
     }
@@ -1426,7 +1449,7 @@
       setState("DEPOT_Q");
       showQuestion(core.q, "⬢ Depot install " + (dqi + 1) + " / " + dq.length + " · " + conceptTag(core), true, function (ok) {
         if (ok) { stationBuild++; coins += 25; dIn++; dCoins += 25; sfx("correct"); }
-        else { dLost++; sfx("wrong"); }
+        else { dLost++; sectorLost.push(core.q); sfx("wrong"); }   // (ARM#1) depot fails resurface too
         dqi++; hud(); stepDeposit();
       });
     }
@@ -1447,7 +1470,7 @@
     function saveCheckpoint() {
       try {
         if (!PERS) return;
-        var snap = { sector: sector, coins: coins, lvl: { engine: lvl.engine, maneuver: lvl.maneuver, capacitor: lvl.capacitor, shieldCell: lvl.shieldCell, rapid: lvl.rapid }, stationBuild: stationBuild, usedIds: usedIds.slice(0, 400), label: 'Sector ' + sector + ' of ' + SECTORS + ' \u00b7 ' + coins + ' \u2b21 \u00b7 station ' + stationBuild + '/' + TOTAL };
+        var snap = { sector: sector, coins: coins, lvl: { engine: lvl.engine, maneuver: lvl.maneuver, capacitor: lvl.capacitor, shieldCell: lvl.shieldCell, rapid: lvl.rapid }, stationBuild: stationBuild, usedIds: usedIds.slice(0, 400), lostIds: lostPool.map(function (lp) { return lp.id; }).slice(0, 12), label: 'Sector ' + sector + ' of ' + SECTORS + ' \u00b7 ' + coins + ' \u2b21 \u00b7 station ' + stationBuild + '/' + TOTAL };
         // (v0.108.0, G4) LIVE-profile write — clone-writes were clobbered by the next answer
         if (PERS.update) PERS.update(function (p) { p.saves = p.saves || {}; p.saves.ARM = snap; });
         else if (PERS.load && PERS.save) PERS.load().then(function (p) { p.saves = p.saves || {}; p.saves.ARM = snap; return PERS.save(p); }).catch(function () {});
@@ -2552,6 +2575,13 @@
     }
     function drawCore(core) {
       var lit = 0.5 + 0.5 * Math.sin(core.pulse); c2d.save(); c2d.translate(core.x, core.y);
+      if (core.recovered && core.state !== "collected" && core.state !== "lost") {   // (ARM#1) a recovered core wears a gold halo
+        c2d.save(); c2d.globalAlpha = 0.35 + 0.25 * lit; c2d.strokeStyle = COL.gold; c2d.lineWidth = 2;
+        if (c2d.setLineDash) c2d.setLineDash([4, 6]);
+        c2d.beginPath(); c2d.arc(0, 0, core.r + 12, 0, TAU); c2d.stroke();
+        if (c2d.setLineDash) c2d.setLineDash([]);
+        c2d.restore();
+      }
       // danger ring: only combat cores (guardians/asteroid), and only before the fight is engaged.
       var ringOn = (core.ch.kind === "combat" && core.state === "locked" && !core.gateActive);
       if (ringOn) {
@@ -2957,6 +2987,8 @@
         sectorNum: function () { return sector; },
         sectorsTotal: function () { return SECTORS; },
         coreQids: function () { return cores.map(function (c) { return c.q.id; }); },
+        lostPoolIds: function () { return lostPool.map(function (lp) { return lp.id; }); },   // (ARM#1)
+        recoveredIdx: function () { var o = []; for (var i = 0; i < cores.length; i++) if (cores[i].recovered) o.push(i); return o; },
         bandCeil: function (i) { return bandFor(i)[1]; },
         bandCeilAt: function (sec, i) { return bandFor(i, sec)[1]; },
         tierOf: function (sec) { return tierOf(sec); },

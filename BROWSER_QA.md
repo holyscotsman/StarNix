@@ -229,6 +229,11 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-ARM-POOL — recovered cores (added v0.131.0).** Lose a core in ARM (fail a scan), finish
+  the sector, fly the next one: one core should wear a gold dashed halo — that's your missed
+  question coming back. Confirm the halo reads as "recovered", not as an error. WRONG: no halo,
+  or lost questions never reappearing.
+
 - **QA-KBB-SWAP — artifact cards + move buttons (added v0.127.0; browser-VERIFIED).** KBB battle:
   the bottom fan is now the artifact collection (5 card slots — filled perks as cards with rarity
   footers, empties dashed), and Attack / Brace +N / Repair +N are compact buttons at the top of the

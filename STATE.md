@@ -103,7 +103,7 @@
 
 ## V1.1 IN PROGRESS — wave 1 (top item per area)
 
-Working VERSION_1_1.md as gated units. DONE: Menu#1 Continue-survives-reload (v0.128.0); NIT#1 bank lint + 3 shuffle-integrity fixes (v0.129.0, 17 suites); Backend#1 save safety net — pagehide flush, :bak fallback, export/import in Settings (v0.130.0).
+Working VERSION_1_1.md as gated units. DONE: Menu#1 Continue (v0.128.0); NIT#1 bank lint (v0.129.0, 17 suites); Backend#1 save safety net (v0.130.0); ARM#1 lost-core resurfacing pool (v0.131.0). NEXT: CC#2 turns, KBB#1 event deck, Flow#1 debrief, FE#1 focus.
 NEXT: NIT#1 bank lint, Backend#1 save safety net, ARM#1 lost-core pool, CC#2 turns, KBB#1
 event deck, Flow#1 debrief, FE#1 focus.
 

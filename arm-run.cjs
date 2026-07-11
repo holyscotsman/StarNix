@@ -405,4 +405,25 @@ var detSector3 = null;   // captured for the determinism probe against window 2
   ok(V2.root.childNodes.length === 0, 'window-2 unmount also leaves an empty root');
 })();
 
+/* ============ (v0.131.0, V1.1 ARM#1) LOST-CORE RESURFACING POOL ============ */
+(function lostPool() {
+  group('ARM#1: lost cores resurface next sector as recovered cores');
+  var V3 = newWindow(), ctx3 = H.makeCtx({ seed: SEED + 31 });
+  V3.mod.mount(V3.root, ctx3);
+  var T3 = V3.root.__armTest;
+  T3.endBriefingIntro();
+  var g3 = 0; while (T3.state() === 'BRIEF' && g3++ < 12) { if (pickBrief(T3, /hyperdrive/i)) break; pickBrief(T3, /understand|go ahead/i); }
+  T3.flushWarp(); T3.step(0.1);
+  T3.prepCore(4); T3.arrive(4);                         // same core the main grading drive uses for wrong->lost
+  var qLost = T3.cores()[4].qid;
+  T3.answer(false);                                     // lose the core through the REAL grading path
+  ok(T3.cores()[4].state === 'lost', 'setup: core 4 lost via a wrong answer');
+  T3.nextSector();                                      // sector boundary commits + redraws
+  var rIdx3 = T3.recoveredIdx(), qids3 = T3.coreQids();
+  var reserved3 = rIdx3.map(function (i) { return qids3[i]; });
+  ok(reserved3.indexOf(qLost) >= 0, 'the lost question resurfaces in sector 2 as a RECOVERED core');
+  ok(T3.lostPoolIds().indexOf(qLost) < 0, 'consumption removes it from the pool (no double-serve)');
+  V3.mod.unmount();
+})();
+
 H.summary('ARM RUN');
