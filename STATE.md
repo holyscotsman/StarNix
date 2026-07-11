@@ -103,7 +103,7 @@
 
 ## V1.1 IN PROGRESS — wave 1 (top item per area)
 
-Working VERSION_1_1.md as gated units. WAVE 1 COMPLETE (v0.128-135, top item per area). WAVE 2 IN FLIGHT: FE#2 (v0.136.0), Backend#2 (v0.137.0, 18 suites), Menu#2 due-chip promotion (v0.138.0). NEXT: CC#1 answer-charged boost, KBB#2 battle debrief, Flow#2 flight plan, ARM#2 boss phases, NIT#2 quarantine holds.
+Working VERSION_1_1.md as gated units. WAVE 1 COMPLETE (v0.128-135, top item per area). WAVE 2 IN FLIGHT: FE#2 (v0.136.0), Backend#2 (v0.137.0, 18 suites), Menu#2 due-chip promotion (v0.138.0), CC#1 answer-charged boost (v0.139.0 — boostCharge meter in CCSim: correct=+1, full=arm+reset, wrong=drain half; HUD gold Boost bar by the shield pips; G2 checkpoint carries the charge; the flat gate-count modulo is gone). NEXT: KBB#2 battle debrief, Flow#2 flight plan, ARM#2 boss phases, NIT#2 quarantine holds.
 NEXT: NIT#1 bank lint, Backend#1 save safety net, ARM#1 lost-core pool, CC#2 turns, KBB#1
 event deck, Flow#1 debrief, FE#1 focus.
 

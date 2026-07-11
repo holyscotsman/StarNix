@@ -264,6 +264,7 @@
     this.boostActive = false;                   // 04 task 8: boost power-up state
     this._gatesPassed = 0;
     this._boostPending = false;
+    this.boostCharge = 0;              // (v0.139.0, V1.1 CC#1) knowledge fuels the boost: corrects charge it
     this._boostTargetScore = 0; this._boostCalmUntil = 0;
     this._nextCoinAt = cfg.BASE_GAP * 0.5;
     // (v0.102.0, C9, Jason) squeeze stretches: the canyon narrows to TWO lanes for 1-2 km
@@ -552,8 +553,7 @@
 
   // ---- gate => pause + question ----
   CCSim.prototype._passGate = function (c) {
-    this._gatesPassed++;                                                          // 04 task 8
-    if (this._gatesPassed % this.cfg.GATES_PER_BOOST === 0) this._boostPending = true;  // boost every 5 gates (fires on resume)
+    this._gatesPassed++;                                                          // 04 task 8 (stat only now — arming lives in answer())
     var q = null;
     var prov = this.ctx.questions;
     if (prov && typeof prov.next === 'function') {
@@ -620,8 +620,13 @@
 
     if (correct) {
       if (this.shields < cfg.SHIELDS_MAX) { this.shields++; delta = 1; }
+      // (v0.139.0, V1.1 CC#1) the run's biggest reward is EARNED now: each correct gate answer
+      // charges the boost meter; a full meter arms the ride (fires on resume, as before).
+      this.boostCharge++;
+      if (this.boostCharge >= cfg.GATES_PER_BOOST) { this.boostCharge = 0; this._boostPending = true; }
     } else {
       this.shields -= 2; delta = -2;            // 04 task 4: a wrong gate answer costs 2 shields
+      this.boostCharge = Math.floor(this.boostCharge / 2);   // (CC#1) a miss drains half the charge
     }
 
     // unique-per-run tracking
@@ -1911,6 +1916,7 @@
         var rz = ctx.resumeData;
         sim.scoreDistance = rz.scoreDistance; sim.shields = Math.max(1, rz.shields | 0);
         sim.coinScore = rz.coinScore | 0; sim._gatesPassed = rz.gatesPassed | 0;
+        sim.boostCharge = rz.boostCharge | 0;   // (v0.139.0, CC#1)
         if (rz.nextTurnScore) sim._nextTurnScore = rz.nextTurnScore;
         sim._nextGateScore = (Math.floor(sim.scoreDistance / (sim.cfg.GATE_KM * 1000)) + 1) * (sim.cfg.GATE_KM * 1000);   // (G4) grid snap
         sim._resumed = true;                                              // (G4) applyUpgrades must NOT re-fill the checkpointed shields
@@ -2099,6 +2105,7 @@
               if (P4 && P4.load && P4.save) {
                 var snap = { scoreDistance: sim.scoreDistance, shields: sim.shields, coinScore: sim.coinScore, gatesPassed: sim._gatesPassed, nextTurnScore: sim._nextTurnScore,
                   boostLeft: sim.boostActive ? Math.max(0, sim._boostTargetScore - sim.scoreDistance) : 0,   // (v0.108.0, G4) an earned ride is part of the save
+                  boostCharge: sim.boostCharge | 0,   // (v0.139.0, CC#1) so is the earned charge
                   label: (sim.scoreDistance / 1000).toFixed(1) + ' km \u00b7 ' + sim.shields + ' shields \u00b7 ' + sim.coinScore + ' cells' };
                 if (P4.update) P4.update(function (p) { p.saves = p.saves || {}; p.saves.CC = snap; });   // (G4 HIGH) live profile
                 else P4.load().then(function (p) { p.saves = p.saves || {}; p.saves.CC = snap; return P4.save(p); }).catch(function () {});
@@ -2201,6 +2208,12 @@
             pip.className = 'cc-pip' + (i < sim.shields ? ' on' : '');
             el.shieldPips.appendChild(pip);
           }
+        }
+        var bc = sim.boostActive ? -1 : sim.boostCharge;                // (CC#1) meter: -1 = riding
+        if (bc !== hudCache.boostCharge) {
+          hudCache.boostCharge = bc;
+          var bi = el.boostBar && el.boostBar.firstChild;
+          if (bi) { bi.style.width = (bc < 0 ? 100 : Math.round(bc / CONFIG.GATES_PER_BOOST * 100)) + '%'; el.boostBar.className = 'cc-boostbar' + (bc < 0 ? ' riding' : (bc >= CONFIG.GATES_PER_BOOST - 1 && bc > 0 ? ' hot' : '')); }
         }
         var km10 = Math.floor(sim.scoreDistance / 100);                 // 0.1 km display granularity
         if (km10 !== hudCache.score) { hudCache.score = km10; el.score.textContent = (km10 / 10).toFixed(1) + ' km'; }
@@ -2440,7 +2453,10 @@
     var boostOvr = ce('div', 'cc-boost-ovr'); boostOvr.innerHTML = '<span>BOOST MODE</span>'; root.appendChild(boostOvr);
     var turnBanner = ce('div', 'cc-turn-banner'); root.appendChild(turnBanner);   // (v0.104.0, C4)
     var shieldWrap = ce('div', 'cc-shieldwrap'); var slabel = ce('span', 'cc-lbl'); slabel.textContent = 'Shields';
-    var shieldPips = ce('div', 'cc-pips'); shieldWrap.appendChild(slabel); shieldWrap.appendChild(shieldPips); hud.appendChild(shieldWrap);
+    var shieldPips = ce('div', 'cc-pips'); shieldWrap.appendChild(slabel); shieldWrap.appendChild(shieldPips);
+    var blabel = ce('span', 'cc-lbl cc-boostlbl'); blabel.textContent = 'Boost';
+    var boostBar = ce('div', 'cc-boostbar'); boostBar.innerHTML = '<i></i>';
+    shieldWrap.appendChild(blabel); shieldWrap.appendChild(boostBar); hud.appendChild(shieldWrap);
     var score = ce('div', 'cc-score'); hud.appendChild(score);
     var dist = ce('div', 'cc-dist'); hud.appendChild(dist);
     var cells = ce('div', 'cc-cells'); hud.appendChild(cells);   // (J9) this-run energy cells
@@ -2477,7 +2493,7 @@
     var introCap = ce('div', 'cc-intro-cap'); introInner.appendChild(introCap);
     var introSkip = ce('button', 'cc-intro-skip'); introSkip.textContent = 'Skip \u25B8'; intro.appendChild(introSkip);
 
-    return { root: root, canvas: canvas, fallback: fallback, hud: hud, shieldPips: shieldPips, score: score, dist: dist, buffs: buffs,
+    return { root: root, canvas: canvas, fallback: fallback, hud: hud, shieldPips: shieldPips, boostBar: boostBar, score: score, dist: dist, buffs: buffs,
       kLeft: kLeft, kRight: kRight, kJump: kJump, kDuck: kDuck, replay: replay,
       overlay: overlay, qStem: qStem, qOpts: qOpts, qFeedback: qFeedback, qTimer: qTimer, cells: cells, boostOvr: boostOvr, turnBanner: turnBanner,
       intro: intro, introCap: introCap, introEyebrow: introEyebrow, introSkip: introSkip,
@@ -2529,6 +2545,11 @@
     '.cc-pips{display:flex;gap:5px;}' +
     '.cc-pip{width:16px;height:8px;border-radius:3px;border:1px solid #34344a;background:transparent;}' +
     '.cc-pip.on{background:linear-gradient(90deg,#1FDDE9,#19a9b3);border-color:#1FDDE9;box-shadow:0 0 8px rgba(31,221,233,.6);}' +
+    '.cc-boostlbl{margin-left:14px;}' +
+    '.cc-boostbar{width:64px;height:8px;border-radius:4px;border:1px solid #34344a;overflow:hidden;}' +
+    '.cc-boostbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#FFC857,#FF9857);transition:width .25s;}' +
+    '.cc-boostbar.hot i{box-shadow:0 0 10px rgba(255,200,87,.7);}' +
+    '.cc-boostbar.riding i{background:linear-gradient(90deg,#1FDDE9,#7855FA);}' +
     '.cc-score{font-size:22px;font-weight:800;color:#FFC857;text-shadow:0 0 10px rgba(255,200,87,.4);margin-left:auto;}' +
     '.cc-dist{font-size:13px;color:#9a9aad;}' +
     '.cc-buffs{font-size:13px;color:#92DD23;min-width:30px;}' +

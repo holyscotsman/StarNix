@@ -277,18 +277,55 @@ function runToQuestion(sim, maxSecs, pinShields) {
 
 /* ============ 4) BOOST: every 5th gate, invulnerable fast-forward ============ */
 (function boost() {
-  group('BOOST: fires on the 5th gate, invulnerable, covers the promised distance');
+  group('BOOST: earned by corrects, invulnerable, covers the promised distance');
   var sim = mkSim(SEED + 3);
-  sim._gatesPassed = CFG.GATES_PER_BOOST - 1;           // next gate is the trigger
+  sim.boostCharge = CFG.GATES_PER_BOOST - 1;            // (v0.139.0, CC#1) one correct short of full
   ok(runToQuestion(sim, 90, CFG.SHIELDS_MAX), 'the trigger gate arrives');
   sim.answer(sim.pending.question.correctIndex);
   var scoreBefore = sim.scoreDistance;
   sim.resumeAfterQuestion();
-  ok(sim.boostActive === true, 'boost activates on resume after the 5th gate');
+  ok(sim.boostActive === true, 'CC#1: the charging correct arms the boost, fired on resume');
   stepFor(sim, CFG.BOOST_TIME + 1.5);
   ok(sim.boostActive === false, 'boost ends on its own once the distance is covered');
   var gained = sim.scoreDistance - scoreBefore;
   ok(gained >= CFG.BOOST_KM * 1000 * 0.95, 'boost covers ~' + CFG.BOOST_KM + ' scored km (+' + Math.round(gained / 1000) + ' km)');
+})();
+
+/* ============ 4b) CC#1: THE BOOST IS EARNED — corrects charge it, a miss drains half ============ */
+(function boostCharge() {
+  group('CC#1: answer-charged boost — corrects fill the meter, a wrong answer drains half');
+  var sim = mkSim(SEED + 31);
+  ok(sim.boostCharge === 0, 'a fresh run starts with an empty meter');
+  // wrong first: no charge lost from empty, NO boost momentum
+  ok(runToQuestion(sim, 90, CFG.SHIELDS_MAX), 'gate 1 arrives');
+  sim.answer((sim.pending.question.correctIndex + 1) % sim.pending.question.options.length);
+  ok(sim.boostCharge === 0 && !sim._boostPending, 'a miss on an empty meter stays empty (no underflow)');
+  sim.shields = CFG.SHIELDS_MAX; sim.resumeAfterQuestion();
+  // two corrects back to back: full meter -> armed -> meter resets
+  ok(runToQuestion(sim, 120, CFG.SHIELDS_MAX), 'gate 2 arrives');
+  sim.answer(sim.pending.question.correctIndex);
+  ok(sim.boostCharge === 1 && !sim._boostPending, 'first correct: half charge, not armed yet');
+  sim.resumeAfterQuestion();
+  ok(!sim.boostActive, 'half a meter buys nothing — no boost fires');
+  ok(runToQuestion(sim, 120, CFG.SHIELDS_MAX), 'gate 3 arrives');
+  sim.answer(sim.pending.question.correctIndex);
+  ok(sim.boostCharge === 0 && sim._boostPending === true, 'second correct: meter full -> boost armed, charge banked to 0');
+  sim.resumeAfterQuestion();
+  ok(sim.boostActive === true, 'the earned boost fires on resume');
+  for (var bt = 0; bt < 60 * 20 && sim.boostActive; bt++) { sim.shields = CFG.SHIELDS_MAX; sim.step(1 / 60); if (sim.phase === 'QUESTION') { sim.answer(sim.pending.question.correctIndex); sim.resumeAfterQuestion(); } }
+  // drain: charge 1, miss -> floor(1/2) = 0
+  var s2 = mkSim(SEED + 32);
+  s2.boostCharge = 1;
+  ok(runToQuestion(s2, 90, CFG.SHIELDS_MAX), 'drain probe reaches a gate');
+  s2.answer((s2.pending.question.correctIndex + 1) % s2.pending.question.options.length);
+  ok(s2.boostCharge === 0 && !s2._boostPending, 'a miss drains half the charge (1 -> 0)');
+  // gate count keeps ticking as a stat but no longer arms anything on its own
+  var s3 = mkSim(SEED + 33);
+  s3._gatesPassed = 99;
+  ok(runToQuestion(s3, 90, CFG.SHIELDS_MAX), 'stat probe reaches a gate');
+  ok(s3._gatesPassed === 100 && !s3._boostPending, 'gate COUNT alone never arms a boost any more (stat only)');
+  s3.answer((s3.pending.question.correctIndex + 1) % s3.pending.question.options.length);
+  ok(!s3._boostPending, 'even at 100 gates, a wrong answer arms nothing');
 })();
 
 /* ============ 5) CRASH + I-FRAMES + DETERMINISM ============ */
@@ -352,7 +389,7 @@ function runToQuestion(sim, maxSecs, pinShields) {
   // boost upgrade: +50% covered distance
   var s3 = mkSim(SEED + 9);
   s3.applyUpgrades({ boost: 1 });
-  s3._gatesPassed = CFG.GATES_PER_BOOST - 1;
+  s3.boostCharge = CFG.GATES_PER_BOOST - 1;             // (v0.139.0, CC#1) charge model
   ok(runToQuestion(s3, 90, CFG.SHIELDS_MAX), 'boost-upgrade probe reaches the trigger gate');
   s3.answer(s3.pending.question.correctIndex);
   var sc0 = s3.scoreDistance;
@@ -360,7 +397,7 @@ function runToQuestion(sim, maxSecs, pinShields) {
   stepFor(s3, CFG.BOOST_TIME + 1.5);
   var gained = s3.scoreDistance - sc0;
   ok(gained >= CFG.BOOST_KM * 1500 * 0.95, 'overcharged boost covers ~+50% (' + Math.round(gained / 1000) + ' km vs stock ' + CFG.BOOST_KM + ')');
-  ok(CFG.GATES_PER_BOOST === 2, 'JB6: boost fires every 2 gates = every 20 km (was 50)');
+  ok(CFG.GATES_PER_BOOST === 2, 'JB6/CC#1: a full charge costs 2 correct answers (GATES_PER_BOOST 2)');
   // passive magnet: a neighbouring-lane cell drifts toward the player
   var s4 = mkSim(SEED + 10);
   s4.applyUpgrades({ magnet: 1 });

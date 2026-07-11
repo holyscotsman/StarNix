@@ -473,9 +473,24 @@ async function runFrames(n = 6) {
     ok("first gate lands at FIRST_GATE_KM (early learning hook), before the 10 km cadence (v0.126.0, Jason)", ccSim._nextGateScore === cfg7.FIRST_GATE_KM * 1000 && cfg7.FIRST_GATE_KM < cfg7.GATE_KM);
     // 04 task 8: every 5 gates -> boost (invuln + ~100 km fast-forward, then normal cadence resumes)
     ccSim.reset();
-    ccSim._gatesPassed = cfg7.GATES_PER_BOOST - 1;
-    ccSim._passGate(ccSim.gates.items[0]);               // the Nth gate -> flags a boost
-    ok("every 5th gate flags a boost", ccSim._boostPending === true);
+    // (v0.139.0, V1.1 CC#1) the boost is EARNED: corrects charge the meter, a miss drains half.
+    // These sim answers record into REAL mastery (cc.js answer()) — snapshot + restore the two
+    // touched entries so the downstream due-queue pins (L1/L2) see unchanged state.
+    const ccMmAll = SN.core.mastery.all();
+    const ccChgPrev = {};
+    const ccNoteQ = () => { const qid = ccSim.pending.question.id; if (!(qid in ccChgPrev)) ccChgPrev[qid] = ccMmAll[qid] ? JSON.parse(JSON.stringify(ccMmAll[qid])) : null; };
+    ccSim.boostCharge = 1;
+    ccSim._passGate(ccSim.gates.items[0]);               // gate opens the question
+    ccNoteQ();
+    ccSim.answer((ccSim.pending.question.correctIndex + 1) % 4);   // a miss
+    ok("CC#1: a wrong answer drains half the charge (1 -> 0), no boost", ccSim.boostCharge === 0 && ccSim._boostPending === false);
+    ccSim.resumeAfterQuestion();
+    ccSim.boostCharge = cfg7.GATES_PER_BOOST - 1;        // one correct short of full
+    ccSim._passGate(ccSim.gates.items[0]);
+    ccNoteQ();
+    ccSim.answer(ccSim.pending.question.correctIndex);   // the charging correct
+    ok("CC#1: a correct gate answer completes the charge and arms the boost", ccSim._boostPending === true && ccSim.boostCharge === 0);
+    for (const ck in ccChgPrev) { if (ccChgPrev[ck]) ccMmAll[ck] = ccChgPrev[ck]; else delete ccMmAll[ck]; }
     ccSim.phase = "EXPLAIN"; ccSim.pending = null;       // jump to the resume point
     ccSim.resumeAfterQuestion();
     ok("boost activates on resume (invuln + fast-forward)", ccSim.boostActive === true && ccSim._boostTargetScore > ccSim.scoreDistance);
@@ -1143,13 +1158,14 @@ async function runFrames(n = 6) {
     ok("New game discards the save and starts fresh", !SN.core.profile.saves.KBB && kSt2.run.section === 1 && kSt2.run.round === 1);
     shell.exitGame(); await wait(120);
     // CC restore (module-level: resumeData -> sim fields)
-    SN.core.profile.saves = { CC: { scoreDistance: 123000, shields: 3, coinScore: 44, gatesPassed: 12, nextTurnScore: 255000, label: "123.0 km" } };
+    SN.core.profile.saves = { CC: { scoreDistance: 123000, shields: 3, coinScore: 44, gatesPassed: 12, boostCharge: 1, nextTurnScore: 255000, label: "123.0 km" } };
     shell.enterGame("CC");
     ok("CC chooser appears", shell.screen === "resume:CC");
     [...w.document.querySelectorAll("button")].find(n => /Resume/.test(n.textContent)).click();
     await wait(400);
     const ccS = shell._ccTestSim || (w.CC && w.CC._lastSim);
     ok("CC resume restores km/shields/cells", !!ccS && ccS.scoreDistance === 123000 && ccS.shields === 3 && ccS.coinScore === 44);
+    ok("CC#1: resume restores the earned boost charge", !!ccS && ccS.boostCharge === 1);
     shell.exitGame(); await wait(120);
     // (v0.108.0, G4) the update seam is the LIVE profile — no clone clobbering
     {

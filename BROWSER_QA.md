@@ -229,6 +229,12 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-CC-CHARGE — the boost is earned (added v0.139.0).** In CC, watch the new gold "Boost"
+  bar beside the shield pips: a correct gate answer half-fills it (glow when one correct from
+  full), the second correct fires the boost on resume and the bar switches to the aqua/iris
+  riding fill; a wrong answer visibly drains half. Check it doesn't crowd the shield pips on a
+  narrow window. WRONG: a boost firing after wrong answers, or a bar that never moves.
+
 - **QA-DEBRIEF — post-sortie card (added v0.134.0).** Play any game, answer a few questions,
   exit to menu: a Sortie debrief card should float in — answered/correct/accuracy/+XP and up to
   3 missed-question stems. Fly again relaunches; Escape/Dismiss/backdrop closes. Exit without
