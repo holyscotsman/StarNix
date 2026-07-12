@@ -1354,6 +1354,51 @@ async function runFrames(n = 6) {
       shell.showMenu(); await wait(10);
       seededMp.forEach((sid) => { delete mmLive[sid]; });
     }
+    // (v0.157.0, V1.1 NIT#4) exam-sim save/resume (G2 parity for the Testing station)
+    {
+      delete SN.core.profile.examResume;
+      shell._examMode = "sim";
+      shell.showExam(5, { mode: "sim" }); await wait(30);
+      const exS = shell._exam._state;
+      ok("NIT#4: a 5-question sim mounts", exS.mode === "sim" && exS.order.length === 5);
+      // the quit below GRADES all five -> mastery records; snapshot + restore so downstream
+      // due-queue pins see unchanged state (the CC#1 lesson)
+      const simMm = SN.core.mastery.all();
+      const simPrev = {};
+      exS.order.forEach((q) => { simPrev[q.id] = simMm[q.id] ? JSON.parse(JSON.stringify(simMm[q.id])) : null; });
+      w.document.querySelector(".sx-exam-opt").click(); await wait(10);          // draft q1
+      const cells = w.document.querySelectorAll(".rl-cell");
+      cells[1].click(); await wait(10);
+      w.document.querySelector(".sx-exam-opt").click(); await wait(10);          // draft q2
+      const blob = SN.core.profile.examResume;
+      ok("NIT#4: drafting persists the resume blob as you go (ids/perms/drafts/clock)",
+        !!blob && blob.ids.length === 5 && blob.perms.length === 5
+        && blob.drafts.filter((d) => d != null).length === 2 && blob.remainMs > 0);
+      const firstId = exS.order[0].id, firstOpts = exS.order[0].options.join("|");
+      shell.showMenu(); await wait(20);                                           // walk away mid-sim
+      shell.showExamSetup(); await wait(10);
+      const rzTile = w.document.querySelector(".sx-exam-len-resume");
+      ok("NIT#4: the Testing station offers Resume with the exact progress",
+        !!rzTile && /2 of 5 answered/.test(rzTile.textContent));
+      rzTile.click(); await wait(30);
+      const exS2 = shell._exam._state;
+      const remain2 = exS2.simEnd - w.performance.now();
+      ok("NIT#4: resume rebuilds the SAME order + option permutations + drafts (grading indices valid)",
+        exS2.mode === "sim" && exS2.order.length === 5 && exS2.order[0].id === firstId
+        && exS2.order[0].options.join("|") === firstOpts
+        && exS2.drafts.filter((d) => d != null).length === 2);
+      ok("NIT#4: the clock resumes where it stopped (\u00b18s)", Math.abs(remain2 - blob.remainMs) < 8000);
+      w.document.querySelector(".sx-exam-quit").click(); await wait(30);          // grades + completes
+      ok("NIT#4: submitting (or quitting into grading) clears the saved sim", !SN.core.profile.examResume);
+      shell.showMenu(); await wait(10);
+      SN.core.persistence.update((p) => { p.examResume = { mode: "sim", ids: ["no-such-id", "x"], perms: [null, null], drafts: [null, null], flags: [false, false], remainMs: 60000 }; });
+      shell.showExamSetup(); await wait(10);
+      ok("NIT#4: a corrupt blob is DISCARDED to a fresh start (no tile, no residue, no crash)",
+        !w.document.querySelector(".sx-exam-len-resume") && !SN.core.profile.examResume);
+      for (const sk in simPrev) { if (simPrev[sk]) simMm[sk] = simPrev[sk]; else delete simMm[sk]; }
+      shell._examMode = "study";   // the default the later mode pins expect
+      shell.showMenu(); await wait(10);
+    }
     // (v0.108.0, G4) the update seam is the LIVE profile — no clone clobbering
     {
       SN.core.persistence.update(p => { p.__probe = 41; });

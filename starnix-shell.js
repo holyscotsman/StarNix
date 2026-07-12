@@ -804,6 +804,28 @@
         lens.appendChild(ib);
       }
     } catch (eI) {}
+    // (v0.157.0, V1.1 NIT#4) a 75-question sim is a 2-hour sitting — resume it. Validated
+    // hard: any unknown id or length drift discards the blob to a fresh start.
+    try {
+      var rz = core.profile.examResume;
+      var rzOk = rz && rz.mode === "sim" && Array.isArray(rz.ids) && rz.ids.length
+        && Array.isArray(rz.perms) && rz.perms.length === rz.ids.length
+        && Array.isArray(rz.drafts) && rz.drafts.length === rz.ids.length
+        && Array.isArray(rz.flags) && rz.flags.length === rz.ids.length
+        && rz.ids.every(function (idR) { return !!core.questions.byId(idR); });
+      if (rz && !rzOk) { core.persistence.update(function (p) { delete p.examResume; }); rz = null; }
+      if (rz && rzOk) {
+        var ansN = 0; for (var za = 0; za < rz.drafts.length; za++) if (rz.drafts[za] != null) ansN++;
+        var remS = Math.max(0, Math.floor((rz.remainMs || 0) / 1000)), mmR = Math.floor(remS / 60), ssR = remS % 60;
+        var rb = el("button", "sx-exam-len sx-exam-len-resume");
+        rb.innerHTML = '<span class="t">\u23f8 Resume your sim</span><span class="s">' + ansN + ' of ' + rz.ids.length + ' answered \u00b7 ' + mmR + ':' + (ssR < 10 ? '0' : '') + ssR + ' left</span>';
+        this._on(rb, "click", function () { self._examMode = "sim"; self.showExam(rz.ids.length, { mode: "sim", resume: rz }); });
+        lens.appendChild(rb);
+        var rd = el("button", "sx-btn sx-btn-ghost sx-exam-resume-discard", "Discard the saved sim");
+        this._on(rd, "click", function () { try { core.persistence.update(function (p) { delete p.examResume; }); } catch (eDd) {} self.showExamSetup(); });
+        lens.appendChild(rd);
+      }
+    } catch (eRz0) {}
     // (v0.146.0, V1.1 NIT#3) redrill EXACTLY what you've gotten wrong — the end-screen redrill
     // evaporates when you walk away; this tile serves the persistent pile (Leitner-derived,
     // cleared per-question by two consecutive corrects on any surface).
@@ -852,6 +874,10 @@
         mastery: core.mastery,
         reducedMotion: rm,
         extraTime: !!(core.profile && core.profile.settings && core.profile.settings.extraTime),   // (v0.84.0, B2)
+        resume: opts.resume || null,   // (v0.157.0, NIT#4)
+        onDraft: function (blob) {
+          try { if (core.persistence && core.persistence.update) core.persistence.update(function (p) { if (blob) p.examResume = blob; else delete p.examResume; }); } catch (eDr) {}
+        },
         onComplete: function (sum) { self._recordExam(sum); },
         onRedrill: function (qs) { self.showExam(null, { questions: qs, mode: "study" }); },   // (v0.87.0, L2)
         onExit: function () { self.showMenu(); },
@@ -1823,6 +1849,8 @@
       ".sx-plan-label{font-size:13px;color:var(--text);flex:1;min-width:180px;}",
       ".sx-plan-cta{padding:6px 14px;font-size:12px;}",
       ".sx-exam-len-misses{border-color:rgba(255,107,91,.5);} .sx-exam-len-misses .t{color:var(--peach,#FF6B5B);}",
+      ".sx-exam-len-resume{border-color:rgba(31,221,233,.55);} .sx-exam-len-resume .t{color:var(--aqua,#1FDDE9);}",
+      ".sx-exam-resume-discard{font-size:12px;padding:6px 12px;align-self:flex-start;}",
       ".sx-diag{font-size:11.5px;color:var(--mid);max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;padding:8px 10px;}",
       ".sx-diag-build{color:var(--dim);letter-spacing:.08em;margin-bottom:6px;}",
       ".sx-diag-err{border-left:3px solid var(--peach,#FF6B5B);padding-left:8px;margin:6px 0;}",

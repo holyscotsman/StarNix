@@ -229,6 +229,14 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-SIM-RESUME — the sim survives a closed tab (added v0.157.0).** Start a Standard sim,
+  answer a handful, flag one, note the clock, close the tab entirely. Reopen -> Testing
+  station: an aqua "⏸ Resume your sim" tile shows your exact progress and remaining time;
+  resuming lands on the same questions with the SAME option order, your answers and flag
+  intact, clock continuing. Submit normally: the tile is gone next visit. Discard works too.
+  WRONG: options reshuffled on resume (grading would be wrong), or a resume tile surviving
+  a submitted sim.
+
 - **QA-KBB-PITY — boss salvage (added v0.156.0).** Beat any KBB section boss and open the
   shop: one offer must be a LEGENDARY wearing a gold "boss salvage −30%" badge, priced
   noticeably under its usual cost, and actually affordable within a couple of sections'

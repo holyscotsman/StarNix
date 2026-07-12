@@ -62,13 +62,15 @@
   // Shuffle a question's options for display, remapping correctIndex/correctIndices
   // AND the parallel optionNotes so every option carries its own rationale. Keeps
   // the original id (mastery records against it).
-  function shuffleOptions(q, rng) {
+  function shuffleOptions(q, rng, permIn) {
     var n = q.options.length, perm = []; for (var i = 0; i < n; i++) perm.push(i);
-    for (var k = n - 1; k > 0; k--) { var j = Math.floor(rng() * (k + 1)); var t = perm[k]; perm[k] = perm[j]; perm[j] = t; }
+    if (permIn && permIn.length === n) { perm = permIn.slice(); }   // (v0.157.0, NIT#4) replay a stored permutation — grading indices stay valid
+    else { for (var k = n - 1; k > 0; k--) { var j = Math.floor(rng() * (k + 1)); var t = perm[k]; perm[k] = perm[j]; perm[j] = t; } }
     var inv = {}; perm.forEach(function (orig, ni) { inv[orig] = ni; });
     var dq = { id: q.id, cert: q.cert, domain: q.domain, difficulty: q.difficulty, stem: q.stem, options: perm.map(function (p) { return q.options[p]; }), explanation: q.explanation };
     if (q.optionNotes) dq.optionNotes = perm.map(function (p) { return q.optionNotes[p]; });
     if (q.image) dq.image = q.image;
+    dq._perm = perm.slice();   // (v0.157.0, NIT#4) the presentation's fingerprint, persisted by the resume blob
     if (Array.isArray(q.correctIndices)) dq.correctIndices = q.correctIndices.map(function (c) { return inv[c]; }).sort(function (a, b) { return a - b; });
     else dq.correctIndex = inv[q.correctIndex];
     return dq;
@@ -307,6 +309,23 @@
     var order = shuffle(pool, rng);
     if (opts.count && opts.count > 0 && opts.count < order.length) order = order.slice(0, opts.count);
     order = order.map(function (q) { return shuffleOptions(q, rng); });
+    // (v0.157.0, V1.1 NIT#4) sim resume: rebuild the EXACT order + option permutations from
+    // the persisted blob. Anything inconsistent (unknown id, length drift) -> fresh start.
+    var resume = (mode === "sim" && opts.resume && opts.resume.ids && opts.resume.perms && opts.resume.drafts && opts.resume.flags) ? opts.resume : null;
+    if (resume) {
+      try {
+        var byIdR = {}, bi0;
+        for (bi0 = 0; bi0 < pool.length; bi0++) byIdR[pool[bi0].id] = pool[bi0];
+        var rebuilt = [];
+        for (var ri0 = 0; ri0 < resume.ids.length; ri0++) {
+          var rq = byIdR[resume.ids[ri0]];
+          if (!rq) { rebuilt = null; break; }
+          rebuilt.push(shuffleOptions(rq, rng, resume.perms[ri0]));
+        }
+        if (rebuilt && rebuilt.length && resume.drafts.length === rebuilt.length && resume.flags.length === rebuilt.length) order = rebuilt;
+        else resume = null;
+      } catch (eRz) { resume = null; }
+    }
 
     var S = { running: true, mode: mode, i: 0, view: 0, results: [], score: 0, locked: false,
       combo: 0,                                        // (v0.58.0) blitz-only consecutive-correct chain
@@ -315,6 +334,15 @@
       drafts: [], flags: [], simEnd: 0 };              // sim: editable answers + review flags + deadline
     S.order = order;
     for (var di = 0; di < order.length; di++) { S.drafts.push(null); S.flags.push(false); }
+    if (resume) { for (var dr0 = 0; dr0 < order.length; dr0++) { S.drafts[dr0] = resume.drafts[dr0]; S.flags[dr0] = !!resume.flags[dr0]; } }   // (NIT#4)
+    // (v0.157.0, NIT#4) every draft/flag change snapshots the sim for resume; null = run over
+    function emitDraft(done) {
+      if (S.mode !== "sim" || typeof opts.onDraft !== "function") return;
+      if (done) { try { opts.onDraft(null); } catch (eD0) {} return; }
+      var idsE = [], permsE = [], ei;
+      for (ei = 0; ei < order.length; ei++) { idsE.push(order[ei].id); permsE.push(order[ei]._perm || null); }
+      try { opts.onDraft({ mode: "sim", count: order.length, xt: !!opts.extraTime, ids: idsE, perms: permsE, drafts: S.drafts.slice(), flags: S.flags.slice(), remainMs: Math.max(0, S.simEnd - nowMs()), savedAt: (root.Date || Date).now() }); } catch (eD1) {}
+    }
     function on(t, type, fn) { t.addEventListener(type, fn); S.listeners.push({ t: t, type: type, fn: fn }); }
 
     container.textContent = "";
@@ -409,7 +437,7 @@
       h4 += '</div><div class="rl-leg"><span><i class="l-ans"></i>Answered</span><span><i class="l-cur"></i>Current</span>' + (S.mode === "sim" ? '<span><i class="l-flg"></i>Flagged</span>' : '') + '</div>';
       railEl.innerHTML = h4;
     }
-    if (S.mode === "sim") S.simEnd = nowMs() + order.length * SIM_SECS_PER_Q * 1000 * XT;
+    if (S.mode === "sim") S.simEnd = nowMs() + ((resume && resume.remainMs > 0) ? resume.remainMs : order.length * SIM_SECS_PER_Q * 1000 * XT);   // (NIT#4) the clock resumes where it stopped
     if (S.mode === "study") barsEl.style.visibility = "hidden";
 
     function fmtClock(ms) {
@@ -508,7 +536,7 @@
         var fg = el("button", "sx-exam-flag" + (S.flags[idx] ? " on" : ""), (S.flags[idx] ? "&#9873; Flagged" : "&#9873; Flag for review")); fg.type = "button";
         var nx = el("button", "sx-exam-btn primary", idx === order.length - 1 ? "Review &rarr;" : "Next &rarr;"); nx.type = "button";
         on(pv, "click", function () { if (idx > 0) renderQuestion(idx - 1); });
-        on(fg, "click", function () { S.flags[idx] = !S.flags[idx]; fg.classList.toggle("on", S.flags[idx]); fg.innerHTML = S.flags[idx] ? "&#9873; Flagged" : "&#9873; Flag for review"; renderRail(); });
+        on(fg, "click", function () { S.flags[idx] = !S.flags[idx]; fg.classList.toggle("on", S.flags[idx]); fg.innerHTML = S.flags[idx] ? "&#9873; Flagged" : "&#9873; Flag for review"; renderRail(); emitDraft(); });
         on(nx, "click", function () { if (idx === order.length - 1) renderReview(); else renderQuestion(idx + 1); });
         var micro = el("span", "sx-exam-micro"); micro.textContent = "Answers save as you go \u2014 the palette jumps anywhere.";
         var rvw = el("button", "sx-exam-btn ghost sx-exam-rvw", "Review screen"); rvw.type = "button";
@@ -536,7 +564,7 @@
         var k = S.multiSel.indexOf(oi);
         if (k >= 0) S.multiSel.splice(k, 1); else S.multiSel.push(oi);
         btnEl.classList.toggle("sel", k < 0);
-        if (S.mode === "sim") S.drafts[S.view] = S.multiSel.length ? S.multiSel.slice() : null;
+        if (S.mode === "sim") { S.drafts[S.view] = S.multiSel.length ? S.multiSel.slice() : null; emitDraft(); }
         var hint = host2.querySelector(".sx-exam-multi");
         if (hint) hint.textContent = "Select " + q.correctIndices.length + " answers \u00b7 " + S.multiSel.length + " selected.";
         var cf1 = host2.querySelector(".sx-exam-confirm"); if (cf1) cf1.classList.toggle("on", S.multiSel.length >= 1);
@@ -545,7 +573,7 @@
         for (var bi = 0; bi < all.length; bi++) all[bi].classList.remove("sel");
         btnEl.classList.add("sel");
         S.selected = oi;
-        if (S.mode === "sim") S.drafts[S.view] = oi;
+        if (S.mode === "sim") { S.drafts[S.view] = oi; emitDraft(); }
         var cf2 = host2.querySelector(".sx-exam-confirm"); if (cf2) cf2.classList.add("on");
       }
       renderRail();   // (D7) drafts save as you go — the palette shows it live
@@ -661,6 +689,7 @@
 
     function submitSim(abandoned) {                  // grade every draft in order; mastery at submit
       if (S.examDone) return;
+      emitDraft(true);   // (v0.157.0, NIT#4) the run is over — clear the saved sim
       S.results = [];
       for (var qi = 0; qi < order.length; qi++) {
         var q = order[qi], chosen = S.drafts[qi];
