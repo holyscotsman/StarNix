@@ -24,10 +24,10 @@ const REVIEW_HOLD = {
   // (v0.143.0, NIT#2) the old hold reason ("empty explanation") was a parser artifact — the real
   // problem is CONTENT: the option-2 note praises the wrong option with the stem's exact success
   // criteria ("provides the highest resiliency and lowest RPO" ... marked Incorrect). Jason's call.
-  a1q52: "content: option-2 note contradicts the key (claims the incorrect option meets the stem's criteria) — needs Jason's wording ruling",
-  "ncp-mci-e1-q52": "content: same question + same contradictory option-2 note as a1q52 (inherited verbatim) — same ruling pending",
-  "ncp-mci-e1-q14": "content: @overall argues STATIC IP mapping is the best way while the key marks Offset-based — the block argues against its own key (workflow verifier finding) — needs Jason's ruling",
-  "ncp-mci-e1-q25": "content: @overall claims custom/guided scripts are ALSO guest customization options, contradicting the key's rejection of that option (workflow verifier finding) — needs Jason's ruling",
+  // (v0.174.0) Jason's ruling 2026-07-12: "stick with what the question and answer state" —
+  // authored keys are final; internal-tension findings are notes for him, not grounds to hold.
+  // e1-q14 / e1-q25 / e1-q52 released accordingly. a1q52 stays held ONLY as the superseded twin.
+  a1q52: "superseded by ncp-mci-e1-q52 (Jason's ruling 2026-07-12: content stands as stated; the canonical e1 version is live)",
 };
 
 function normStem(s){ return String(s||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim(); }

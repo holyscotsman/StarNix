@@ -1,9 +1,9 @@
 {
   "parsed": 309,
-  "live": 254,
-  "held": 55,
+  "live": 255,
+  "held": 54,
   "multiLive": 32,
-  "withOptionNotes": 254,
+  "withOptionNotes": 255,
   "byDomain": {
     "security": 24,
     "architecture": 26,
@@ -11,17 +11,16 @@
     "networking": 35,
     "vms": 41,
     "monitoring": 35,
+    "data-protection": 29,
     "performance": 14,
-    "data-protection": 28,
     "storage": 30
   },
   "byDifficulty": {
-    "1": 24,
-    "2": 191,
-    "3": 39
+    "1": 25,
+    "2": 189,
+    "3": 41
   },
   "heldSummary": {
-    "content": 4,
     "dup-stem (also ncp-mci-e1-q1)": 1,
     "dup-stem (also ncp-mci-e1-q2)": 1,
     "dup-stem (also ncp-mci-e1-q3)": 1,
@@ -35,6 +34,7 @@
     "dup-stem (also ncp-mci-e1-q11)": 1,
     "dup-stem (also ncp-mci-e1-q12)": 1,
     "key-unverified": 3,
+    "dup-stem (also ncp-mci-e1-q14)": 1,
     "dup-stem (also ncp-mci-e1-q15)": 1,
     "dup-stem (also ncp-mci-e1-q16)": 1,
     "dup-stem (also ncp-mci-e1-q18)": 1,
@@ -44,6 +44,7 @@
     "dup-stem (also ncp-mci-e1-q22)": 1,
     "dup-stem (also ncp-mci-e1-q23)": 1,
     "dup-stem (also ncp-mci-e1-q24)": 1,
+    "dup-stem (also ncp-mci-e1-q25)": 1,
     "dup-stem (also ncp-mci-e1-q26)": 1,
     "dup-stem (also ncp-mci-e1-q28)": 1,
     "dup-stem (also ncp-mci-e1-q29)": 1,
@@ -66,6 +67,7 @@
     "dup-stem (also ncp-mci-e1-q46)": 1,
     "dup-stem (also ncp-mci-e1-q47)": 1,
     "dup-stem (also ncp-mci-e1-q49)": 1,
+    "superseded by ncp-mci-e1-q52 (Jason's ruling 2026-07-12": 1,
     "dup-stem (also ncp-mci-e1-q53)": 1,
     "dup-stem (also ncp-mci-e1-q55)": 1,
     "dup-stem (also ncp-mci-e1-q56)": 1,
@@ -73,21 +75,6 @@
     "dup-stem (also ncp-mci-e1-q59)": 1
   },
   "heldItems": [
-    {
-      "src": "ncp-mci-e1-q14",
-      "stem": "An administrator is working with a network team to design the ne",
-      "reason": "content: @overall argues STATIC IP mapping is the best way while the key marks Offset-based — the block argues against its own key (workflow verifier finding) — needs Jason's ruling"
-    },
-    {
-      "src": "ncp-mci-e1-q25",
-      "stem": "What guest customization options are available when creating a V",
-      "reason": "content: @overall claims custom/guided scripts are ALSO guest customization options, contradicting the key's rejection of that option (workflow verifier finding) — needs Jason's ruling"
-    },
-    {
-      "src": "ncp-mci-e1-q52",
-      "stem": "A company is evaluating Nutanix DR to protect some business-crit",
-      "reason": "content: same question + same contradictory option-2 note as a1q52 (inherited verbatim) — same ruling pending"
-    },
     {
       "src": "a1q1",
       "stem": "An administrator sees the alert shown in the exhibit. What shoul",
@@ -154,6 +141,11 @@
       "reason": "key-unverified: Metro+Witness, medium confidence, portal table gated (review_notes.md)"
     },
     {
+      "src": "a1q14",
+      "stem": "An administrator is working with a network team to design the ne",
+      "reason": "dup-stem (also ncp-mci-e1-q14)"
+    },
+    {
       "src": "a1q15",
       "stem": "A user created a report in the prism central Intelligent Operati",
       "reason": "dup-stem (also ncp-mci-e1-q15)"
@@ -197,6 +189,11 @@
       "src": "a1q24",
       "stem": "An administrator needs to create a single chart showing multiple",
       "reason": "dup-stem (also ncp-mci-e1-q24)"
+    },
+    {
+      "src": "a1q25",
+      "stem": "What guest customization options are available when creating a V",
+      "reason": "dup-stem (also ncp-mci-e1-q25)"
     },
     {
       "src": "a1q26",
@@ -316,7 +313,7 @@
     {
       "src": "a1q52",
       "stem": "A company is evaluating Nutanix DR to protect some business-crit",
-      "reason": "content: option-2 note contradicts the key (claims the incorrect option meets the stem's criteria) — needs Jason's wording ruling"
+      "reason": "superseded by ncp-mci-e1-q52 (Jason's ruling 2026-07-12: content stands as stated; the canonical e1 version is live)"
     },
     {
       "src": "a1q53",

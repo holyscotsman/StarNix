@@ -409,6 +409,7 @@ A DR administrator has set up a Protection Policy for 50 workloads, all configur
 @domain: data-protection
 @difficulty: 3
 @tags: protection-policy, storage-container, dr, rpo
+@briefing: Fifty identical workloads, one policy, and only some of them recover. When the failure is selective but the configuration looks uniform, stop staring at the policy and look underneath it. Nutanix DR needs the storage container name on the recovery cluster to match the source. Where the name does not match, the workload has nowhere to land. Same name, both sides. It is the kind of detail that stays invisible right up until the day you actually need the failover.
 
 ---
 

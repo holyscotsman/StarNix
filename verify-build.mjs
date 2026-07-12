@@ -152,25 +152,26 @@ async function runFrames(n = 6) {
       const hasStem = (frag) => poolN.some((q) => q.stem.indexOf(frag) >= 0);
       ok("NIT#2: the three U+2028 casualties are LIVE again (a1q59/a1q60/a2q55)",
         hasStem("Auto Detect for Reserve Capacity") && hasStem("establishing synchronous replication between them") && hasStem("application data is completely missing"));
-      ok("NIT#2: a1q52 stays HELD (option-note contradicts the key — Jason's call), bank at 254 (v0.172.0: +25 a6 pack)",
-        !hasStem("evaluating Nutanix DR to protect some business-critical")
-        && w.STARNIX_QUESTIONS.questions.length === 254);   // the raw bank (pool() adds fixture seeds)
+      ok("NIT#2/v0.174.0: the DR question is LIVE via its canonical e1 version (Jason's ruling: content stands as stated; a1q52 held only as the superseded twin), bank at 255",
+        w.STARNIX_QUESTIONS.questions.filter((q) => /evaluating Nutanix DR to protect some business-critical/.test(q.stem)).length === 1
+        && w.STARNIX_QUESTIONS.questions.length === 255);   // the raw bank (pool() adds fixture seeds)
       ok("NIT#2: every bank question still carries optionNotes (indent-sensitive parse guard)",
-        w.STARNIX_QUESTIONS.questions.filter((q) => q.optionNotes && q.optionNotes.some((nn) => nn && nn.length)).length === 254);
+        w.STARNIX_QUESTIONS.questions.filter((q) => q.optionNotes && q.optionNotes.some((nn) => nn && nn.length)).length === 255);
       // (v0.173.0, Jason) the e1 interchange bank: canonical versions supersede classic dups
       {
         const e1 = w.STARNIX_QUESTIONS.questions.filter((q) => q.briefing && q.tags);
-        ok("E1: 47 canonical interchange questions live with briefing + tags (48th = q20, briefing stripped as factually wrong; q14/q25/q52 held on verifier findings)",
-          e1.length === 47 && e1.every((q) => q.briefing.length > 60 && Array.isArray(q.tags) && q.tags.length > 0)
-          && w.STARNIX_QUESTIONS.questions.filter((q) => q.tags && !q.briefing).length === 1);
+        ok("E1/v0.174.0: all 51 canonical questions live, every one with its authored briefing + tags (Jason's ruling: content stands as stated)",
+          e1.length === 51 && e1.every((q) => q.briefing.length > 60 && Array.isArray(q.tags) && q.tags.length > 0)
+          && w.STARNIX_QUESTIONS.questions.filter((q) => q.tags && !q.briefing).length === 0);
         const e1img = e1.filter((q) => q.image && /^ncp-mci-e1-/.test(q.image));
         ok("E1: the six exhibits ship with authored image-alt text",
           e1img.length === 6 && e1img.every((q) => typeof q.imageAlt === "string" && q.imageAlt.length > 40));
         const srcAlt = w.document.documentElement.innerHTML;
         ok("E1: the exam renders q.imageAlt as the exhibit's alt on BOTH surfaces (card + review)",
           srcAlt.indexOf('esc(q.imageAlt || ("exhibit " + q.image))') >= 0 && srcAlt.indexOf('esc(q.imageAlt || "Question exhibit")') >= 0);
-        ok("E1: q52's twin stays HELD with the inherited a1q52 contradiction (one ruling covers both)",
-          !w.STARNIX_QUESTIONS.questions.some((q) => /evaluating Nutanix DR to protect some business-critical/.test(q.stem)));
+        ok("E1/v0.174.0: exactly one live copy per superseded stem (the a1 twins hold as dups)",
+          w.STARNIX_QUESTIONS.questions.filter((q) => /same last octet in the IP address in DR/.test(q.stem)).length === 1
+          && w.STARNIX_QUESTIONS.questions.filter((q) => /guest customization options are available when creating/.test(q.stem)).length === 1);
       }
       // (v0.172.0, Jason) the a6 practice-exam pack: 25 live, ALL priority-2, keys cross-checked
       {
