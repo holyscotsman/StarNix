@@ -229,6 +229,14 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-ARM-BOSSES — four distinct dreadnoughts (added v0.142.0).** Dev-skip to each boss
+  sector (3/6/9/12). The banner and pre-brief should NAME the warship (VANGUARD / BULWARK /
+  TEMPEST / ANNIHILATOR) and call its signature. EYES: B1 = single beam only, no wall ever;
+  B2 = wall barrages return + pairs of escort drones sweep in from the hull flanks; B3 = TWO
+  beam columns charge and fire together (both telegraphs read clearly, columns never stack on
+  one x); B4 = everything, then a visible ENRAGE (banner + faster weave) after the third port
+  breaks. WRONG: any two bosses feeling identical, or twin columns overlapping into one fat beam.
+
 - **QA-FLIGHTPLAN — the bridge tells you what's next (added v0.141.0).** With NO reviews due,
   the dock should open with an iris "Today's flight plan" card: an undone daily ("Daily: ... —
   Launch KBB"), a stale/missing sim ("Run a sim"), or a weakest-domain drill ("Open Codex") —

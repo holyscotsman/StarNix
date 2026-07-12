@@ -270,10 +270,10 @@ var detSector3 = null;   // captured for the determinism probe against window 2
   // (v0.108.0, G4 HIGH) the wall laser must produce a FINITE gap (bossArena has .l, not .x —
   // gapX was NaN and the wall mode was completely inert since v0.97)
   (function () {
-    var st9 = T.setupBossSector();
+    var st9 = T.setupBossSector(6);   // (v0.142.0, ARM#2) B1 no longer fields the wall — probe B2
     var found = false, guard9 = 0;
     while (!found && guard9++ < 400) {
-      T.step(0.1);
+      T.refillShields(); T.step(0.1);
       var bi9 = T.bossInfo();
       if (bi9 && bi9.laserMode === 'wall') found = true;
     }
@@ -283,9 +283,9 @@ var detSector3 = null;   // captured for the determinism probe against window 2
   })();
   // (v0.97.0, A10) boss arsenal: seekers + dual lasers
   ok(/MISSILE_SPEED = 130, MISSILE_TURN = 1\.7, MISSILE_R = 10/.test(H.ARM_SRC)
-     && /boss\.laserMode = runRng\.next\(\) < 0\.6 \? "beam" : "wall"/.test(H.ARM_SRC)
+     && /boss\.laserMode = runRng\.next\(\) < \(1 - P\.wallP\) \? "beam" : "wall"/.test(H.ARM_SRC)
      && /Math\.abs\(ship\.x - boss\.gapX\) >= GAP_HALF/.test(H.ARM_SRC),
-     'A10: seeking missiles (slower/larger/shootable) + wall laser with ONE safe column');
+     'A10/ARM#2: seeking missiles + wall laser, wall chance now per-boss (P.wallP)');
   (function () {
     // behavioral: drive the boss with a forced missile — it must steer toward the ship,
     // die to a player bullet, and never linger past its life.
@@ -300,6 +300,41 @@ var detSector3 = null;   // captured for the determinism probe against window 2
     T.shootAtMissile();
     for (var fs = 0; fs < 30 && T.missileInfo().active > 0; fs++) T.step(1 / 60);
     ok(T.missileInfo().active === 0, 'A10: a player bullet detonates the seeker');
+  })();
+  // (v0.142.0, V1.1 ARM#2) four dreadnoughts, four fights — the pattern table drives them
+  (function () {
+    var s3 = T.setupBossSector(3), s6 = T.setupBossSector(6), s9 = T.setupBossSector(9), s12 = T.setupBossSector(12);
+    ok(s3.pattern === 'VANGUARD' && s6.pattern === 'BULWARK' && s9.pattern === 'TEMPEST' && s12.pattern === 'ANNIHILATOR',
+       'ARM#2: sectors 3/6/9/12 fly four NAMED dreadnoughts (' + [s3.pattern, s6.pattern, s9.pattern, s12.pattern].join('/') + ')');
+    // B1: the wall NEVER arms (wallP 0 — teach the fight on the single beam)
+    T.setupBossSector(3);
+    var sawWall = false;
+    for (var w1 = 0; w1 < 400; w1++) { T.refillShields(); T.step(0.1); var b1 = T.bossInfo(); if (b1 && b1.laserMode === 'wall') { sawWall = true; break; } }
+    ok(!sawWall, 'ARM#2 B1 VANGUARD: 40 simulated seconds, the wall barrage never arms (beam only)');
+    var p1 = T.bossPatternInfo();
+    ok(p1 && p1.wallP === 0 && !p1.twin && p1.escortEvery === 0 && !p1.enrage, 'ARM#2 B1 table: no wall, no twin, no escorts, no enrage');
+    // B2: escort drones launch in the arena (the old bossActive spawn freeze is bypassed by design)
+    T.setupBossSector(6);
+    var e0 = T.bossEscorts();
+    for (var w2 = 0; w2 < 110; w2++) { T.refillShields(); T.step(0.1); }   // 11 s > escortEvery 9
+    ok(e0 === 0 && T.bossEscorts() >= 2, 'ARM#2 B2 BULWARK: escort drones launch from the flanks (' + T.bossEscorts() + ' in the arena)');
+    ok(T.bossPatternInfo().escortEvery === 9 && T.bossPatternInfo().wallP === 0.4, 'ARM#2 B2 table: wall unlocked + 9s escort cadence');
+    // B3: twin beams — when a beam charges, a SECOND column arms with it
+    T.setupBossSector(9);
+    var sawTwin = false;
+    for (var w3 = 0; w3 < 400; w3++) { T.refillShields(); T.step(0.1); var b3 = T.bossInfo(); if (b3 && b3.laserState !== 'none' && b3.laserMode === 'beam' && b3.twin) { sawTwin = true; break; } }
+    ok(sawTwin, 'ARM#2 B3 TEMPEST: the beam charges with a second simultaneous column');
+    ok(T.bossPatternInfo().missLo === 3.5 && T.bossPatternInfo().laserLo === 3.5, 'ARM#2 B3 table: tighter seeker + laser cadences');
+    // B4: everything + enrage at 3 broken ports
+    T.setupBossSector(12);
+    var p4 = T.bossPatternInfo();
+    ok(p4 && p4.enrage && p4.twin && p4.escortEvery === 8 && p4.wallP === 0.4, 'ARM#2 B4 ANNIHILATOR table: wall + twin + escorts + enrage');
+    var bi4a = T.bossInfo();
+    ok(bi4a && bi4a.enraged === false, 'ARM#2 B4: calm before three ports break');
+    T.breakWeakpoints(3);
+    T.step(0.05);
+    var bi4b = T.bossInfo();
+    ok(bi4b && bi4b.enraged === true, 'ARM#2 B4: three broken ports trip the ENRAGE (faster weave + tighter cadence)');
   })();
   // (v0.96.0, A6) economy + cadence sources
   ok(/sec % 3 === 0/.test(H.ARM_SRC) && /MAX_TIER = 8/.test(H.ARM_SRC)

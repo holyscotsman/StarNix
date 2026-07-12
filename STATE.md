@@ -103,7 +103,7 @@
 
 ## V1.1 IN PROGRESS — wave 1 (top item per area)
 
-Working VERSION_1_1.md as gated units. WAVE 1 COMPLETE (v0.128-135, top item per area). WAVE 2 IN FLIGHT: FE#2 (v0.136.0), Backend#2 (v0.137.0, 18 suites), Menu#2 due-chip promotion (v0.138.0), CC#1 answer-charged boost (v0.139.0 — boostCharge meter in CCSim; HUD gold Boost bar; checkpoint-safe; flat modulo gone), KBB#2 post-battle debrief (v0.140.0 — run.misses text-collected in submitAnswer, capped 5, per battle; .kbb-debrief card on the map), Flow#2 flight plan (v0.141.0 — StarNix.plan.rank pure planner: due > undone daily > sim recency > weakest domain > clear; .sx-plan-card tops the dock, yields to the due chip). NEXT: ARM#2 boss phases, NIT#2 quarantine holds.
+Working VERSION_1_1.md as gated units. WAVE 1 COMPLETE (v0.128-135, top item per area). WAVE 2 IN FLIGHT: FE#2 (v0.136.0), Backend#2 (v0.137.0, 18 suites), Menu#2 due-chip promotion (v0.138.0), CC#1 answer-charged boost (v0.139.0 — boostCharge meter in CCSim; HUD gold Boost bar; checkpoint-safe; flat modulo gone), KBB#2 post-battle debrief (v0.140.0 — run.misses text-collected in submitAnswer, capped 5, per battle; .kbb-debrief card on the map), Flow#2 flight plan (v0.141.0 — StarNix.plan.rank pure planner; .sx-plan-card tops the dock, yields to the due chip), ARM#2 boss patterns (v0.142.0 — BOSS_PATTERNS table: B1 VANGUARD beam-only teach, B2 BULWARK wall+escort pairs, B3 TEMPEST twin beams+tight salvos, B4 ANNIHILATOR everything+enrage at 3 broken ports; setupBossSector(sec) seam). NEXT: NIT#2 quarantine holds, then wave 3 (#3 items per area).
 NEXT: NIT#1 bank lint, Backend#1 save safety net, ARM#1 lost-core pool, CC#2 turns, KBB#1
 event deck, Flow#1 debrief, FE#1 focus.
 
