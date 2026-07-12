@@ -229,6 +229,16 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-RANK-REWARDS — promotions that pay (added v0.179.0).** On a profile at Pilot (800+ XP)
+  the menu rank strip must wear a small gold `⬡` crest chip beside the rank name (tooltip
+  names it). Codex → 'Rank rewards': 4 rows, earned ones bright gold-bordered, future ones
+  dimmed. Cross Lieutenant (1400 XP) and the gold promotion toast must NAME the pay:
+  '+25 KBB starting coins · Free ARM Shield Cell level' — then a fresh KBB run starts at 31
+  coins and a fresh ARM run shows the Shield Cell perk in the depot/regen feel. In Settings,
+  the trail picker's 7th swatch reads 'Reach Commodore rank' until 6800 XP, then unlocks
+  (and stays unlocked forever). WRONG: a crest below Pilot, a toast that still says only
+  'Promoted', or the gold trail lockable again after a decay.
+
 - **QA-CC-BUFFS7 — the three one-shot buffs (added v0.178.0).** Fly CC through power gates
   (the glowing ~10% cores) until the new kinds land: OVERSHIELD must show a `⛨+1` HUD chip
   and the next crash must cost NO shield pip (chip gone after); SCHOLAR shows `📖next` and the

@@ -24,7 +24,7 @@
   var CORE_VERSION = "1.1.0";              // internal contract version (changes rarely)
   // User-facing playable-build stamp. BUMP THIS (and the date) on every delivered index.html so the
   // version shown in-game tells us exactly which build is being played/tested. Shown by the shell.
-  var BUILD_VERSION = "0.178.0";
+  var BUILD_VERSION = "0.179.0";
   var BUILD_DATE = "2026-07-03";
   var BUILD_LABEL = "v" + BUILD_VERSION + " \u00b7 " + BUILD_DATE;
   var SCHEMA_VERSION = 1;
@@ -299,6 +299,33 @@
     { name: "Commodore",     xp: 6800 },
     { name: "Fleet admiral", xp: 9500 }
   ];
+  /* (v0.179.0, V1.1 Flow#7) Commander ranks pay concrete cross-game rewards. Data-driven and
+   * ADDITIVE ONLY — no retro-locking of live content ('Cadet unlocks Blitz' rejected: Blitz
+   * already ships unlocked for everyone). Games read the accumulated perks via ctx.perks. */
+  var RANK_REWARDS = [
+    { rank: 3, kind: "crest",     label: "Bridge crest insignia" },
+    { rank: 4, kind: "kbbCoins",  n: 25, label: "+25 KBB starting coins" },
+    { rank: 4, kind: "armShield", n: 1,  label: "Free ARM Shield Cell level" },
+    { rank: 8, kind: "goldTrail", label: "Commodore gold ship trail" }
+  ];
+  function rankPerks(xp) {
+    var idx = rankFor(xp).index;
+    var p = { crest: false, kbbCoins: 0, armShieldCell: 0, goldTrail: false };
+    for (var i = 0; i < RANK_REWARDS.length; i++) {
+      var rw = RANK_REWARDS[i];
+      if (idx < rw.rank) continue;
+      if (rw.kind === "crest") p.crest = true;
+      else if (rw.kind === "kbbCoins") p.kbbCoins += rw.n;
+      else if (rw.kind === "armShield") p.armShieldCell += rw.n;
+      else if (rw.kind === "goldTrail") p.goldTrail = true;
+    }
+    return p;
+  }
+  function rankRewardsAt(index) {
+    var out = [];
+    for (var i = 0; i < RANK_REWARDS.length; i++) if (RANK_REWARDS[i].rank === index) out.push(RANK_REWARDS[i].label);
+    return out;
+  }
   function rankFor(xp) {
     xp = (typeof xp === "number" && xp > 0) ? Math.floor(xp) : 0;
     var i = RANKS.length - 1;
@@ -527,13 +554,18 @@
     { id: "mantis-wake", name: "Mantis wake", color: "#92DD23", domain: "vms" },
     { id: "gold-vector", name: "Gold vector", color: "#FFC857", domain: "networking" },
     { id: "peach-blaze", name: "Peach blaze", color: "#FF6B5B", domain: "security" },
-    { id: "iris-bloom",  name: "Iris bloom",  color: "#AC9BFD", domain: "architecture" }
+    { id: "iris-bloom",  name: "Iris bloom",  color: "#AC9BFD", domain: "architecture" },
+    { id: "commodore-gold", name: "Commodore gold", color: "#FFE08A", domain: null, rank: 8 }   // (v0.179.0, Flow#7) rank-gated, parallel to the domain gate
   ];
   var COSMETIC_THRESHOLD = 0.5;   // the domain's masteredPct needed to unlock its trail
   // (v0.65.0, Jason's ruling) unlocks are EARNED FOREVER: profile.trailsUnlocked latches a
   // variant the moment its threshold is seen, so later mastery decay never re-locks it.
   function cosmeticUnlocked(def, stats, profile) {
     if (!def) return false;
+    if (def.rank != null) {   // (v0.179.0, Flow#7) rank-gated variant: latched forever, else live rank check
+      if (profile && profile.trailsUnlocked && profile.trailsUnlocked[def.id]) return true;
+      return !!(profile && rankFor(profile.xp).index >= def.rank);
+    }
     if (!def.domain) return true;
     if (profile && profile.trailsUnlocked && profile.trailsUnlocked[def.id]) return true;   // latched = earned forever
     if (!stats || !stats.domains) return false;
@@ -550,8 +582,9 @@
     var newly = [];
     for (var i = 0; i < COSMETICS.length; i++) {
       var def = COSMETICS[i];
-      if (!def.domain || un[def.id]) continue;
-      if (cosmeticUnlocked(def, stats, null)) { un[def.id] = clock.now(); newly.push(def.id); }
+      if ((!def.domain && def.rank == null) || un[def.id]) continue;
+      var live = (def.rank != null) ? cosmeticUnlocked(def, stats, profile) : cosmeticUnlocked(def, stats, null);   // (Flow#7) rank latch reads the profile's xp
+      if (live) { un[def.id] = clock.now(); newly.push(def.id); }
     }
     return newly;
   }
@@ -1209,6 +1242,8 @@
       ai: c.ai,
       assets: global.STARNIX_ASSETS || {},   // inlined sprites/art (assets.js); games read e.g. ctx.assets.armBoss
       settings: c.profile ? c.profile.settings : defaultSettings(),
+      perks: rankPerks(c.profile && typeof c.profile.xp === "number" ? c.profile.xp : 0),   // (v0.179.0, Flow#7) rank perks snapshot — additive ctx key (01 s9a)
+      rewards: null,   // reserved
       sanitize: c.escapeHTML
     };
   };
@@ -1217,6 +1252,7 @@
    * Games never call this directly; XP flows through the existing seams only. */
   StarNix.xp = {
     AWARDS: XP_AWARDS, RANKS: RANKS, rankFor: rankFor,
+    REWARDS: RANK_REWARDS, perks: rankPerks, rewardsAt: rankRewardsAt,   // (v0.179.0, V1.1 Flow#7)
     forAnswer: xpForAnswer, forExam: xpForExam, forScore: xpForScore, add: addXP
   };
 

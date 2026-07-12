@@ -857,4 +857,15 @@ function newWindow() {
   }
 })();
 
+/* ============ Flow#7 (v0.179.0): the Lieutenant perk pays +25 starting coins ============ */
+(function rankPerk() {
+  group('Flow#7: ctx.perks.kbbCoins raises the starting purse (CONFIG untouched)');
+  var V = newWindow(), K = V.KBB;
+  var ctxP = H.makeCtx(K, { seed: SEED + 91 }); ctxP.perks = { kbbCoins: 25 };
+  var runP = K.createRun(ctxP, { seed: SEED + 91 });
+  var runN = K.createRun(H.makeCtx(K, { seed: SEED + 91 }), { seed: SEED + 91 });
+  ok(runN.squad.coins === 6 && runP.squad.coins === 31,
+     'perked run starts at 31 coins, stock run at 6 — the perk rides ctx, never CONFIG');
+})();
+
 H.summary('KBB RUN');

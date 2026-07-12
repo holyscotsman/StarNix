@@ -142,7 +142,7 @@
     // ---- injected context + environment ----
     var ctx, root, doc, win, raf, caf;
     // ---- providers (pulled from ctx in mount) ----
-    var Q, MAST, AUD, RNG, THEME, TEL, PERS, SET, EXIT, TESTMODE;
+    var Q, MAST, AUD, RNG, THEME, TEL, PERS, SET, EXIT, TESTMODE, PERKS = {};
     var runRng;                       // forked per run for determinism
     var COL;                          // palette
     var TRAIL;                        // (v0.57.0 unit 7) resolved ship-trail tint (cosmetic)
@@ -341,7 +341,7 @@
 
       Q = ctx.questions; MAST = ctx.mastery; AUD = ctx.audio || noopAudio();
       RNG = ctx.rng; THEME = ctx.theme || {}; TEL = ctx.telemetry; PERS = ctx.persistence;
-      SET = ctx.settings || {}; EXIT = ctx.exit; TESTMODE = !!ctx.test;
+      SET = ctx.settings || {}; EXIT = ctx.exit; TESTMODE = !!ctx.test; PERKS = ctx.perks || {};   // (v0.179.0, Flow#7)
       runRng = RNG.fork("arm-boot");   // valid before newRun re-forks per run
       paused = false; pauseStart = 0; pauseClockOffset = 0; pausedTimers.length = 0;
       initSprites();                   // S3: asset-gated ship sprites (no-op + vector fallback if absent)
@@ -1025,6 +1025,7 @@
       sector = 1; coins = 0;
       disarmPuzzleTimer(); puzzleCore = null; puzzleDoneFlag = false;
       lvl.engine = lvl.maneuver = lvl.capacitor = lvl.shieldCell = lvl.rapid = 0;
+      if (PERKS.armShieldCell) lvl.shieldCell = PERKS.armShieldCell | 0;   // (v0.179.0, V1.1 Flow#7) Lieutenant perk: free Shield Cell level(s) on a fresh run
       charges = undefined; shields = undefined; deriveStats(); charges = maxCharges; shields = maxShields; rechargeTimer = rechargeTime;
       held = []; stationBuild = 0; sectorLost = []; usedIds = []; lostPool = [];
       runRng = RNG.fork("arm-run-" + sector + ":" + (runSeq++));   // deterministic per run; (v0.91.0) runSeq varies retries/replays
@@ -3266,6 +3267,8 @@
         puzzleSecs: function (t, len, extra) { return puzzleSecsFor(t, len, extra); },
         puzzleTryGuess: function (g) { return activePuzzle && activePuzzle.tryGuess ? activePuzzle.tryGuess(g) : null; },
         flushLater: function () { var fired = 0; timers.forEach(function (rec, id) { win.clearTimeout(id); }); var fns = []; timers.forEach(function (rec) { fns.push(rec.fn); }); timers.clear(); for (var i = 0; i < fns.length; i++) { try { fns[i](); fired++; } catch (eF) {} } return fired; },
+        upgradeLvl: function (k) { return lvl[k]; },                 // (v0.179.0, Flow#7)
+        regenDelay: function () { return shieldRegenDelay; },
         hpMix: function (n, sec) { var keep = sector; if (sec) sector = sec; var out = {}; for (var i = 0; i < (n || 300); i++) { var h = enemyHpFor(sector); out[h] = (out[h] || 0) + 1; } sector = keep; return out; },   // (v0.155.0, ARM#4)
         shotDmg: function (sec) { return shotDmgFor(sec); },
         setSmoothDiff: function (v) { smoothDiff = !!v; },

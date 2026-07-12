@@ -2669,8 +2669,8 @@ async function runFrames(n = 6) {
   {
     const core = SN.core, C = SN.cosmetics;
     SN.achievements.LIST.forEach(d => { core.profile.achievements[d.id] = 1; });   // no surprise unlock XP
-    ok("cosmetics API: 6 palette-locked variants + threshold 0.5 + pure helpers",
-      !!C && C.LIST.length === 6 && C.THRESHOLD === 0.5 && C.LIST[0].id === "standard" && C.LIST[0].domain === null
+    ok("cosmetics API: 7 variants (standard + 5 domain-locked + 1 rank-locked) + threshold 0.5 + pure helpers",
+      !!C && C.LIST.length === 7 && C.THRESHOLD === 0.5 && C.LIST[0].id === "standard" && C.LIST[0].domain === null
       && C.LIST.every(d => /^#[0-9A-F]{6}$/i.test(d.color)) && typeof C.unlocked === "function" && typeof C.resolve === "function");
     {
       const stats = { domains: [{ domain: "storage", masteredPct: 0.5 }, { domain: "vms", masteredPct: 0.49 }] };
@@ -2711,8 +2711,8 @@ async function runFrames(n = 6) {
     {
       const swatches = w.document.querySelectorAll(".sx-trail");
       const lockedN = w.document.querySelectorAll(".sx-trail.locked").length;
-      ok("picker: 6 swatches; standard equipped by default; locked variants dimmed with a requirement",
-        swatches.length === 6 && !!w.document.querySelector('.sx-trail.on[data-trail="standard"]')
+      ok("picker: 7 swatches; standard equipped by default; locked variants dimmed with a requirement",
+        swatches.length === 7 && !!w.document.querySelector('.sx-trail.on[data-trail="standard"]')
         && lockedN >= 1 && /Master 50% of/.test(w.document.querySelector(".sx-trail.locked .sx-trail-req").textContent));
       const target = w.document.querySelector('.sx-trail[data-trail="' + chosen.id + '"]');
       ok("picker: the newly unlocked variant is selectable", !!target && !target.classList.contains("locked"));
@@ -2764,6 +2764,85 @@ async function runFrames(n = 6) {
     // hygiene
     core.profile.trailsUnlocked = {};
     core.profile.achievements = {};
+    shell.showMenu();
+  }
+
+  // V7. Flow#7 (v0.179.0): Commander ranks pay concrete cross-game rewards
+  console.log("\nV7. Flow#7 rank rewards (table / perks math / rank-gated trail / ctx.perks / Codex ledger / crest / toast)");
+  {
+    const core = SN.core, X = SN.xp, C = SN.cosmetics;
+    const saveXp = core.profile.xp, saveSeen = core.profile.rankSeen;
+    ok("REWARDS table pinned: 4 additive rewards at Pilot / Lieutenant x2 / Commodore",
+      Array.isArray(X.REWARDS) && X.REWARDS.length === 4
+      && X.REWARDS.map(r => r.rank).join(",") === "3,4,4,8"
+      && X.REWARDS[1].n === 25 && X.REWARDS[2].n === 1
+      && X.REWARDS.every(r => typeof r.label === "string" && r.label.length > 3));
+    {
+      const p0 = X.perks(0), p3 = X.perks(800), p4 = X.perks(1400), p8 = X.perks(6800);
+      ok("perks math: nothing at Recruit; crest at Pilot; +25 coins & +1 shield cell at Lieutenant; gold trail at Commodore",
+        !p0.crest && p0.kbbCoins === 0 && p0.armShieldCell === 0 && !p0.goldTrail
+        && p3.crest && p3.kbbCoins === 0 && p3.armShieldCell === 0
+        && p4.crest && p4.kbbCoins === 25 && p4.armShieldCell === 1 && !p4.goldTrail
+        && p8.goldTrail && p8.kbbCoins === 25 && p8.armShieldCell === 1);
+    }
+    ok("rewardsAt: Lieutenant lists exactly its two labels; Recruit none; Pilot names the crest",
+      X.rewardsAt(4).length === 2 && X.rewardsAt(0).length === 0 && /crest/i.test(X.rewardsAt(3)[0]));
+    const gold = C.LIST.find(d => d.id === "commodore-gold");
+    ok("commodore-gold joined COSMETICS on a rank gate (rank 8, no domain)",
+      !!gold && gold.rank === 8 && gold.domain === null);
+    ok("rank unlock path: 6800 XP unlocks, 6799 does not, a latched profile stays unlocked at 0 XP",
+      C.unlocked(gold, null, { xp: 6800 }) === true && C.unlocked(gold, null, { xp: 6799 }) === false
+      && C.unlocked(gold, null, { xp: 0, trailsUnlocked: { "commodore-gold": 1 } }) === true
+      && C.unlocked(gold, null, null) === false);
+    {
+      const pf = { xp: 6800, trailsUnlocked: {} };
+      const newly = C.latch(pf, null);
+      ok("latch: crossing Commodore latches the gold trail forever (idempotent)",
+        newly.indexOf("commodore-gold") >= 0 && !!pf.trailsUnlocked["commodore-gold"]
+        && C.latch(pf, null).indexOf("commodore-gold") === -1);
+    }
+    ok("resolve: a locked commodore-gold pick falls back to standard; unlocked sticks",
+      C.resolve({ shipTrail: "commodore-gold" }, null, { xp: 100 }).id === "standard"
+      && C.resolve({ shipTrail: "commodore-gold" }, null, { xp: 9600 }).id === "commodore-gold");
+    core.profile.xp = 1400;
+    {
+      const cx = SN.makeContext("perks-probe");
+      ok("makeContext snapshots ctx.perks from the profile's xp",
+        !!cx.perks && cx.perks.kbbCoins === 25 && cx.perks.armShieldCell === 1 && cx.perks.crest === true);
+    }
+    // Codex ledger + crest chip (Pilot, already acknowledged — no toast side effects)
+    core.profile.xp = 800; core.profile.rankSeen = 3;
+    shell.showStats();
+    {
+      const rows = w.document.querySelectorAll(".sx-reward");
+      const gotN = w.document.querySelectorAll(".sx-reward.got").length;
+      ok("Codex rank-rewards ledger: 4 rows, exactly the Pilot reward earned at 800 XP",
+        rows.length === 4 && gotN === 1 && /crest/i.test(w.document.querySelector(".sx-reward.got .sx-reward-label").textContent));
+    }
+    shell.showMenu();
+    ok("the bridge rank strip wears the Pilot crest", !!w.document.querySelector(".sx-rank .sx-crest"));
+    // the promotion toast names what Lieutenant pays
+    core.profile.xp = 1400; core.profile.rankSeen = 3; core.profile.settings.reducedMotion = false;
+    shell.showMenu();
+    {
+      const t = [...w.document.querySelectorAll(".sx-toast")].pop();
+      ok("the promotion toast names what Lieutenant pays",
+        !!t && /Promoted: Lieutenant/.test(t.textContent) && /\+25 KBB starting coins/.test(t.textContent) && /Shield Cell/.test(t.textContent));
+    }
+    // picker: the rank variant states its requirement, then unlocks (and latches) by rank
+    core.profile.xp = 800;
+    shell.showSettings();
+    ok("picker: commodore-gold locked at Pilot with a rank requirement (the 7th swatch)",
+      w.document.querySelector('.sx-trail[data-trail="commodore-gold"]').classList.contains("locked")
+      && /Reach Commodore rank/.test(w.document.querySelector('.sx-trail[data-trail="commodore-gold"] .sx-trail-req').textContent));
+    core.profile.xp = 6800;
+    shell.showSettings();
+    ok("picker: at Commodore the gold trail is selectable and latched forever",
+      !w.document.querySelector('.sx-trail[data-trail="commodore-gold"]').classList.contains("locked")
+      && !!core.profile.trailsUnlocked["commodore-gold"]);
+    // hygiene: state-neutral exit
+    core.profile.xp = saveXp; core.profile.rankSeen = saveSeen;
+    core.profile.trailsUnlocked = {};
     shell.showMenu();
   }
 

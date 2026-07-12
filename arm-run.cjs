@@ -613,4 +613,19 @@ var detSector3 = null;   // captured for the determinism probe against window 2
   V3.mod.unmount();
 })();
 
+/* ============ Flow#7 (v0.179.0): the Lieutenant perk = a free Shield Cell level ============ */
+(function rankPerk() {
+  group('Flow#7: ctx.perks.armShieldCell boots a fresh run at Shield Cell level 1');
+  var V4 = newWindow(), ctx4 = H.makeCtx({ seed: SEED + 77 });
+  ctx4.perks = { armShieldCell: 1 };
+  V4.mod.mount(V4.root, ctx4);
+  var T4 = V4.root.__armTest;
+  T4.endBriefingIntro();
+  ok(T4.upgradeLvl('shieldCell') === 1 && T4.upgradeLvl('engine') === 0 && T4.upgradeLvl('rapid') === 0,
+     'fresh run boots with Shield Cell level 1 and ONLY that perk');
+  ok(Math.abs(T4.regenDelay() - 4 * 0.91) < 1e-9,
+     'the perk is real: shield regen delay derives at level 1 (3.64s, not the stock 4s)');
+  V4.mod.unmount();
+})();
+
 H.summary('ARM RUN');

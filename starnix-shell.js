@@ -744,7 +744,11 @@
       ? (r.next - xp).toLocaleString() + " XP to " + X.RANKS[r.index + 1].name
       : "top rank";
     var line = el("span", "sx-rank-xp", xp.toLocaleString() + " XP · " + toNext);
-    host.appendChild(name); host.appendChild(bar); host.appendChild(line);
+    host.appendChild(name);
+    try {   // (v0.179.0, V1.1 Flow#7) the Pilot reward: a bridge crest beside the rank name
+      if (X.perks && X.perks(xp).crest) { var crest = el("span", "sx-crest", "\u2b21"); crest.title = "Bridge crest \u2014 Pilot rank reward"; host.appendChild(crest); }
+    } catch (eCr) {}
+    host.appendChild(bar); host.appendChild(line);
     if (streakN >= 2) host.appendChild(el("span", "sx-streak-chip", "\ud83d\udd25 " + streakN + "-day streak"));   // (v0.153.0, Flow#4)
     var seen = (typeof prof.rankSeen === "number" && prof.rankSeen >= 0) ? prof.rankSeen : 0;
     if (r.index > seen) {
@@ -752,7 +756,8 @@
       try { if (core.persistence && core.persistence.save) core.persistence.save(prof); } catch (e) {}
       var rm = !!(prof.settings && prof.settings.reducedMotion);
       if (!rm) host.classList.add("sx-rank-up");           // pulse; reduced-motion stays static
-      this._toast("✦ Promoted: " + r.name, "sx-toast-gold");
+      var rwL = (X.rewardsAt) ? X.rewardsAt(r.index) : [];   // (v0.179.0, Flow#7) the promotion names what it pays
+      this._toast("✦ Promoted: " + r.name + (rwL.length ? " \u2014 " + rwL.join(" \u00b7 ") : ""), "sx-toast-gold");
       try { core.audio.sfx("correct"); } catch (e2) {}
     }
   };
@@ -1183,6 +1188,7 @@
       + '<div class="sx-dom-head">Domain mastery heatmap</div><div class="sx-heatmap"></div>'
       + '<div class="sx-dom-head">Daily missions</div><div class="sx-daily sx-daily-stats"></div>'
       + '<div class="sx-dom-head">Achievements <span class="sx-ach-count"></span></div><div class="sx-ach"></div>'
+      + '<div class="sx-dom-head">Rank rewards</div><div class="sx-rewards"></div>'
       + '<div class="sx-dom-head">By domain · weakest first</div><div class="sx-domain-list"></div>'
       + '<div class="sx-dom-head">Weakest questions</div><div class="sx-weak"></div>'
       + '<div class="sx-row"></div></div>';
@@ -1284,6 +1290,20 @@
       if (cnt) cnt.textContent = got + " / " + list.length;
     })(s.querySelector(".sx-ach"));
 
+    // ---- rank rewards (v0.179.0, V1.1 Flow#7): what each rank pays — earned vs ahead ----
+    (function buildRewards(box) {
+      if (!box || !StarNix.xp.REWARDS) return;
+      var idx = StarNix.xp.rankFor((core.profile && core.profile.xp) || 0).index;
+      for (var ri = 0; ri < StarNix.xp.REWARDS.length; ri++) {
+        var rw = StarNix.xp.REWARDS[ri];
+        var row = el("div", "sx-reward" + (idx >= rw.rank ? " got" : ""));
+        row.appendChild(el("span", "sx-reward-rank", "✦ " + StarNix.xp.RANKS[rw.rank].name));
+        row.appendChild(el("span", "sx-reward-label", rw.label));
+        row.title = (idx >= rw.rank) ? "Earned" : "Locked";
+        box.appendChild(row);
+      }
+    })(s.querySelector(".sx-rewards"));
+
     // ---- weakest-questions drill (v0.51.0): worst-20 by bucket/streak/misses -> Study mode ----
     (function buildWeak(box) {
       var weak = self._weakestQuestions(20);
@@ -1339,7 +1359,8 @@
       var body = el("span", "sx-trail-body");
       body.appendChild(el("span", "sx-trail-name", def.name));
       body.appendChild(el("span", "sx-trail-req", un ? (current.id === def.id ? "Equipped" : "Unlocked")
-        : "Master " + Math.round(StarNix.cosmetics.THRESHOLD * 100) + "% of " + def.domain));
+        : (def.rank != null ? "Reach " + StarNix.xp.RANKS[def.rank].name + " rank"   // (v0.179.0, Flow#7)
+          : "Master " + Math.round(StarNix.cosmetics.THRESHOLD * 100) + "% of " + def.domain)));
       b.appendChild(body);
       if (un) {
         self._on(b, "click", function () {
@@ -1972,6 +1993,11 @@
       ".sx-diag-ev{color:var(--mid);font-size:10.5px;}",
       ".sx-diag-empty{color:var(--dim);}",
       ".sx-streak-chip{font-size:12px;font-weight:700;color:#FF9857;background:rgba(255,152,87,.12);border:1px solid rgba(255,152,87,.45);border-radius:999px;padding:2px 10px;}",
+      ".sx-crest{font-size:13px;color:var(--gold);border:1px solid rgba(255,200,87,.5);border-radius:6px;padding:0 6px;line-height:18px;}",
+      ".sx-reward{display:flex;gap:10px;align-items:baseline;border:1px solid var(--border);border-radius:8px;padding:6px 10px;margin:4px 0;opacity:.5;}",
+      ".sx-reward.got{opacity:1;border-color:rgba(255,200,87,.5);}",
+      ".sx-reward-rank{color:var(--gold);font-weight:800;font-size:11px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;}",
+      ".sx-reward-label{font-size:13px;}",
       ".sx-sim-trend{margin-top:12px;}",
       ".sx-pause-due{font-size:12.5px;color:var(--gold);border:1px solid rgba(255,200,87,.4);background:rgba(255,200,87,.08);border-radius:9px;padding:6px 10px;}",
       ".sx-debrief-due{font-size:12.5px;color:var(--gold);margin-top:8px;}",

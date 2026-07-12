@@ -891,7 +891,9 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
     var squad = {
       hp: CONFIG.squad.hp, maxHp: CONFIG.squad.maxHp, shield: 0, startShield: CONFIG.squad.startShield || 0,
       basePower: CONFIG.squad.basePower, block: CONFIG.squad.block,
-      healPower: CONFIG.squad.healPower, coins: CONFIG.squad.coins, artifacts: []
+      healPower: CONFIG.squad.healPower,
+      coins: CONFIG.squad.coins + ((ctx.perks && ctx.perks.kbbCoins) | 0),   // (v0.179.0, V1.1 Flow#7) Lieutenant perk: richer loadout start
+      artifacts: []
     };
     var run = {
       ctx: ctx, seed: seed, rng: rng, section: 1, round: 1, squad: squad,
