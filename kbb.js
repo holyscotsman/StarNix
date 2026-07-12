@@ -306,9 +306,11 @@
   var CONSUMABLES = {
     repair: { id: 'repair', name: 'Repair Kit', description: 'Heal HP.' },
     recharge: { id: 'recharge', name: 'Recharge', description: 'Restore shield.' },
-    intel: { id: 'intel', name: 'Intel', description: 'Reveal the enemy\u2019s full incoming attack for this battle.' }
+    intel: { id: 'intel', name: 'Intel', description: 'Reveal the enemy\u2019s full incoming attack for this battle.' },
+    overcharge: { id: 'overcharge', name: 'Overcharge', description: 'Your next correct attack this battle hits at +1.0 mult.' },   // (v0.177.0, V1.1 KBB#7)
+    stasis: { id: 'stasis', name: 'Stasis Field', description: 'The enemy skips its next counterattack.' }
   };
-  var CONSUMABLE_IDS = ['repair', 'recharge', 'intel'];   // (v0.98.0, K3) Purge cut (Jason)
+  var CONSUMABLE_IDS = ['repair', 'recharge', 'intel', 'overcharge', 'stasis'];   // (v0.98.0 K3 cut; v0.177.0 KBB#7: offense + tempo restored)
 
   // ---- 4. Enemy / boss ----
   function enemyName(section, boss, mechanic) {
@@ -445,6 +447,7 @@
       var h = arts[i].def.hooks.modifyDamage;
       if (h && !jammed) h(makeArtCtx(run, arts[i], { answerMs: answerMs }), d);
     }
+    if (run.battle && run.battle.overcharge) { d.mult += 1.0; run.battle.overcharge = false; run.log.push('Overcharge discharged'); }   // (v0.177.0, KBB#7) one strike, then spent
     var v = d.flat * d.mult * d.post;
     if (!isFinite(v) || isNaN(v) || v < 0) v = 0;
     v = Math.round(v);
@@ -493,7 +496,7 @@
       correctCount: 0, wrongCount: 0, correctStreak: 0,
       seenIds: [], question: null, reason: null, revealed: [],
       oneShot: false, retryUsed: false, coldTierUsed: false,
-      refundAttack: false, skipEnemyCounter: false,
+      refundAttack: false, skipEnemyCounter: false, overcharge: false,   // (v0.177.0, KBB#7)
       lastDamage: 0, lastIncoming: 0, lastToHp: 0
     };
     run.phase = 'battle';
@@ -819,6 +822,16 @@
     if (id === 'repair') { run._consumableAmt = CONFIG.repairHeal; fireSide(run, 'onConsumableUsed', { consumable: id }); run._api.heal(run._consumableAmt); }
     else if (id === 'recharge') { run._consumableAmt = CONFIG.rechargeShield; fireSide(run, 'onConsumableUsed', { consumable: id }); run._api.addShield(run._consumableAmt); }
 else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onConsumableUsed', { consumable: id }); }
+    else if (id === 'overcharge') {   // (v0.177.0, KBB#7) next correct attack this battle: +1.0 mult
+      if (!run.battle || run.battle.over) return { ok: false, reason: 'no-active-battle' };
+      run.battle.overcharge = true; run.log.push('Overcharge armed: next strike amplified');
+      fireSide(run, 'onConsumableUsed', { consumable: id });
+    }
+    else if (id === 'stasis') {       // (KBB#7) tempo: the enemy skips its next counter (the cold-tier flag)
+      if (!run.battle || run.battle.over) return { ok: false, reason: 'no-active-battle' };
+      run.battle.skipEnemyCounter = true; run.log.push('Stasis field: the next counterattack is frozen');
+      fireSide(run, 'onConsumableUsed', { consumable: id });
+    }
     else return { ok: false, reason: 'unknown' };
     run.consumables.splice(idx, 1);
     return { ok: true };

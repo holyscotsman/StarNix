@@ -229,6 +229,12 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-KBB-CONSUMABLES — offense and tempo (added v0.177.0).** Buy an Overcharge and a Stasis
+  Field from a shop: using Overcharge mid-battle should visibly double your next correct hit
+  (log: "Overcharge armed" then "discharged"); Stasis should make the enemy's next counter
+  simply not happen (watch the intent chip). Both should be un-usable from the map (no live
+  battle). WRONG: an overcharge lasting more than one strike, or stasis eating two counters.
+
 - **QA-ARM-PUZZLES — decrypt + trace (added v0.176.0).** Reach a T1 sector (5+) and open
   puzzle cores until TRACE appears: the lit conduits must be readable, tapping a linked node
   extends the aqua trace, tapping the head backs up, and there is ALWAYS a route to OUT. In

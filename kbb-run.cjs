@@ -404,6 +404,39 @@ function newWindow() {
   ok(dmgJam === rj.squad.basePower && dmgClean > dmgJam, 'KBB#5 JAMMER: jammed turns strip artifact hooks to base power (' + dmgJam + ' vs ' + dmgClean + ')');
 })();
 
+(function newConsumables() {
+  group('KBB#7: Overcharge + Stasis — offense and tempo join the sustain row');
+  var V = newWindow(), K = V.KBB;
+  var right = function (q) { return q.multi ? q.correctIndices.slice() : q.correctIndex; };
+  ok(K.CONSUMABLE_IDS.length === 5 && K.CONSUMABLE_IDS.indexOf('overcharge') >= 0 && K.CONSUMABLE_IDS.indexOf('stasis') >= 0,
+     'the consumable pool is five (repair/recharge/intel/overcharge/stasis) — the cap-4 hold matters again');
+  // OVERCHARGE: exactly +1.0 mult on the NEXT correct attack, then spent
+  var run = K.createRun(H.makeCtx(K, { seed: SEED + 80 }), { seed: SEED + 80 });
+  run.battle.enemy.pattern = 'flat'; run.battle.enemy.cyc = 0;
+  var base = K.computeDamage(run, 8000);
+  run.consumables.push('overcharge');
+  ok(K.useConsumable(run, 'overcharge').ok === true && run.battle.overcharge === true, 'Overcharge arms on the live battle');
+  ok(K.computeDamage(run, 8000) === base * 2 && run.battle.overcharge === false,
+     'the armed strike computes at +1.0 mult (' + base + ' -> ' + base * 2 + ') and the charge is SPENT in the same computation');
+  ok(K.computeDamage(run, 8000) === base, 'the following strike is back to base — one strike only');
+  // STASIS: the enemy skips exactly one counter
+  var run2 = K.createRun(H.makeCtx(K, { seed: SEED + 81 }), { seed: SEED + 81 });
+  run2.battle.enemy.pattern = 'flat'; run2.battle.enemy.cyc = 0; run2.battle.enemy.hp = 99999; run2.battle.enemy.maxHp = 99999;
+  run2.consumables.push('stasis');
+  ok(K.useConsumable(run2, 'stasis').ok === true && run2.battle.skipEnemyCounter === true, 'Stasis freezes the counter flag');
+  var d2 = K.drawQuestion(run2);
+  var r2 = K.submitAnswer(run2, right(d2.question), 900, 'attack');
+  ok(r2.enemyAttacked === false && r2.incoming === 0, 'STASIS: the enemy skips that counter entirely');
+  var d3 = K.drawQuestion(run2);
+  var r3 = K.submitAnswer(run2, right(d3.question), 900, 'attack');
+  ok(r3.enemyAttacked === true, 'the NEXT turn counters normally — stasis is one counter, not a battle');
+  // guard: neither arms outside a live battle
+  var run3 = K.createRun(H.makeCtx(K, { seed: SEED + 82 }), { seed: SEED + 82 });
+  run3.phase = 'shop'; run3.battle = null; run3.consumables.push('overcharge', 'stasis');
+  ok(K.useConsumable(run3, 'overcharge').ok === false && K.useConsumable(run3, 'stasis').ok === false
+     && run3.consumables.length === 2, 'no live battle -> both refuse and are NOT consumed');
+})();
+
 (function flagshipArc() {
   group('KBB#3: the run has an arc — Flagship victory at section 3, then the endless Deep Belt');
   var V = newWindow(), K = V.KBB;
