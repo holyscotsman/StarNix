@@ -50,7 +50,10 @@
     // Obstacles
     OBST_DEPTH: 0.7,           // half depth (z)
     ROCK_H: 1.25,             // (Jason v0.47.0) the jump obstacle is now a FULL-WIDTH low wall, "a lot bigger": collision top raised 0.6 -> 1.25. Still comfortably jumpable — sin arc clears it for ~63% of JUMP_TIME (base > 1.25/2.4 of apex), vs a ~0.03 s crossing at MAX_SPEED.
-    SWEEP_FREQ: 0.30,         // (v0.56.0) OB_SWEEP lateral pan, radians per metre of approach — a full sweep cycle every ~21 m; beam x = sin(phase + z*freq) * LANE_W (pure fn of z: deterministic, one source of truth for sim + view)
+    SWEEP_FREQ: 0.30,
+    CHAIN_GAP: 34,            // (v0.160.0, V1.1 CC#5) jump-wall -> arch spacing: > MAX_SPEED*JUMP_TIME*0.55 (land, then duck) and > the fairness z-cluster radius
+    ROCKFALL_LAND_Z: 30,      // (CC#5) the boulder lands this far ahead — airborne = no hitbox, landed = lane seal
+    ROCKFALL_DROP_H: 11,      // rim height the boulder falls from (view-only feel; collision is z-gated)         // (v0.56.0) OB_SWEEP lateral pan, radians per metre of approach — a full sweep cycle every ~21 m; beam x = sin(phase + z*freq) * LANE_W (pure fn of z: deterministic, one source of truth for sim + view)
     CEIL_BOTTOM: 1.5,         // (Jason) arch underside / duck clearance — raised from 1.0 so the gap is bigger and reads clearly (duck top 0.7 still passes; stand top 1.9 still hits)
     ARCH_H: 5.3,             // (Jason) arch TOP raised to the chasm rim — ARCH_H = RIM_Y(6.8) - CEIL_BOTTOM(1.5) = 5.3, so the top sits flush with the chasm lip (no gap above; unlike the old 5.5 whose top at 7.0 poked ABOVE the rim) while the underside stays at the duck clearance (1.5). A duck obstacle whose top reaches the rim MUST be this tall — its underside can't rise above head height or it stops being duckable.
 
@@ -140,7 +143,7 @@
   // OB_ARCH: a full-width rock arch spanning ALL lanes — duck under it (lane-independent).
   // OB_SWEEP: (v0.56.0) a low energy beam that PANS the canyon laterally as it approaches —
   // jump is the guaranteed out (worst case); slipping past where it isn't is the skill play.
-  var OB_NARROW = 0, OB_LOWROCK = 1, OB_ARCH = 2, OB_SWEEP = 3;
+  var OB_NARROW = 0, OB_LOWROCK = 1, OB_ARCH = 2, OB_SWEEP = 3, OB_ROCKFALL = 4;   // (v0.160.0, CC#5)
   var SIDE_LEFT = 0, SIDE_RIGHT = 1;   // OB_NARROW.side -> which outer lane it seals (left=lane0, right=lane2)
   var BUFF_MAGNET = 'magnet', BUFF_INVINCIBLE = 'invincible', BUFF_SHIELDPLUS = 'shieldPlus',
       BUFF_COINX2 = 'coinX2', BUFF_SLOWMO = 'slowmo';
@@ -265,6 +268,7 @@
     this._gatesPassed = 0;
     this._boostPending = false;
     this.boostCharge = 0;              // (v0.139.0, V1.1 CC#1) knowledge fuels the boost: corrects charge it
+    this._rowExtra = 0;                // (v0.160.0, CC#5) chain spacing carry
     this.lastMilestone = 0;            // (v0.144.0, V1.1 CC#3) the most recent 25 km mark crossed
     this._nextMile = 25000;
     this._boostTargetScore = 0; this._boostCalmUntil = 0;
@@ -460,6 +464,12 @@
       // past it is real skill); jumping lifts the base clear of the low beam either way.
       return Math.abs(p.x - this._sweepX(o)) < cfg.LANE_W * 0.5 && (pLo < cfg.ROCK_H);
     }
+    if (o.type === OB_ROCKFALL) {
+      // (v0.160.0, CC#5) still FALLING = no hitbox (the shadow + ring warn the lane);
+      // LANDED = it seals its lane at any height, exactly like a canyon-wall extension.
+      if (o.z > cfg.ROCKFALL_LAND_Z) return false;
+      return Math.abs(p.x - o.x) < cfg.LANE_W * 0.5;
+    }
     // OB_LOWROCK — (Jason v0.47.0) full-width low wall: lane-independent (no x test), player base
     // below the wall top => hit; jumping lifts the base clear. Mirrors OB_ARCH's lane-independence.
     return (pLo < cfg.ROCK_H);
@@ -473,6 +483,7 @@
     // crossing time, so only the jump (base above the low beam) is a guaranteed clear.
     // Live gameplay stays phase-honest via _hitsObstacle — this pessimism is only for fairness.
     if (o.type === OB_SWEEP) return action !== 'jump';
+    if (o.type === OB_ROCKFALL) return Math.abs((lane - 1) * cfg.LANE_W - o.x) < cfg.LANE_W * 0.5;   // (CC#5) worst-case landed: its lane is dead, any action
     var x = (lane - 1) * cfg.LANE_W;
     var y = 0, topY = cfg.PLAYER_H;
     if (action === 'jump') { y = cfg.JUMP_HEIGHT; topY = y + cfg.PLAYER_H; }
@@ -743,6 +754,7 @@
       }
       var gap = cfg.BASE_GAP - (this.speed - cfg.BASE_SPEED) * cfg.GAP_K;
       if (gap < cfg.MIN_GAP) gap = cfg.MIN_GAP; else if (gap > cfg.BASE_GAP) gap = cfg.BASE_GAP;
+      if (this._rowExtra) { gap += this._rowExtra; this._rowExtra = 0; }   // (v0.160.0, CC#5) a chain's arch never crowds the next row
       this._nextRowAt += gap;
     }
     // (v0.73.0, J9) energy CELLS — the v0.28 coin pipeline revived as the Garage currency.
@@ -773,7 +785,17 @@
       this._rowOpenLane = 1;                         // jump clears from anywhere (worst case); coins stay centre
       return;
     }
-    r = (r - 0.10) / 0.90;                           // renormalize: the original pattern mix keeps its relative proportions
+    if (r < 0.18) {                                  // (v0.160.0, CC#5) CHAIN: jump into duck
+      this._spawnChain(zAhead);
+      this._rowOpenLane = 1;
+      return;
+    }
+    if (r < 0.26) {                                  // (CC#5) ROCKFALL: dodge the telegraphed lane
+      var rfLane = this._spawnRockfall(zAhead);
+      this._rowOpenLane = rfLane === 1 ? 0 : 1;
+      return;
+    }
+    r = (r - 0.26) / 0.74;                           // renormalize: the original pattern mix keeps its relative proportions
     if (r < 0.26) {                                  // narrowing: seal one outer lane (3 -> 2)
       var side = rng.next() < 0.5 ? SIDE_LEFT : SIDE_RIGHT;
       this._spawnNarrow(side, zAhead);
@@ -837,12 +859,25 @@
     return o;
   };
   CCSim.prototype._spawnArch = function (zAhead) { this._placeObstacle(OB_ARCH, 1, 0, zAhead); }; // lane irrelevant (full-width)
+  // (v0.160.0, V1.1 CC#5) CHAIN: jump wall then arch CHAIN_GAP apart — the jump-into-duck
+  // rhythm beat. The scheduler adds the gap to the NEXT row so the arch never crowds it.
+  CCSim.prototype._spawnChain = function (zAhead) {
+    this._spawnLowRock(this.rng.int(3), zAhead);
+    this._spawnArch(zAhead + this.cfg.CHAIN_GAP);
+    this._rowExtra = this.cfg.CHAIN_GAP;
+  };
+  // (CC#5) ROCKFALL: a boulder drops from the rim onto ONE telegraphed lane; the other two stay open.
+  CCSim.prototype._spawnRockfall = function (zAhead) {
+    var lane = this.rng.int(3);
+    this._placeObstacle(OB_ROCKFALL, lane, 0, zAhead);
+    return lane;
+  };
 
   CCSim.prototype._placeObstacle = function (type, lane, side, zAhead) {
     var o = this.obstacles.acquire();
     if (!o) return null;                             // sized to never happen; harness asserts pooling
     o.type = type; o.lane = lane; o.side = side; o.span = 1;   // span = render width in lanes (2 = wall-extend deep bulge; 0 = collision-only)
-    o.x = (lane - 1) * this.cfg.LANE_W; o.z = zAhead; o.tested = false; o.sweepPhase = 0;
+    o.x = (lane - 1) * this.cfg.LANE_W; o.z = zAhead; o.z0 = zAhead; o.tested = false; o.sweepPhase = 0;   // z0: spawn distance (rockfall's fall clock)
     return o;
   };
 
@@ -866,8 +901,9 @@
       var L = tryLanes[t], sealed = false;
       probe.x = (L - 1) * cfg.LANE_W;
       for (i = 0; i < n; i++) {
-        o = items[i]; if (!o.active || o.type !== OB_NARROW) continue;
+        o = items[i]; if (!o.active || (o.type !== OB_NARROW && o.type !== OB_ROCKFALL)) continue;   // (CC#5) a landed boulder seals like a wall
         if (Math.abs(o.z - z) >= 2.4) continue;
+        if (o.type === OB_ROCKFALL) { if (Math.abs(o.x - probe.x) < cfg.LANE_W * 0.5) { sealed = true; break; } continue; }   // coins route around it even pre-landing
         if (this._hitsObstacle(o, probe)) { sealed = true; break; }
       }
       if (!sealed) { outLane = L; break; }
@@ -1043,6 +1079,15 @@
     // (v0.56.0) OB_SWEEP: a lane-wide low energy beam that pans the canyon — PEACH (danger per
     // 07 §1), additive so it reads as energy, not rock. Telegraph = peach SIDEWAYS arrows
     // (horizontal cone ≠ the up/down jump/duck cones — colorblind-safe by shape + color).
+    // (v0.160.0, V1.1 CC#5) rockfall kit: falling boulder + ground shadow + peach warning ring
+    var shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.42 });
+    var warnMat = new THREE.MeshBasicMaterial({ color: 0xFF6B5B, transparent: true, opacity: 0.8 });
+    this._disposables.push(shadowMat); this._disposables.push(warnMat);
+    this.iBoulder = this._instanced(this._track(new THREE.SphereGeometry(cfg.LANE_W * 0.42, 8, 7)), M.rock, cfg.POOL_OBSTACLES);
+    var shadowGeo = this._track(new THREE.CircleGeometry(cfg.LANE_W * 0.4, 12)); if (shadowGeo.rotateX) shadowGeo.rotateX(-Math.PI / 2);
+    this.iRfShadow = this._instanced(shadowGeo, shadowMat, cfg.POOL_OBSTACLES);
+    var warnGeo = this._track(new THREE.RingGeometry(cfg.LANE_W * 0.32, cfg.LANE_W * 0.44, 16)); if (warnGeo.rotateX) warnGeo.rotateX(-Math.PI / 2);
+    this.iRfWarn = this._instanced(warnGeo, warnMat, cfg.POOL_OBSTACLES);
     var sweepMat = new THREE.MeshBasicMaterial({ color: 0xFF6B5B, transparent: true, opacity: 0.85 });
     var chevSideGeo = new THREE.ConeGeometry(0.34, 0.55, 4);
     if (chevSideGeo.rotateZ) chevSideGeo.rotateZ(-Math.PI / 2);        // tip points +x -> a horizontal arrow
@@ -1566,7 +1611,7 @@
     var hide = this._hide, sm = this.scratchM, sp = this.scratchP, sq = this.scratchQ, ss = this.scratchS;
 
     // obstacles -> instanced meshes by type (narrow split L/R: each bulge is baked at its wall's world x/y)
-    var bL = 0, bR = 0, rN = 0, cN = 0, dL = 0, dR = 0, chU = 0, chD = 0, swN = 0, chS = 0;
+    var bL = 0, bR = 0, rN = 0, cN = 0, dL = 0, dR = 0, chU = 0, chD = 0, swN = 0, chS = 0, rfN = 0, rsN = 0, rwN = 0;   // (CC#5) rockfall
     var chBob = this.reducedMotion ? 0 : Math.sin(this._t * 4.2) * 0.12;   // (Jason v0.47.0) telegraph chevrons bob toward their action
     var items = sim.obstacles.items, n = items.length, i;
     for (i = 0; i < n; i++) {
@@ -1599,6 +1644,16 @@
             this.iChevSide.setMatrixAt(chS++, sm);
           }
         }
+        else if (o.type === OB_ROCKFALL) {
+          // (v0.160.0, CC#5) fall height is a pure fn of remaining approach (z0 -> LAND_Z): no
+          // per-frame state, deterministic, freezes with the world during questions.
+          var rfk = (o.z - cfg.ROCKFALL_LAND_Z) / Math.max(1, (o.z0 - cfg.ROCKFALL_LAND_Z));
+          if (rfk < 0) rfk = 0; else if (rfk > 1) rfk = 1;
+          var rfy = cfg.LANE_W * 0.42 + rfk * rfk * cfg.ROCKFALL_DROP_H;   // ease-in drop
+          setPos(sm, sp, sq, ss, o.x, rfy, -o.z); this.iBoulder.setMatrixAt(rfN++, sm);
+          setPos(sm, sp, sq, ss, o.x, 0.03, -o.z); this.iRfShadow.setMatrixAt(rsN++, sm);
+          if (rfk > 0) { setPos(sm, sp, sq, ss, o.x, 0.06, -o.z); this.iRfWarn.setMatrixAt(rwN++, sm); }   // ring only while airborne
+        }
         else {
           setPos(sm, sp, sq, ss, 0, cfg.CEIL_BOTTOM + cfg.ARCH_H / 2, -o.z); this.iArch.setMatrixAt(cN++, sm);   // wall-to-wall lintel; underside stays at CEIL_BOTTOM (duck clearance)
           for (var chd = -1; chd <= 1; chd++) {
@@ -1621,6 +1676,9 @@
     this.iChevUpShaft.count = this.iChevUpShaft.instanceMatrix.count; this.iChevDownShaft.count = this.iChevDownShaft.instanceMatrix.count;
     this.iChevUpShaft.instanceMatrix.needsUpdate = this.iChevDownShaft.instanceMatrix.needsUpdate = true;
     this.iChevUp.instanceMatrix.needsUpdate = this.iChevDown.instanceMatrix.needsUpdate = true;
+    fillHidden(this.iBoulder, rfN, hide); fillHidden(this.iRfShadow, rsN, hide); fillHidden(this.iRfWarn, rwN, hide);
+    this.iBoulder.count = this.iBoulder.instanceMatrix.count; this.iRfShadow.count = this.iRfShadow.instanceMatrix.count; this.iRfWarn.count = this.iRfWarn.instanceMatrix.count;
+    this.iBoulder.instanceMatrix.needsUpdate = this.iRfShadow.instanceMatrix.needsUpdate = this.iRfWarn.instanceMatrix.needsUpdate = true;
     fillHidden(this.iSweep, swN, hide); fillHidden(this.iChevSide, chS, hide); fillHidden(this.iSweepHead, swN, hide);
     this.iSweep.count = this.iSweep.instanceMatrix.count; this.iChevSide.count = this.iChevSide.instanceMatrix.count;
     this.iSweepHead.count = this.iSweepHead.instanceMatrix.count;
@@ -2705,7 +2763,7 @@
   }
 
   return { CCSim: CCSim, CCView: CCView, createCCModule: createCCModule, CONFIG: CONFIG,
-    _enums: { OB_NARROW: OB_NARROW, OB_LOWROCK: OB_LOWROCK, OB_ARCH: OB_ARCH, OB_SWEEP: OB_SWEEP, SIDE_LEFT: SIDE_LEFT, SIDE_RIGHT: SIDE_RIGHT, POWER_KINDS: POWER_KINDS },
+    _enums: { OB_NARROW: OB_NARROW, OB_LOWROCK: OB_LOWROCK, OB_ARCH: OB_ARCH, OB_SWEEP: OB_SWEEP, OB_ROCKFALL: OB_ROCKFALL, SIDE_LEFT: SIDE_LEFT, SIDE_RIGHT: SIDE_RIGHT, POWER_KINDS: POWER_KINDS },
     garage: { ITEMS: GARAGE_ITEMS, state: garageState, buy: garageBuy },
     makeFallbackRng: makeFallbackRng };
 });

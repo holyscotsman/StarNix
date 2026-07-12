@@ -346,6 +346,23 @@ function runToQuestion(sim, maxSecs, pinShields) {
   ok(s2._nextMile === 75000, 'CC#3: resume derives the next mark from the checkpoint distance (62 km -> 75 km)');
 })();
 
+/* ============ 4d) CC#5: THE NEW ROWS ENTER THE LIVE STREAM ============ */
+(function newRows() {
+  group('CC#5: chain + rockfall spawn in the live mix');
+  var sim = mkSim(SEED + 40);
+  var placed = [];
+  var rp = sim._placeObstacle.bind(sim);
+  sim._placeObstacle = function (t, l, s, z) { placed.push({ t: t, z: z, at: sim.distance }); return rp(t, l, s, z); };
+  for (var f = 0; f < 60 * 150; f++) { sim.shields = 9; if (sim.phase === 'QUESTION') { sim.answer(null, { timedOut: true }); sim.resumeAfterQuestion(); } sim.step(1 / 60); }
+  var rocks = placed.filter(function (p) { return p.t === 4; }).length;
+  var chains = 0;
+  for (var i = 1; i < placed.length; i++) { if (placed[i].t === 2 && placed[i - 1].t === 1 && placed[i].at === placed[i - 1].at && Math.abs((placed[i].z - placed[i - 1].z) - CFG.CHAIN_GAP) < 0.001) chains++; }
+  ok(rocks >= 2, 'CC#5: rockfalls enter the live stream (' + rocks + ' in 150s)');
+  ok(chains >= 2, 'CC#5: chain rows enter the live stream (' + chains + ' in 150s)');
+  var classic = placed.filter(function (p) { return p.t <= 3; }).length;
+  ok(classic > rocks + chains * 2, 'CC#5: the classic mix still forms the base');
+})();
+
 /* ============ 5) CRASH + I-FRAMES + DETERMINISM ============ */
 (function crashDet() {
   group('CRASH + DETERMINISM: shield cost, chained-hit grace, same-seed identity');

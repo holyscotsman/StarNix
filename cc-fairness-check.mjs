@@ -75,7 +75,21 @@ function solvable(seed) {
     realPlace(type, lane, side, zAhead);
     if (curRow) curRow.push({ type: type, lane: lane, side: side, x: (lane - 1) * CFG.LANE_W, z: zAhead, active: true });
   };
-  sim._spawnRow = function (zAhead) { curRow = []; realRow(zAhead); if (curRow.length) allRows.push(curRow); curRow = null; };
+  sim._spawnRow = function (zAhead) {
+    curRow = []; realRow(zAhead);
+    // (v0.160.0, CC#5) group by z-CLUSTER, not by call: a chain's wall and arch sit ~CHAIN_GAP
+    // apart (two separate action moments — jump, then duck); same-z composites stay one unit.
+    if (curRow.length) {
+      curRow.sort((a, b) => a.z - b.z);
+      let cluster = [curRow[0]];
+      for (let ci = 1; ci < curRow.length; ci++) {
+        if (curRow[ci].z - cluster[cluster.length - 1].z <= 16) cluster.push(curRow[ci]);
+        else { allRows.push(cluster); cluster = [curRow[ci]]; }
+      }
+      allRows.push(cluster);
+    }
+    curRow = null;
+  };
   const dt = 1 / 60;
   for (let frame = 0; frame < 60 * 120; frame++) {
     sim.shields = 99; const adv = sim.speed * dt; sim.distance += adv;
@@ -101,6 +115,30 @@ console.log("\nJump wall (v0.47.0) — full-width + jumpable:");
   ok("jumping clears the wall in every lane", jumpAll);
   ok("ducking does NOT clear the wall (it's the arch's mirror)", !duckAny);
   ok("wall top raised to 1.25 (Jason: a lot bigger)", CFG.ROCK_H === 1.25);
+}
+
+// ---- (v0.160.0, V1.1 CC#5) the two new types ----
+console.log("\nCC#5 — CHAIN (jump-then-duck) and ROCKFALL (telegraphed lane seal):");
+{
+  const sim = new CC.CCSim({ rng: makeRng(9) });
+  const placed = [];
+  const rp = sim._placeObstacle.bind(sim);
+  sim._placeObstacle = function (t, l, s, z) { placed.push({ t, l, z }); return rp(t, l, s, z); };
+  sim._spawnChain(100);
+  ok("chain = jump wall then arch exactly CHAIN_GAP apart (34m: land the jump, then duck)",
+    placed.length === 2 && placed[0].t === 1 && placed[1].t === 2 && placed[1].z - placed[0].z === CFG.CHAIN_GAP);
+  ok("chain spacing clears the jump arc with margin (CHAIN_GAP > MAX_SPEED * JUMP_TIME * 0.55)",
+    CFG.CHAIN_GAP > CFG.MAX_SPEED * CFG.JUMP_TIME * 0.55 && CFG.CHAIN_GAP > 16);
+  const rf = { type: 4, lane: 2, side: 0, x: CFG.LANE_W, z: 80, z0: 200, active: true };
+  ok("airborne rockfall has NO hitbox in any lane/action (the warning window is real)",
+    ['stand', 'jump', 'duck'].every((a) => [0, 1, 2].every((l) => {
+      const hit = sim._hitsObstacle(rf, { x: (l - 1) * CFG.LANE_W, y: a === 'jump' ? CFG.JUMP_HEIGHT : 0, topY: a === 'duck' ? CFG.PLAYER_DUCK_H : CFG.PLAYER_H });
+      return !hit;
+    })));
+  rf.z = CFG.ROCKFALL_LAND_Z - 1;
+  ok("landed rockfall seals EXACTLY its lane (any action), the other two stay open",
+    sim._wouldHit(rf, 2, 'stand') && sim._wouldHit(rf, 2, 'jump') && sim._wouldHit(rf, 2, 'duck')
+    && !sim._wouldHit(rf, 0, 'stand') && !sim._wouldHit(rf, 1, 'stand'));
 }
 
 console.log("\nSolvability — every obstacle row leaves an escape lane (covers OB_PINCH center):");

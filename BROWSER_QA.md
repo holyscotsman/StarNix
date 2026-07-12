@@ -229,6 +229,14 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-CC-NEWROWS — chains + rockfalls (added v0.160.0).** Fly CC a few minutes: (a) CHAIN
+  rows — a jump wall with an arch ~a beat behind it; the jump must land comfortably before the
+  duck (report if you ever eat the arch mid-arc at top speed); (b) ROCKFALL — a boulder
+  visibly FALLS from the rim onto one lane with a shadow + peach ring warning well before it
+  lands; it must never hit you while still in the air, and the landed rock seals only its
+  lane. Reduced motion: ring static. WRONG: a boulder materializing with no fall, a chain
+  arch crowding the next row, or coins leading you into the rockfall lane.
+
 - **QA-CINE-BEAM — the Disruptor fire moment (added v0.159.0).** Watch the cinematic's beam
   beat (~3.4s-6.4s): the warship's nose should GLOW and swell for a full second with a faint
   marching dashed line aimed at the station, then a thick peach beam with a white-hot core

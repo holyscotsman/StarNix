@@ -726,8 +726,8 @@ async function runFrames(n = 6) {
   if (ccSim3) {
     const EN = (w.CC && w.CC._enums) || { OB_NARROW: 0, OB_LOWROCK: 1, OB_ARCH: 2, SIDE_LEFT: 0, SIDE_RIGHT: 1 };
     ccSim3.reset();
-    let nNarrow = 0, nLow = 0, nArch = 0, rows = 0, unsolvable = 0;
-    let narrowSealOK = true, lowJumpOK = true, archWideOK = true, archDuckOK = true;
+    let nNarrow = 0, nLow = 0, nArch = 0, nRock = 0, rows = 0, unsolvable = 0;
+    let narrowSealOK = true, lowJumpOK = true, archWideOK = true, archDuckOK = true, rockSealOK = true;
     for (let i = 0; i < 1500; i++) {
       const z = 100 + i * 40;
       ccSim3._spawnRow(z);                                                   // drive the spawner directly (deterministic per rng)
@@ -744,6 +744,10 @@ async function runFrames(n = 6) {
           nNarrow++;
           if (!ccSim3._wouldHit(o, o.lane, "stand")) narrowSealOK = false;   // a wall blocks its own lane
           for (const ln of [0, 1, 2]) if (ln !== o.lane && ccSim3._wouldHit(o, ln, "stand")) narrowSealOK = false; // and ONLY its own lane (no x-bleed)
+        } else if (o.type === 4 /* OB_ROCKFALL, v0.160.0 CC#5 */) {
+          nRock++;
+          if (!ccSim3._wouldHit(o, o.lane, "jump") || !ccSim3._wouldHit(o, o.lane, "duck")) rockSealOK = false;   // worst-case landed: its lane is dead at ANY action
+          for (const ln of [0, 1, 2]) if (ln !== o.lane && ccSim3._wouldHit(o, ln, "stand")) rockSealOK = false;  // and ONLY its lane
         } else {
           nLow++;
           if (!ccSim3._wouldHit(o, o.lane, "stand")) lowJumpOK = false;      // standing in its lane is hit
@@ -761,9 +765,10 @@ async function runFrames(n = 6) {
         if (solved) break;
       }
       if (!solved) unsolvable++;
-      for (const o of row) ccSim3.obstacles.release(o);                      // recycle so the cap-32 pool never exhausts
+      for (const o of ccSim3.obstacles.items) if (o.active) ccSim3.obstacles.release(o);   // recycle EVERYTHING (a chain's arch sits at z+CHAIN_GAP — the old same-z filter leaked it until the pool starved)
     }
-    ok("all three obstacle kinds spawn (narrowing / low rock / arch)", nNarrow > 0 && nLow > 0 && nArch > 0);
+    ok("all obstacle kinds spawn (narrowing / low rock / arch / rockfall)", nNarrow > 0 && nLow > 0 && nArch > 0 && nRock > 0);
+    ok("CC#5: every spawned rockfall seals exactly its own lane (worst-case landed)", rockSealOK);
     ok("each narrowing wall blocks exactly its own lane (no x-bleed)", narrowSealOK);
     ok("low rock blocks a stander in its lane and is jump-clearable", lowJumpOK);
     ok("arch is full-width: hits a stander in every lane", archWideOK);
