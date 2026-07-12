@@ -2384,6 +2384,28 @@
         devrow.appendChild(btn("arm-act ghost", "Skip to boss fight \u25b8", function () { sfx("click"); devSkipToBoss(); }));
         panel.appendChild(devrow);
       }
+      // (v0.189.0, V1.1 ARM#8) SHIP'S LOG — re-read this sector's briefings outside combat.
+      // Renders what Vega actually SAYS: the composed teachLine, its answer landing LAST (A5).
+      // Retrieval support right before a core scan, at zero new-content cost (02 s'ship's log').
+      if (cores.length) {
+        panel.appendChild(mk("div", "arm-eyebrow e-aqua", "\u25a4 Ship's log \u00b7 sector " + sector));
+        var logWrap = mk("div", "arm-log");
+        for (var li = 0; li < cores.length; li++) {
+          (function (core) {
+            var stL = core.state === "collected" ? "INSTALLED" : core.state === "lost" ? "LOST" : "PENDING";
+            var entry = mk("div", "arm-log-entry" + (core.state === "collected" ? " got" : core.state === "lost" ? " lost" : ""));
+            var head = mk("div", "arm-log-head");
+            head.appendChild(mk("span", "arm-log-tag", conceptTag(core)));
+            head.appendChild(mk("span", "arm-log-st arm-log-" + stL.toLowerCase(), stL));
+            entry.appendChild(head);
+            var tL = teachLine(core);
+            if (tL.body) entry.appendChild(mk("div", "arm-log-why", tL.body));
+            if (tL.close) entry.appendChild(mk("div", "arm-log-key", tL.close));   // (A5) the answer lands LAST
+            logWrap.appendChild(entry);
+          })(cores[li]);
+        }
+        panel.appendChild(logWrap);
+      }
       var row = mk("div", "arm-btnrow");
       row.appendChild(btn("arm-act", "Resume ▸", function () { sfx("click"); setState(prevState || "SECTOR"); }));
       panel.appendChild(row);
@@ -3331,6 +3353,7 @@
         typeProbe: function () { return { active: typing.active, shown: typing.shown, total: typing.total, forced: typeForced, layerOn: !!(typeLayer && typeLayer.style.display === "block"), optsWait: !!(commsOpts && commsOpts.classList.contains("wait")) }; },   // (v0.180.0, ARM#7)
         typeForce: function (onF) { typeForced = !!onF; },
         typeSkip: function () { skipReveal(); },
+        openSettings: function () { showSettings(); },               // (v0.189.0, ARM#8)
         hpMix: function (n, sec) { var keep = sector; if (sec) sector = sec; var out = {}; for (var i = 0; i < (n || 300); i++) { var h = enemyHpFor(sector); out[h] = (out[h] || 0) + 1; } sector = keep; return out; },   // (v0.155.0, ARM#4)
         shotDmg: function (sec) { return shotDmgFor(sec); },
         setSmoothDiff: function (v) { smoothDiff = !!v; },
@@ -3476,6 +3499,17 @@
       ".arm-rtext b{color:" + C.iris300 + ";font-size:12px;letter-spacing:0;}",
       ".arm-vignette{position:absolute;inset:0;z-index:4;pointer-events:none;background:radial-gradient(120% 120% at 50% 45%, transparent 62%, rgba(4,4,10,.55) 88%, rgba(4,4,10,.85) 100%);}",
       ".arm-srow{display:flex;justify-content:space-between;align-items:center;gap:14px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:" + C.mid + ";}",
+      /* (v0.189.0, V1.1 ARM#8) the ship's log — center-console CRT pages */
+      ".arm-log{display:flex;flex-direction:column;gap:8px;max-height:210px;overflow-y:auto;margin:6px 0 10px;padding-right:4px;text-align:left;}",
+      ".arm-log-entry{border:1px solid #26263a;border-left:3px solid " + C.aqua + ";border-radius:8px;padding:7px 9px;background:rgba(10,14,20,.65);}",
+      ".arm-log-entry.got{border-left-color:#92DD23;}",
+      ".arm-log-entry.lost{border-left-color:#FF6B5B;}",
+      ".arm-log-head{display:flex;justify-content:space-between;gap:8px;margin-bottom:4px;}",
+      ".arm-log-tag{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:" + C.aqua + ";}",
+      ".arm-log-st{font-size:11px;font-weight:700;letter-spacing:.08em;}",
+      ".arm-log-installed{color:#92DD23;}.arm-log-lost{color:#FF6B5B;}.arm-log-pending{color:" + C.mid + ";}",
+      ".arm-log-why{font-size:12px;color:#c9c9d6;line-height:1.45;}",
+      ".arm-log-key{font-size:12px;color:#9ff0f7;font-weight:700;margin-top:3px;}",
       ".arm-srow b{color:" + C.text + ";font-weight:700;font-size:12.5px;letter-spacing:.02em;font-variant-numeric:tabular-nums;}.arm-srow b.gold{color:" + C.gold + ";}",   /* (v0.187.0, FE#8) */
       ".arm-meter{width:88px;height:8px;border-radius:5px;border:1px solid #33334a;overflow:hidden;}.arm-meter>i{display:block;height:100%;border-radius:5px;}",
       ".arm-m-shield>i{background:linear-gradient(90deg," + C.aqua + ",#19a9b3);box-shadow:0 0 10px rgba(31,221,233,.6);}",

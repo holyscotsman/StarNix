@@ -229,6 +229,14 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-ARM-LOG — the ship's log (added v0.189.0).** Mid-sector, open ⚙ Menu: below the
+  toggles sits 'Ship's log · sector n' — five CRT entries with topic tags and status chips.
+  Collect a core, reopen: its chip flips to green INSTALLED; lose one: peach LOST, and its
+  left border tints match. Each entry reads explanation first, 'So the key here is …' last.
+  The rail scrolls if the panel is short. WRONG: entries for a different sector, a status
+  that lags reality, the answer line appearing first, or the log showing in the intro
+  before cores exist.
+
 - **QA-CINE-CAPTIONS — the letterboxed cold open (added v0.188.0).** Replay the intro: the
   frame must wear real letterbox bars (thin top, deeper bottom), each caption TYPES on over
   about half a second with a soft tick as it starts, and the line sits inside the bottom

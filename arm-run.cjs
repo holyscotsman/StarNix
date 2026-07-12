@@ -616,6 +616,45 @@ var detSector3 = null;   // captured for the determinism probe against window 2
   V3.mod.unmount();
 })();
 
+/* ============ ARM#8 (v0.189.0): the SHIP'S LOG — re-read briefings from the pause menu ============ */
+(function shipsLog() {
+  group("ARM#8: ship's log — five CRT entries, live status, the answer lands LAST in each");
+  var V6 = newWindow(), ctx6 = H.makeCtx({ seed: SEED + 66 });
+  V6.mod.mount(V6.root, ctx6);
+  var T6 = V6.root.__armTest;
+  T6.endBriefingIntro();
+  var g6 = 0; while (T6.state() === 'BRIEF' && g6++ < 12) { if (pickBrief(T6, /hyperdrive/i)) break; pickBrief(T6, /understand|go ahead/i); }
+  T6.flushWarp(); T6.step(0.1);
+  ok(T6.state() === 'SECTOR', 'setup: live sector reached');
+  T6.openSettings();
+  var doc6 = V6.root.ownerDocument || V6.win.document;
+  var entries = doc6.querySelectorAll('.arm-log-entry');
+  ok(entries.length === T6.coreQids().length && entries.length === 5,
+     'the log lists exactly this sector\'s five cores');
+  var lastOk = true, keyLast = true;
+  for (var e6 = 0; e6 < entries.length; e6++) {
+    var kids = entries[e6].children;
+    var lastEl = kids[kids.length - 1];
+    if (!/arm-log-key/.test(lastEl.className) || !/the key here is/.test(lastEl.textContent)) keyLast = false;
+    if (!/PENDING/.test(entries[e6].querySelector('.arm-log-st').textContent)) lastOk = false;
+  }
+  ok(keyLast, 'A5 extended: in every entry the ANSWER is the final line');
+  ok(lastOk, 'all five start PENDING');
+  // resume, collect one core and lose another — the log tracks the live states
+  [...doc6.querySelectorAll('button')].filter(function (b) { return /Resume/.test(b.textContent); })[0].click();
+  T6.prepCore(1); T6.arrive(1); T6.answer(true);
+  T6.prepCore(3); T6.arrive(3);
+  if (T6.state() === 'PUZZLE') { T6.puzzleTapSolve(); T6.flushLater(); }   // a puzzle core: crack it, the question follows
+  T6.answer(false);
+  T6.openSettings();
+  var sts = [...doc6.querySelectorAll('.arm-log-st')].map(function (n) { return n.textContent; });
+  ok(sts.filter(function (t) { return t === 'INSTALLED'; }).length === 1
+     && sts.filter(function (t) { return t === 'LOST'; }).length === 1
+     && sts.filter(function (t) { return t === 'PENDING'; }).length === 3,
+     'after one collect and one loss the log reads 1 INSTALLED / 1 LOST / 3 PENDING');
+  V6.mod.unmount();
+})();
+
 /* ============ ARM#7 (v0.180.0): the D4 CRT typing reveal, designed around the A5 race ============ */
 (function typeReveal() {
   group('ARM#7: typing reveal — commsMsg holds full text instantly, the layer types, skip completes');
