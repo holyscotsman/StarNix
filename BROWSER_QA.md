@@ -229,6 +229,13 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-GAUNTLET — one shot a day (added v0.196.0).** In the Testing station, run the ⚡
+  Daily gauntlet: ten Blitz questions, then the tile flips to a locked scoreboard with your
+  points and (from day two) a 🔥 streak chip. Relaunching that day must be impossible from
+  the tile, and the Gauntleteer daily mission on the bridge should tick complete. Tomorrow
+  the tile unlocks with a DIFFERENT ten. WRONG: a second scored run the same day, the same
+  ten questions two days running, or a streak chip after a skipped day.
+
 - **QA-BRIDGE-TOUR — the first boot has a path (added v0.195.0).** On a FRESH profile (or
   after clearing storage): the four strips wear numbered ribbons (ARM's aqua 'START HERE',
   NIT counting toward 50 cards), and a violet tour card sits bottom-left stepping through

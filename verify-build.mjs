@@ -2679,7 +2679,7 @@ async function runFrames(n = 6) {
     const core = SN.core, D = SN.daily;
     // achievements sentinel again — daily records here must not trigger surprise unlock XP
     SN.achievements.LIST.forEach(d => { core.profile.achievements[d.id] = 1; });
-    ok("daily API exposed: 6 templates + gen/ensure/state/claim/dayKey", !!D && D.TEMPLATES.length === 6
+    ok("daily API exposed: 7 templates + gen/ensure/state/claim/dayKey", !!D && D.TEMPLATES.length === 7
       && [D.gen, D.ensure, D.state, D.claim, D.dayKey].every(f => typeof f === "function"));
     {
       const a = JSON.stringify(D.gen("2026-07-03")), b = JSON.stringify(D.gen("2026-07-03")), c = JSON.stringify(D.gen("2026-07-04"));
@@ -2694,10 +2694,11 @@ async function runFrames(n = 6) {
     core.profile.streaks = {};                                    // fresh streak run for the chain mission
     const xp0 = core.profile.xp;
     D.ensure(core.profile);
-    // pinned day: 2026-07-03 rolls [promote:5, sharp:10, chain:3] (asserted, so drift is loud)
+    // pinned day: 2026-07-03 rolls [gauntlet:1, sharp:10, chain:3] with the 7-template pool
+    // (v0.196.0, NIT#9 — the Gauntleteer joined; asserted, so drift is loud)
     ok("ensure: seeds today's state (date, xpStart, zeroed counters) with the pinned missions",
       core.profile.daily.date === "2026-07-03" && core.profile.daily.xpStart === xp0
-      && core.profile.daily.missions.map(m => m.tpl + ":" + m.target).join(",") === "promote:5,sharp:10,chain:3");
+      && core.profile.daily.missions.map(m => m.tpl + ":" + m.target).join(",") === "gauntlet:1,sharp:10,chain:3");
     // progress wiring: the mastery choke point feeds correct/byGame/bestStreak/promotions
     const dq = core.questions.pool().slice(10, 14);
     core.mastery.record(dq[0].id, true, { game: "CC" });
@@ -2729,6 +2730,7 @@ async function runFrames(n = 6) {
     // DOM: menu strip + claim flow + Progress-screen row
     core.profile.daily.correct = 99; core.profile.daily.byGame = { ARM: 99, KBB: 99, CC: 99, EXAM: 99 };
     core.profile.daily.bestStreak = 99; core.profile.daily.exams = 99; core.profile.daily.promotions = 99;
+    core.profile.blitzDaily = { last: core.profile.daily.date, streak: 1, best: 1, pts: 1, pct: 1 };   // (NIT#9) a rolled gauntlet mission completes too
     core.profile.xp = core.profile.daily.xpStart + 999;
     shell.showMenu();
     // (v0.60.0 P2·1, PLAYTEST A1/A3) the menu hosts a COMPACT strip: undated head, no goal
@@ -2757,6 +2759,7 @@ async function runFrames(n = 6) {
     ok("Progress screen: exactly ONE 'Daily missions' heading (A3 double header gone)",
       [...w.document.querySelectorAll(".sx-dom-head")].filter(h => /Daily missions/.test(h.textContent)).length === 1
       && w.document.querySelectorAll(".sx-daily-stats .sx-daily-head").length === 0);
+    core.profile.blitzDaily = null;   // (NIT#9) hygiene — the N9 section manages its own record
     shell.showMenu();
     // hygiene
     core.clock.now = realNow;
@@ -3065,6 +3068,48 @@ async function runFrames(n = 6) {
       ok("B8: the domain-weight seam is decisive when set (5 of 5 draws from the boosted domain) and null = uniform (Flow#5 quarantine holds)",
         seen8.length === 5 && seen8.every(dn => dn === dom0));
     }
+  }
+
+  // N9. NIT#9 (v0.196.0): the Daily gauntlet — one seeded 10-question Blitz per day
+  {
+    const D9 = SN.daily, p9g = SN.core.profile;
+    const save9g = p9g.blitzDaily ? JSON.parse(JSON.stringify(p9g.blitzDaily)) : null;
+    const today9 = D9.dayKey();
+    const setA = shell._gauntletQuestions("2026-07-12").map(q => q.id).join(",");
+    const setB = shell._gauntletQuestions("2026-07-12").map(q => q.id).join(",");
+    const setC = shell._gauntletQuestions("2026-07-13").map(q => q.id).join(",");
+    ok("NIT#9: the gauntlet draw is date-pure — same date same ten, next date a different ten",
+      setA.split(",").length === 10 && setA === setB && setA !== setC);
+    p9g.blitzDaily = null;
+    shell.showExamSetup();
+    const gt = w.document.querySelector(".sx-exam-len-gauntlet");
+    ok("NIT#9: the setup rail carries the gauntlet tile, launchable when unplayed",
+      !!gt && !gt.disabled && /ONE scored Blitz attempt/.test(gt.textContent));
+    // completion records: streak seeds at 1, best takes the points
+    shell._gauntletDay = today9;
+    shell._recordExam({ mode: "blitz", total: 10, correct: 8, pct: 80, speedPoints: 4200 });
+    ok("NIT#9: the first completion records the day (streak 1, best 4200)",
+      p9g.blitzDaily && p9g.blitzDaily.last === today9 && p9g.blitzDaily.streak === 1
+      && p9g.blitzDaily.best === 4200 && p9g.blitzDaily.pts === 4200);
+    // ONE attempt: a same-day retry never rescores, even when better
+    shell._gauntletDay = today9;
+    shell._recordExam({ mode: "blitz", total: 10, correct: 10, pct: 100, speedPoints: 9999 });
+    ok("NIT#9: a same-day retry NEVER rescores (pts hold at 4200)",
+      p9g.blitzDaily.pts === 4200 && p9g.blitzDaily.best === 4200);
+    // streak math: yesterday's completion chains
+    p9g.blitzDaily = { last: D9.dayKey(SN.core.clock.now() - 86400000), streak: 3, best: 5000, pts: 5000, pct: 90 };
+    shell._gauntletDay = today9;
+    shell._recordExam({ mode: "blitz", total: 10, correct: 9, pct: 90, speedPoints: 4800 });
+    ok("NIT#9: a consecutive-day completion chains the streak (3 -> 4)",
+      p9g.blitzDaily.streak === 4 && p9g.blitzDaily.last === today9 && p9g.blitzDaily.best === 5000);
+    shell.showExamSetup();
+    const gt2 = w.document.querySelector(".sx-exam-len-gauntlet");
+    ok("NIT#9: after today's run the tile locks and shows the score + streak",
+      !!gt2 && gt2.disabled && /done for today/.test(gt2.textContent) && /4-day streak/.test(gt2.textContent));
+    ok("NIT#9: the Gauntleteer daily mission rides the same record",
+      D9.TEMPLATES.some(t => t.id === "gauntlet" && t.progress({ date: today9 }, {}, p9g) === 1));
+    p9g.blitzDaily = save9g;
+    shell.showMenu();
   }
 
   // F9. Flow#9 (v0.195.0): first-run order ribbons + the 3-step bridge tour

@@ -983,6 +983,29 @@
     if (total > 20) lenBtn("Quick", "20 questions \u00b7 a fast confidence check", 20);
     if (total > 75) lenBtn("Standard", "75 questions \u00b7 the real exam's length (120 min at sim pace)", 75);   // (v0.84.0, B1) was 65 — the real NCP-MCI is 75 q
     lenBtn("Full bank", total + " questions \u00b7 everything that's live", total);
+    // (v0.196.0, V1.1 NIT#9) the Daily gauntlet: one seeded 10-question Blitz per day —
+    // the retention loop the Leitner scheduler needs to actually work.
+    try {
+      var gDay = StarNix.daily.dayKey();
+      var bd9 = core.profile.blitzDaily || null;
+      var gStreak = (bd9 && bd9.streak) | 0;
+      var chip9 = gStreak >= 2 ? ' \u00b7 \ud83d\udd25 ' + gStreak + '-day streak' : '';
+      var gb = el("button", "sx-exam-len sx-exam-len-gauntlet");
+      if (bd9 && bd9.last === gDay) {
+        gb.innerHTML = '<span class="t">\u26a1 Daily gauntlet \u2014 done for today</span><span class="s">' + (bd9.pts || 0).toLocaleString() + ' pts \u00b7 ' + (bd9.pct || 0) + '%' + chip9 + ' \u00b7 a fresh set arrives tomorrow</span>';
+        gb.disabled = true;
+      } else {
+        gb.innerHTML = '<span class="t">\u26a1 Daily gauntlet</span><span class="s">10 seeded questions \u00b7 ONE scored Blitz attempt \u2014 the same set for everyone today' + chip9 + (bd9 && bd9.best ? ' \u00b7 best ' + bd9.best.toLocaleString() + ' pts' : '') + '</span>';
+        this._on(gb, "click", function () {
+          var qsG = self._gauntletQuestions(gDay);
+          if (!qsG.length) return;
+          self._examMode = "blitz";
+          self._gauntletDay = gDay;                       // _recordExam consumes this
+          self.showExam(null, { questions: qsG, mode: "blitz" });
+        });
+      }
+      lens.appendChild(gb);
+    } catch (eG9) {}
     // (v0.92.0, G1) exhibits are deliberately exam-only (games can't render images) — but
     // that made them invisible to a games-first player. One tap serves exactly those.
     try {
@@ -1110,6 +1133,16 @@
   };
 
   // Record a completed exam's best speed-score per length (profile.bests.EXAM[count]).
+  // (v0.196.0, V1.1 NIT#9) today's gauntlet set: seeded by the DATE alone, so every
+  // retry-tempted player gets the same ten — deterministic by construction, pinnable by the same token.
+  Shell.prototype._gauntletQuestions = function (dateStr) {
+    var coreG = StarNix.core;
+    var dayG = dateStr || StarNix.daily.dayKey();
+    var rngG = coreG.makeRng("blitz-daily:" + dayG);
+    var poolG = coreG.questions.pool().slice();
+    for (var iG = poolG.length - 1; iG > 0; iG--) { var jG = Math.floor(rngG.next() * (iG + 1)); var tG = poolG[iG]; poolG[iG] = poolG[jG]; poolG[jG] = tG; }
+    return poolG.slice(0, 10);
+  };
   Shell.prototype._recordExam = function (sum) {
     if (!sum) return;
     // (v0.52.0 unit 2) Commander-rank XP: any COMPLETED exam awards into the one pool
@@ -1147,6 +1180,22 @@
         if (dd) { dd.exams = (dd.exams || 0) + 1; if (StarNix.core.persistence && StarNix.core.persistence.save) StarNix.core.persistence.save(pD); }
       }
     } catch (eD) {}
+    // (v0.196.0, V1.1 NIT#9) the Daily gauntlet: ONE scored attempt per day — streak + best.
+    try {
+      var gDayR = this._gauntletDay; this._gauntletDay = null;
+      if (gDayR && sum.mode === "blitz" && !sum.abandoned && sum.total === 10 && gDayR === StarNix.daily.dayKey()) {
+        var pG = StarNix.core.profile;
+        var bdG = pG.blitzDaily || (pG.blitzDaily = { last: null, streak: 0, best: 0, pts: 0, pct: 0 });
+        if (bdG.last !== gDayR) {                       // retries after the first completion never score
+          var yG = StarNix.daily.dayKey(StarNix.core.clock.now() - 86400000);
+          bdG.streak = (bdG.last === yG) ? (bdG.streak | 0) + 1 : 1;
+          bdG.last = gDayR;
+          bdG.pts = sum.speedPoints || 0; bdG.pct = sum.pct || 0;
+          if ((sum.speedPoints || 0) > (bdG.best | 0)) bdG.best = sum.speedPoints || 0;
+          try { StarNix.core.persistence.save(pG); } catch (eGs) {}
+        }
+      }
+    } catch (eG) {}
     if (sum.mode && sum.mode !== "blitz") return;   // bests are the Blitz speed leaderboard; Study/Sim don't compete on speed
     var core = StarNix.core;
     try {

@@ -24,7 +24,7 @@
   var CORE_VERSION = "1.1.0";              // internal contract version (changes rarely)
   // User-facing playable-build stamp. BUMP THIS (and the date) on every delivered index.html so the
   // version shown in-game tells us exactly which build is being played/tested. Shown by the shell.
-  var BUILD_VERSION = "0.195.0";
+  var BUILD_VERSION = "0.196.0";
   var BUILD_DATE = "2026-07-03";
   var BUILD_LABEL = "v" + BUILD_VERSION + " \u00b7 " + BUILD_DATE;
   var SCHEMA_VERSION = 1;
@@ -482,7 +482,10 @@
       progress: function (d, m, profile) { return Math.max(0, ((profile && profile.xp) || 0) - (d.xpStart || 0)); } },
     { id: "promote", icon: "📈", name: "Drill sergeant", xp: 60, targets: [3, 5],
       desc: function (t) { return "Promote " + t + " questions up the mastery ladder today."; },
-      progress: function (d) { return d.promotions || 0; } }
+      progress: function (d) { return d.promotions || 0; } },
+    { id: "gauntlet", icon: "\u26a1", name: "Gauntleteer", xp: 60, targets: [1],   // (v0.196.0, V1.1 NIT#9)
+      desc: function () { return "Complete today's Daily gauntlet."; },
+      progress: function (d, m, profile) { return (profile && profile.blitzDaily && d && profile.blitzDaily.last === d.date) ? 1 : 0; } }
   ];
   function dayKey(ts) {
     var d = new Date(ts != null ? ts : clock.now());
@@ -887,6 +890,7 @@
       qstats: {},            // (v0.183.0, V1.1 Backend#7) per-question pace aggregates: id -> {n, lat(EMA ms), pct(EMA of window used)}
       station: 0,            // (v0.186.0, V1.1 Flow#8) MCI Station modules re-lit (0-60) — mastery-fed, latched forever
       onboarded: false,      // (v0.195.0, V1.1 Flow#9) first-run order ribbons + bridge tour latch
+      blitzDaily: null,      // (v0.196.0, V1.1 NIT#9) daily gauntlet record: {last, streak, best, pts, pct}
       settings: defaultSettings(),
       updatedAt: clock.now()
     };
@@ -911,6 +915,7 @@
     if (!p.qstats || typeof p.qstats !== "object") p.qstats = {};       // (v0.183.0, Backend#7)
     if (typeof p.station !== "number" || !(p.station >= 0)) p.station = 0;   // (v0.186.0, Flow#8)
     if (typeof p.onboarded !== "boolean") p.onboarded = !!(p.totals && p.totals.questionsSeen > 0);   // (v0.195.0, Flow#9) veterans skip the tour
+    if (p.blitzDaily !== null && (typeof p.blitzDaily !== "object" || !p.blitzDaily)) p.blitzDaily = null;   // (v0.196.0, NIT#9)
     if (typeof p.streakDays !== "number") p.streakDays = 0;            // (v0.153.0, Flow#4)
     if (typeof p.streakDaysBest !== "number") p.streakDaysBest = 0;
     p.settings = Object.assign({}, def.settings, p.settings || {});
