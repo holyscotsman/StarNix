@@ -229,6 +229,13 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-KBB-READS — enemies you can read (added v0.171.0).** Play a few sections: round-1
+  enemies should VARY between runs (not always steady 'flat'); from section 2, meet the
+  Siphon (weak hits, "rips 4 shield" chip — confirm bracing the strike turn beats bracing
+  early) and the Crescendo (two calm gold "Building" turns, then a peach HEAVY that hits ~3x
+  harder — dodgeable by braceing exactly then). WRONG: a HEAVY with no calm build-up shown,
+  or the siphon draining shield on its Charging turns.
+
 - **QA-COLORBLIND — the simulator pass (added v0.170.0).** Take fresh screenshots of: a graded
   exam question (right + wrong options), KBB's FINAL turn + intent alert, CC's low timer, the
   Codex domain bars + heatmap, readiness sim chips. Run them through a deuteranopia AND a

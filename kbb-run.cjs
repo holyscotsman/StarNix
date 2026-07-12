@@ -74,6 +74,7 @@ function newWindow() {
 
   // C) repair after taking damage heals healPower (capped at maxHp)
   var runC = K.createRun(H.makeCtx(K, { seed: SEED + 2 }), { seed: SEED + 2 });
+  runC.battle.enemy.pattern = 'flat'; runC.battle.enemy.cyc = 0;   // (v0.171.0, KBB#6) pin the read — this probe's arithmetic assumes steady intent
   runC.squad.shield = 0;                                                                       // bare hull so the counter reaches hp
   var dC1 = K.drawQuestion(runC); K.submitAnswer(runC, wrongA(dC1.question), 3000, 'attack');   // eat a counter
   if (runC.phase !== 'lost') {
@@ -141,6 +142,7 @@ function newWindow() {
   // erasure-coding: every THIRD incoming enemy attack halved (probe via wrong-answer counters)
   (function () {
     var run = mkRun(SEED + 22, 'erasure-coding', true);
+    run.battle.enemy.pattern = 'flat'; run.battle.enemy.cyc = 0;   // (v0.171.0, KBB#6) steady intent — the thirds arithmetic is under test, not the read
     var seen = [];
     for (var t = 0; t < 3; t++) {
       var q = K.drawQuestion(run).question;
@@ -310,6 +312,39 @@ function newWindow() {
     K.submitAnswer(run2, (qq.multi ? qq.correctIndices.slice() : qq.correctIndex), 900, 'attack');
   }
   ok(crossed && run2.misses.length === 0, 'starting the next battle clears the previous debrief');
+})();
+
+(function intentPatterns() {
+  group('KBB#6: intent patterns rolled per enemy — siphon + crescendo join the reads');
+  var V = newWindow(), K = V.KBB;
+  ok(K.ENEMY_PATTERNS.length === 5 && K.ENEMY_PATTERNS.indexOf('siphon') >= 0 && K.ENEMY_PATTERNS.indexOf('crescendo') >= 0,
+     'the pattern pool is five (flat/ramp/alternating/siphon/crescendo)');
+  // per-enemy roll: round 1 is NOT always flat any more; s1 stays classics-only
+  var seen1 = {}, seen2 = {};
+  for (var sd = 0; sd < 60; sd++) {
+    var runP = K.createRun(H.makeCtx(K, { seed: 9000 + sd }), { seed: 9000 + sd });
+    seen1[runP.battle.enemy.pattern] = 1;
+    runP.section = 2; runP.round = 1;
+    seen2[K.makeEnemy(runP).pattern] = 1;
+  }
+  ok(Object.keys(seen1).length >= 2 && !seen1.siphon && !seen1.crescendo,
+     'section 1 round 1 varies across runs but stays on the teaching classics (' + Object.keys(seen1).sort().join('/') + ')');
+  ok(seen2.siphon === 1 && seen2.crescendo === 1,
+     'section 2+ regulars draw the full pool (' + Object.keys(seen2).sort().join('/') + ')');
+  // SIPHON: weak hit + a 4-shield rip BEFORE absorption
+  var runS = K.createRun(H.makeCtx(K, { seed: 9100 }), { seed: 9100 });
+  var eS = runS.battle.enemy; eS.pattern = 'siphon'; eS.intent = 10; eS.boss = false;
+  ok(K.currentIntent(runS) === 6, 'siphon hits weak (60% of intent: 10 -> 6)');
+  runS.squad.shield = 10;
+  K._test.applyIncoming(runS, K.currentIntent(runS));
+  ok(runS.squad.shield === 0 && runS.battle.lastToHp === 0,
+     'siphon rips 4 shield FIRST, then the weak hit lands on what remains (10-4-6=0 shield, 0 to hull)');
+  // CRESCENDO: weak/weak/HEAVY on a three-turn cycle
+  var runC = K.createRun(H.makeCtx(K, { seed: 9101 }), { seed: 9101 });
+  var eC = runC.battle.enemy; eC.pattern = 'crescendo'; eC.intent = 10; eC.cyc = 0; eC.boss = false;
+  var seqC = [];
+  for (var tc = 0; tc < 6; tc++) { seqC.push(K.currentIntent(runC)); K._test.advanceIntent ? K._test.advanceIntent(runC) : (function () { eC.cyc = (eC.cyc + 1) % 3; })(); }
+  ok(seqC.join(',') === '7,7,22,7,7,22', 'crescendo cycles weak/weak/HEAVY (7,7,22 at intent 10)');
 })();
 
 (function newMechanics() {

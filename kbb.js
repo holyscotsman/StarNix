@@ -61,7 +61,7 @@
   }
   var BOSS_MECHANICS = ['shielded', 'enrage', 'gated'];   // the teaching cycle (sections 1-3; the s3 Flagship stays 'gated')
   var BOSS_MECHANICS_ALL = ['shielded', 'enrage', 'gated', 'splitter', 'leech', 'jammer'];   // (v0.162.0, V1.1 KBB#5) Deep Belt pool
-  var ENEMY_PATTERNS = ['flat', 'ramp', 'alternating'];
+  var ENEMY_PATTERNS = ['flat', 'ramp', 'alternating', 'siphon', 'crescendo'];   // (v0.171.0, V1.1 KBB#6) two new READS: siphon strips shield, crescendo cycles weak/weak/HEAVY
 
   // ---- 3. Artifact catalog (data + hooks). modifyDamage channels:
   // d.flat (additive base), d.mult (additive to 1-based mult), d.post (xfinal).
@@ -332,7 +332,13 @@
       hp = Math.round(hp * CONFIG.bossHpMult);
       mechanic = s <= 3 ? BOSS_MECHANICS[(s - 1) % BOSS_MECHANICS.length] : BOSS_MECHANICS_ALL[Math.floor(run.rng.next() * BOSS_MECHANICS_ALL.length)];   // (KBB#5) past depth 3, bosses stop rerunning section 1
       pattern = (mechanic === 'enrage') ? 'ramp' : 'flat';
-    } else { pattern = ENEMY_PATTERNS[(r - 1) % ENEMY_PATTERNS.length]; }
+    } else {
+      // (v0.171.0, KBB#6) rolled PER ENEMY via run.rng (round 1 was ALWAYS 'flat' before) —
+      // section 1 teaches the three classics; siphon/crescendo phase in from section 2.
+      var pr = run.rng.next();
+      if (s === 1) pattern = ENEMY_PATTERNS[Math.floor(pr * 3)];
+      else pattern = pr < 0.22 ? 'siphon' : (pr < 0.44 ? 'crescendo' : ENEMY_PATTERNS[Math.floor((pr - 0.44) / 0.56 * 3)]);
+    }
     var step = Math.max(1, Math.round(intent * 0.4));
     if (mechanic === 'enrage') step = Math.max(2, Math.round(intent * 0.6));
     var flagship = boss && s === CONFIG.flagshipSection;   // (v0.149.0, KBB#3)
@@ -342,18 +348,22 @@
       intent: intent, baseIntent: intent, intentStep: step, pattern: pattern,
       intentToggle: false, shieldUp: false, locked: !!(boss && mechanic === 'gated'),
       split: false, escortHp: 0, escortMax: 0, jamOn: false,   // (v0.162.0, KBB#5) splitter escort + jammer window
+      cyc: 0,   // (v0.171.0, KBB#6) crescendo's three-turn cycle counter
       rewardCoins: bossOrNormalCoins(s, r, boss)
     };
   }
   function currentIntent(run) {
     var e = run.battle.enemy;
     if (e.pattern === 'alternating') return e.intentToggle ? e.intent * 2 : 0;
+    if (e.pattern === 'siphon') return Math.max(1, Math.round(e.intent * 0.6));            // (v0.171.0, KBB#6) weak hit — the sting is the shield strip
+    if (e.pattern === 'crescendo') return e.cyc === 2 ? Math.round(e.intent * 2.2) : Math.max(1, Math.round(e.intent * 0.7));   // weak/weak/HEAVY
     return e.intent;
   }
   function advanceIntent(run) {
     var e = run.battle.enemy;
     if (e.pattern === 'ramp') e.intent += e.intentStep;
     else if (e.pattern === 'alternating') e.intentToggle = !e.intentToggle;
+    else if (e.pattern === 'crescendo') e.cyc = (e.cyc + 1) % 3;   // (v0.171.0, KBB#6)
   }
 
   // ---- 5. Engine ----
@@ -449,6 +459,13 @@
     }
     incoming = Math.max(0, Math.round(incoming));
     var s = run.squad;
+    // (v0.171.0, V1.1 KBB#6) the SIPHON pattern rips 4 shield BEFORE the hit lands — brace
+    // timing matters against it (a pre-strip brace is wasted; brace the turn it strikes)
+    if (run.battle && run.battle.enemy && run.battle.enemy.pattern === 'siphon' && s.shield > 0) {
+      var ripped = Math.min(4, s.shield);
+      s.shield -= ripped;
+      run.log.push(run.battle.enemy.name + ' siphons ' + ripped + ' shield');
+    }
     var fromShield = Math.min(s.shield, incoming);
     s.shield -= fromShield;
     var toHp = incoming - fromShield;
@@ -2161,6 +2178,8 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
       else if (e.escortHp > 0) { icls += ' alert'; itxt = 'Escort \u2665 ' + e.escortHp; }
       else if (e.boss && e.mechanic === 'leech') { itxt = (itxt ? itxt + ' \u00b7 ' : '') + 'siphons misses'; }
       else if (ci === 0) { icls += ' charge'; itxt = 'Charging'; }
+      else if (e.pattern === 'siphon' && !e.boss) { icls += ' shield'; itxt = 'Siphon \u2694 ' + ci + ' \u00b7 rips 4 shield'; }   // (v0.171.0, KBB#6)
+      else if (e.pattern === 'crescendo' && !e.boss) { itxt = (e.cyc === 2 ? 'HEAVY \u2694 ' : 'Building \u2694 ') + ci; alert = e.cyc === 2; if (e.cyc !== 2) icls += ' charge'; }
       else { itxt = 'Incoming attack \u2694 ' + ci; alert = true; }
       if (alert) icls += ' alert';
       s.enemyText.innerHTML =
