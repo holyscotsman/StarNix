@@ -229,6 +229,13 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-COLORBLIND — the simulator pass (added v0.170.0).** Take fresh screenshots of: a graded
+  exam question (right + wrong options), KBB's FINAL turn + intent alert, CC's low timer, the
+  Codex domain bars + heatmap, readiness sim chips. Run them through a deuteranopia AND a
+  protanopia simulator (e.g. Sim Daltonism): every pass/fail/danger state must still read via
+  its glyph (✓/✕/⚠), stripe pattern, or border style with the hues collapsed. WRONG: any
+  state distinguishable only by the red/green axis.
+
 - **QA-REVIEW-FILTERS — the last ten minutes (added v0.169.0).** In a sim's Review screen:
   three chips (All/Flagged/Blank) with correct counts, filtering live; G from inside a
   question hops to the next flagged one. Submit with blanks: the button itself turns peach

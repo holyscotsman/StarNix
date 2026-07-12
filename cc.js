@@ -2656,6 +2656,7 @@
     '.cc-tag{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#1FDDE9;margin-bottom:10px;}' +
     '.cc-qtimer{font-size:13px;font-weight:700;color:#92DD23;margin-bottom:8px;letter-spacing:.04em;}' +
     '.cc-qtimer.low{color:#FF6B5B;}' +
+    '.cc-qtimer.low::before{content:"\\26A0 ";}' +   /* (v0.170.0, FE#6) the low-time cue finally has a SHAPE */
     '.cc-stem{font-size:17px;font-weight:600;line-height:1.4;margin-bottom:16px;}' +
     '.cc-opts{display:flex;flex-direction:column;gap:9px;}' +
     '.cc-opt{text-align:left;padding:12px 14px;border-radius:11px;border:1.5px solid #34344a;background:rgba(28,28,40,.6);color:#F2F2F7;font-size:14px;font-family:inherit;cursor:pointer;transition:border-color .1s,background .1s;}' +

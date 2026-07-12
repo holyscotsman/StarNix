@@ -1995,8 +1995,8 @@
       ".sx-dom-count{width:48px;text-align:right;color:var(--text);font-weight:700;}",
       ".sx-dom-due{width:52px;text-align:right;font-size:10.5px;font-weight:800;letter-spacing:.03em;color:var(--aqua);}",
       ".sx-dom-due.none{opacity:0;}",
-      ".sx-dom-fill.weak{background:linear-gradient(90deg,#ff8a7d,#ff6b5b);}",
-      ".sx-dom-fill.mid{background:linear-gradient(90deg,#ffc857,#e0a93e);}",
+      ".sx-dom-fill.weak{background:repeating-linear-gradient(135deg,#ff8a7d 0 4px,#b24537 4px 8px);}",   // (v0.170.0, FE#6) dense stripes = weak — pattern, not just hue
+      ".sx-dom-fill.mid{background:repeating-linear-gradient(135deg,#ffc857 0 9px,#b98f34 9px 12px);}",   // (FE#6) sparse stripes = mid; strong stays SOLID
       ".sx-dom-fill.strong{background:linear-gradient(90deg,var(--mantis),#6fae18);}",
       ".sx-dom-head{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mid);margin:18px 0 6px;text-align:left;}",
       /* (v0.51.0) Progress & readiness */
@@ -2008,7 +2008,9 @@
       ".sx-ready-sub{font-size:12px;color:var(--mid);text-align:left;margin-top:2px;}",
       ".sx-ready-sims{display:flex;gap:6px;flex-wrap:wrap;}",
       ".sx-simchip{font-size:11px;padding:3px 8px;border-radius:999px;border:1px solid rgba(255,255,255,0.14);color:var(--peach);}",
+      ".sx-simchip::before{content:'\\2715 ';font-size:9px;}",   // (v0.170.0, FE#6) fail = x, pass = check — shape first
       ".sx-simchip.pass{color:var(--mantis);border-color:rgba(146,221,35,0.4);}",
+      ".sx-simchip.pass::before{content:'\\2713 ';}",
       ".sx-ready-go{align-self:flex-start;}",
       ".sx-heatmap{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-start;}",
       ".sx-heat{min-width:96px;flex:1 1 96px;max-width:150px;padding:9px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.10);text-align:left;}",
@@ -2016,7 +2018,9 @@
       ".sx-heat-pct{font-size:17px;font-weight:800;margin-top:2px;}",
       ".sx-heat-due{font-size:10px;color:var(--gold);margin-top:1px;}",
       ".sx-heat.t0{background:rgba(255,255,255,0.03);color:var(--mid);}",
-      ".sx-heat.t1{background:rgba(255,107,91,0.14);border-color:rgba(255,107,91,0.35);} .sx-heat.t1 .sx-heat-pct{color:var(--peach);}",
+      ".sx-heat.t1{background:rgba(255,107,91,0.14);border-color:rgba(255,107,91,0.35);border-style:dotted;} .sx-heat.t1 .sx-heat-pct{color:var(--peach);}",
+      ".sx-heat.t2{border-style:dashed;}",   // (v0.170.0, FE#6) tier = border STYLE too: dotted->dashed->solid->double
+      ".sx-heat.t4{border-style:double;border-width:3px;}",
       ".sx-heat.t2{background:rgba(255,200,87,0.12);border-color:rgba(255,200,87,0.32);} .sx-heat.t2 .sx-heat-pct{color:var(--gold);}",
       ".sx-heat.t3{background:rgba(146,221,35,0.10);border-color:rgba(146,221,35,0.30);} .sx-heat.t3 .sx-heat-pct{color:var(--mantis);}",
       ".sx-heat.t4{background:rgba(146,221,35,0.18);border-color:rgba(146,221,35,0.50);} .sx-heat.t4 .sx-heat-pct{color:var(--mantis);}",

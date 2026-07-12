@@ -995,6 +995,8 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
     css.push('.kbb-skip:hover{border-color:' + P.aqua + ';color:' + P.text + ';}');
     css.push('.kbb-act-hint{margin-top:6px;font-size:11px;color:' + P.dim + ';letter-spacing:.2px;}');
     css.push('.kbb-statline .final{color:' + P.peach + ';font-weight:800;letter-spacing:.4px;animation:kbbFinalPulse 1.1s ease-in-out infinite;}');
+    css.push('.kbb-statline .final::before{content:"\\26A0 ";}');   // (v0.170.0, FE#6) shape cue, not just peach
+    css.push('.kbb-intent.alert::before{content:"\\26A0 ";}');
     css.push('@keyframes kbbFinalPulse{0%,100%{opacity:.75}50%{opacity:1}}');
     css.push('.kbb-en-strike{animation:kbbStrike .55s ease-out;}');
     css.push('@keyframes kbbStrike{0%{box-shadow:0 0 0 0 rgba(255,107,91,.0);}18%{box-shadow:0 0 0 3px rgba(255,107,91,.85),0 0 22px rgba(255,107,91,.5);}100%{box-shadow:0 0 0 0 rgba(255,107,91,0);}}');

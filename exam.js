@@ -138,6 +138,12 @@
       ".sx-exam-opt.sel .k{background:" + P.aqua + ";color:#06222a;}",
       ".sx-exam-opt.ok{border-color:" + P.mantis + ";background:rgba(146,221,35,.16);}",
       ".sx-exam-opt.bad{border-color:" + P.peach + ";background:rgba(255,107,91,.16);}",
+      // (v0.170.0, V1.1 FE#6) 01 s12: never color alone — graded options carry GLYPHS, the
+      // selection carries border THICKNESS. Works across both skins (classic + station).
+      ".sx-exam-opt{position:relative;}",
+      ".sx-exam-opt.ok::after{content:'\\2713';position:absolute;right:12px;top:50%;transform:translateY(-50%);font-weight:800;font-size:16px;color:" + P.mantis + ";}",
+      ".sx-exam-opt.bad::after{content:'\\2715';position:absolute;right:12px;top:50%;transform:translateY(-50%);font-weight:800;font-size:15px;color:" + P.peach + ";}",
+      ".sx-exam-opt.sel{border-width:3px;}",
       ".sx-exam-opt:disabled{cursor:default;}",
       ".sx-exam-multi{font-size:12px;color:" + P.aqua + ";margin:11px 1px 2px;font-weight:600;}",
       ".sx-exam-submit{margin-top:13px;width:100%;background:linear-gradient(90deg," + P.iris + "," + P.aqua + ");border:0;color:#fff;border-radius:11px;padding:13px;font:700 15px Montserrat,Arial,sans-serif;cursor:pointer;opacity:.5;pointer-events:none;}",

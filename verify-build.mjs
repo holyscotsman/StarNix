@@ -166,6 +166,22 @@ async function runFrames(n = 6) {
       brP.click(); await wait(10);
       ok("Menu#3: the board clicks through to the Codex", shell.screen === "stats");
       shell.showMenu(); await wait(10);
+      // (v0.170.0, V1.1 FE#6) colorblind shape-cue audit: never color alone (01 s12)
+      {
+        const cssAll = w.document.documentElement.innerHTML;
+        ok("FE#6: graded exam options carry \u2713/\u2715 glyphs and selection carries border thickness",
+          cssAll.indexOf(".sx-exam-opt.ok::after") >= 0 && cssAll.indexOf(".sx-exam-opt.bad::after") >= 0
+          && cssAll.indexOf(".sx-exam-opt.sel{border-width:3px;}") >= 0);
+        ok("FE#6: KBB's FINAL pulse + intent alert and CC's low timer carry \u26A0 shape cues",
+          cssAll.indexOf(".kbb-statline .final::before") >= 0 && cssAll.indexOf(".kbb-intent.alert::before") >= 0
+          && cssAll.indexOf(".cc-qtimer.low::before") >= 0);
+        ok("FE#6: domain bars use PATTERN tiers (stripes weak/mid, solid strong) and heat tiles use border STYLES",
+          /sx-dom-fill\.weak\{background:repeating-linear-gradient/.test(cssAll)
+          && /sx-dom-fill\.mid\{background:repeating-linear-gradient/.test(cssAll)
+          && cssAll.indexOf(".sx-heat.t2{border-style:dashed;}") >= 0);
+        ok("FE#6: sim chips lead with \u2713/\u2715, not hue",
+          cssAll.indexOf(".sx-simchip::before") >= 0 && cssAll.indexOf(".sx-simchip.pass::before") >= 0);
+      }
       // (v0.169.0, V1.1 NIT#6) sim review filters + the blank-submit confirmation
       {
         shell._examMode = "sim";
