@@ -445,11 +445,19 @@ async function runFrames(n = 6) {
 
   console.log("\nE. CC (Three absent -> graceful fallback)");
   calls.length = 0;
+  SN.core.persistence.update((p) => { p.bests = p.bests || {}; p.bests.CC = 62345; });   // (v0.144.0, CC#3) PB probe — through the seam so load() sees it
+  if (SN.core.persistence.flush) SN.core.persistence.flush();   // beat the debounce: the mount's load() reads storage
   delete SN.core.profile.saves; shell.enterGame("CC");
   ok("screen === game:CC", shell.screen === "game:CC");
   ok("CC track played on enter", calls.indexOf("track:cc") !== -1);
   await wait(10);
   ok("CC mounted (root has content)", shell.currentGameRoot && shell.currentGameRoot.childNodes.length > 0);
+  await wait(30);   // let the async persistence.load() PB capture settle
+  {
+    const pbEl = w.document.querySelector(".cc-pb");
+    ok("CC#3: the HUD shows the persisted personal best while you run", !!pbEl && pbEl.textContent === "PB 62.3 km");
+    ok("CC#3: the milestone banner element is armed (hidden until 25 km)", !!w.document.querySelector(".cc-mile-banner") && !w.document.querySelector(".cc-mile-banner.on"));
+  }
   ok("CC shows 3D-unavailable fallback", /three\.js|3d/i.test(shell.currentGameRoot.textContent || ""));
   // #11: the descent cinematic plays first; skipping it fires the how-to card, which hands off to the run.
   const ccIntro = w.document.querySelector(".cc-intro");

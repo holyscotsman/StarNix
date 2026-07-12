@@ -229,6 +229,13 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-CC-MILES — milestone + PB moments (added v0.144.0).** Fly CC past 25 km: an aqua
+  "◈ 25 km" banner should pop with a sting and fade ~2 km later (frozen mid-fade if a question
+  opens). With a previous best on record, "PB xx.x km" sits under the km readout; passing it
+  flips the label to a gold NEW RECORD and fires a star banner. Reduced motion: banners appear
+  statically (no pop animation). WRONG: four stacked banners after a boost, or a PB label that
+  never appears despite a recorded best.
+
 - **QA-ARM-BOSSES — four distinct dreadnoughts (added v0.142.0).** Dev-skip to each boss
   sector (3/6/9/12). The banner and pre-brief should NAME the warship (VANGUARD / BULWARK /
   TEMPEST / ANNIHILATOR) and call its signature. EYES: B1 = single beam only, no wall ever;

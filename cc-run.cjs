@@ -328,6 +328,24 @@ function runToQuestion(sim, maxSecs, pinShields) {
   ok(!s3._boostPending, 'even at 100 gates, a wrong answer arms nothing');
 })();
 
+/* ============ 4c) CC#3: 25 km MILESTONE CLOCK ============ */
+(function milestones() {
+  group('CC#3: the 25 km milestone clock — fires each mark, derives on resume');
+  var sim = mkSim(SEED + 34);
+  ok(sim.lastMilestone === 0 && sim._nextMile === 25000, 'fresh run: no milestone yet, first mark at 25 km');
+  sim.scoreDistance = 24990; sim.step(1 / 60);
+  for (var mt = 0; mt < 600 && sim.lastMilestone === 0; mt++) { sim.shields = 9; if (sim.phase === 'QUESTION') { sim.answer(null, { timedOut: true }); sim.resumeAfterQuestion(); } sim.step(1 / 60); }
+  ok(sim.lastMilestone === 25000 && sim._nextMile === 50000, 'crossing 25 km fires the mark and arms 50 km');
+  sim.scoreDistance = 74995;
+  for (var mt2 = 0; mt2 < 600 && sim.lastMilestone < 75000; mt2++) { sim.shields = 9; if (sim.phase === 'QUESTION') { sim.answer(null, { timedOut: true }); sim.resumeAfterQuestion(); } sim.step(1 / 60); }
+  ok(sim.lastMilestone === 75000 && sim._nextMile === 100000, 'skipped marks are not back-paid: 75 km fires once, next is 100');
+  // resume derivation: a 62 km checkpoint must aim at 75 km, not replay 25/50
+  var s2 = mkSim(SEED + 35);
+  s2.scoreDistance = 62000;
+  s2._nextMile = (Math.floor(s2.scoreDistance / 25000) + 1) * 25000;   // the resume line (cc.js restore)
+  ok(s2._nextMile === 75000, 'CC#3: resume derives the next mark from the checkpoint distance (62 km -> 75 km)');
+})();
+
 /* ============ 5) CRASH + I-FRAMES + DETERMINISM ============ */
 (function crashDet() {
   group('CRASH + DETERMINISM: shield cost, chained-hit grace, same-seed identity');

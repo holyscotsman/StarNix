@@ -265,6 +265,8 @@
     this._gatesPassed = 0;
     this._boostPending = false;
     this.boostCharge = 0;              // (v0.139.0, V1.1 CC#1) knowledge fuels the boost: corrects charge it
+    this.lastMilestone = 0;            // (v0.144.0, V1.1 CC#3) the most recent 25 km mark crossed
+    this._nextMile = 25000;
     this._boostTargetScore = 0; this._boostCalmUntil = 0;
     this._nextCoinAt = cfg.BASE_GAP * 0.5;
     // (v0.102.0, C9, Jason) squeeze stretches: the canyon narrows to TWO lanes for 1-2 km
@@ -327,6 +329,9 @@
     // 04 task 7/8: scored distance accrues at SCORE_SPEED — or covers BOOST_KM over ~BOOST_TIME during a boost
     this.scoreSpeed = this.boostActive ? ((cfg.BOOST_KM + (this._up ? this._up.boostKm : 0)) * 1000 / cfg.BOOST_TIME) : cfg.SCORE_SPEED;
     this.scoreDistance += this.scoreSpeed * dt;
+    while (this.scoreDistance >= this._nextMile) {   // (v0.144.0, CC#3) 25 km milestone clock —
+      this.lastMilestone = this._nextMile; this._nextMile += 25000;   // a 100 km boost lands on the LATEST mark, not four stacked banners
+    }
     // (v0.104.0, C4) turn lifecycle: warn TURN_WARN_S ahead (never during a boost ride),
     // then require the matching lane the instant the threshold crosses. Miss = wall clip.
     if (!this.turnPending && !this.boostActive && this.scoreDistance >= this._nextTurnScore - cfg.SCORE_SPEED * cfg.TURN_WARN_S) {
@@ -1917,6 +1922,7 @@
         sim.scoreDistance = rz.scoreDistance; sim.shields = Math.max(1, rz.shields | 0);
         sim.coinScore = rz.coinScore | 0; sim._gatesPassed = rz.gatesPassed | 0;
         sim.boostCharge = rz.boostCharge | 0;   // (v0.139.0, CC#1)
+        sim._nextMile = (Math.floor(sim.scoreDistance / 25000) + 1) * 25000;   // (v0.144.0, CC#3) derive, don't snapshot
         if (rz.nextTurnScore) sim._nextTurnScore = rz.nextTurnScore;
         sim._nextGateScore = (Math.floor(sim.scoreDistance / (sim.cfg.GATE_KM * 1000)) + 1) * (sim.cfg.GATE_KM * 1000);   // (G4) grid snap
         sim._resumed = true;                                              // (G4) applyUpgrades must NOT re-fill the checkpointed shields
@@ -1930,6 +1936,9 @@
           if (prof && prof.settings) {
             if (prof.settings.reducedMotion != null) settings.reducedMotion = !!prof.settings.reducedMotion;
             garageProfile = prof;                              // (v0.73.0, J9)
+            // (v0.144.0, V1.1 CC#3) surface the personal best while you run — it's the target
+            pbBest = (prof.bests && prof.bests.CC) | 0;
+            if (el.pb && pbBest > 0) el.pb.textContent = 'PB ' + (pbBest / 1000).toFixed(1) + ' km';
             if (prof.ccUpgrades) sim.applyUpgrades(prof.ccUpgrades);
             if (prof.settings.music != null && ctx.audio) ctx.audio.setMusic && ctx.audio.setMusic(!!prof.settings.music);
             if (prof.settings.sfx != null && ctx.audio) ctx.audio.setSfx && ctx.audio.setSfx(!!prof.settings.sfx);
@@ -2198,7 +2207,8 @@
       }
 
       // ---- HUD ----
-      var hudCache = { shields: -1, score: -1, dist: -1, buffs: '', cells: -1 };
+      var hudCache = { shields: -1, score: -1, dist: -1, buffs: '', cells: -1, mile: 0 };
+      var pbBest = 0, pbBeaten = false, mileHideAt = 0;   // (v0.144.0, CC#3)
       function updateHud() {
         if (sim.shields !== hudCache.shields) {
           hudCache.shields = sim.shields;
@@ -2209,6 +2219,23 @@
             el.shieldPips.appendChild(pip);
           }
         }
+        // (v0.144.0, V1.1 CC#3) milestone + personal-best moments
+        if (sim.lastMilestone > hudCache.mile) {
+          hudCache.mile = sim.lastMilestone;
+          el.mileBanner.textContent = '\u25c8 ' + (sim.lastMilestone / 1000) + ' km \u2014 deeper into the chasm';
+          el.mileBanner.classList.add('on');
+          mileHideAt = sim.scoreDistance + 2200;
+          try { ctx.audio && ctx.audio.sfx && ctx.audio.sfx('correct'); } catch (eMi) {}
+        }
+        if (pbBest > 0 && !pbBeaten && sim.scoreDistance > pbBest) {
+          pbBeaten = true;
+          if (el.pb) { el.pb.textContent = 'NEW RECORD'; el.pb.className = 'cc-pb beat'; }
+          el.mileBanner.textContent = '\u2605 NEW RECORD \u2014 past ' + (pbBest / 1000).toFixed(1) + ' km';
+          el.mileBanner.classList.add('on');
+          mileHideAt = sim.scoreDistance + 2600;
+          try { ctx.audio && ctx.audio.sfx && ctx.audio.sfx('collect'); } catch (ePb) {}
+        }
+        if (mileHideAt && sim.scoreDistance > mileHideAt) { el.mileBanner.classList.remove('on'); mileHideAt = 0; }
         var bc = sim.boostActive ? -1 : sim.boostCharge;                // (CC#1) meter: -1 = riding
         if (bc !== hudCache.boostCharge) {
           hudCache.boostCharge = bc;
@@ -2458,6 +2485,8 @@
     var boostBar = ce('div', 'cc-boostbar'); boostBar.innerHTML = '<i></i>';
     shieldWrap.appendChild(blabel); shieldWrap.appendChild(boostBar); hud.appendChild(shieldWrap);
     var score = ce('div', 'cc-score'); hud.appendChild(score);
+    var pb = ce('div', 'cc-pb'); hud.appendChild(pb);                      // (v0.144.0, CC#3)
+    var mileBanner = ce('div', 'cc-mile-banner'); root.appendChild(mileBanner);
     var dist = ce('div', 'cc-dist'); hud.appendChild(dist);
     var cells = ce('div', 'cc-cells'); hud.appendChild(cells);   // (J9) this-run energy cells
     var buffs = ce('div', 'cc-buffs'); hud.appendChild(buffs);
@@ -2495,7 +2524,7 @@
 
     return { root: root, canvas: canvas, fallback: fallback, hud: hud, shieldPips: shieldPips, boostBar: boostBar, score: score, dist: dist, buffs: buffs,
       kLeft: kLeft, kRight: kRight, kJump: kJump, kDuck: kDuck, replay: replay,
-      overlay: overlay, qStem: qStem, qOpts: qOpts, qFeedback: qFeedback, qTimer: qTimer, cells: cells, boostOvr: boostOvr, turnBanner: turnBanner,
+      overlay: overlay, qStem: qStem, qOpts: qOpts, qFeedback: qFeedback, qTimer: qTimer, cells: cells, boostOvr: boostOvr, turnBanner: turnBanner, pb: pb, mileBanner: mileBanner,
       intro: intro, introCap: introCap, introEyebrow: introEyebrow, introSkip: introSkip,
       gameover: gameover, ovrTitle: ovrTitle, ovrStats: ovrStats, ovrCells: ovrCells, garagePanel: garagePanel, btnGarage: btnGarage, btnRestart: btnRestart, btnExit: btnExit };
   }
@@ -2611,6 +2640,12 @@
     '.cc-turn-banner{position:absolute;top:38%;left:50%;transform:translateX(-50%);display:none;font-size:26px;font-weight:800;letter-spacing:.22em;color:#FFC857;text-shadow:0 0 18px rgba(255,200,87,.8);pointer-events:none;z-index:12;animation:ccTurnFlash 0.4s step-end infinite;}' +
     '@keyframes ccTurnFlash{0%{opacity:1;}50%{opacity:.45;}}' +
     '@media (prefers-reduced-motion: reduce){.cc-turn-banner{animation:none;}}' +
+    '.cc-pb{font-size:11px;letter-spacing:.1em;color:#9a9aad;margin-top:-2px;}' +
+    '.cc-pb.beat{color:#FFC857;text-shadow:0 0 10px rgba(255,200,87,.7);}' +
+    '.cc-mile-banner{position:absolute;top:30%;left:50%;transform:translateX(-50%);display:none;font-size:22px;font-weight:800;letter-spacing:.16em;color:#1FDDE9;text-shadow:0 0 16px rgba(31,221,233,.8);pointer-events:none;z-index:12;animation:ccMilePop .5s ease-out;}' +
+    '.cc-mile-banner.on{display:block;}' +
+    '@keyframes ccMilePop{0%{transform:translateX(-50%) scale(.7);opacity:0;}100%{transform:translateX(-50%) scale(1);opacity:1;}}' +
+    '@media (prefers-reduced-motion: reduce){.cc-mile-banner{animation:none;}}' +
     '.cc-boost-ovr{position:absolute;inset:0;display:none;align-items:center;justify-content:center;pointer-events:none;z-index:7;background:radial-gradient(ellipse at center, rgba(31,221,233,.06) 30%, rgba(31,221,233,.18) 100%);backdrop-filter:blur(1.5px);}' +
     '.cc-boost-ovr span{font-size:34px;font-weight:800;letter-spacing:.3em;color:#1FDDE9;text-shadow:0 0 24px rgba(31,221,233,.8);animation:ccBoostPulse 0.5s ease-in-out infinite alternate;}' +
     '@keyframes ccBoostPulse{from{opacity:.75;}to{opacity:1;}}' +
