@@ -229,6 +229,12 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-TOASTS — the toast stack (added v0.151.0).** Trigger several toasts at once (easiest:
+  a multi-achievement moment, or claim two dailies fast): pills must stack upward from the
+  bottom, never overprint; a repeated message shows "×2" on one pill; long messages linger
+  visibly longer than short ones. WRONG: pills stamping over each other, or a wall of
+  identical pills.
+
 - **QA-MOTION-TOGGLE — in-app reduced motion reaches everything (added v0.150.0).** With the
   OS setting OFF, flip Settings → Reduced motion ON and tour: the TITLE screen bg must stop
   drifting (previously OS-only), KBB's strike telegraph and FINAL ATTACK line go static, the

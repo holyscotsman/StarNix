@@ -165,6 +165,23 @@ async function runFrames(n = 6) {
       brP.click(); await wait(10);
       ok("Menu#3: the board clicks through to the Codex", shell.screen === "stats");
       shell.showMenu(); await wait(10);
+      // (v0.151.0, V1.1 FE#4) toast service: stacking, length-scaled duration, dedupe
+      {
+        shell._toast("first toast");
+        shell._toast("second toast that is quite a bit longer than the first one, so it must outlive it");
+        shell._toast("second toast that is quite a bit longer than the first one, so it must outlive it");
+        const ts = [...w.document.querySelectorAll(".sx-toast")];
+        ok("FE#4: simultaneous toasts STACK bottom-up instead of overprinting",
+          ts.length === 2 && ts[0].style.bottom !== ts[1].style.bottom && ts.every((n) => n.style.bottom !== ""));
+        ok("FE#4: an identical live message dedupes into a \u00d7N counter",
+          /\u00d72$/.test(ts[1].textContent));
+        await wait(2400);
+        const ts2 = [...w.document.querySelectorAll(".sx-toast")];
+        ok("FE#4: duration scales with length — the short toast is gone, the long one still up",
+          ts2.length === 1 && /longer/.test(ts2[0].textContent));
+        await wait(3800);
+        ok("FE#4: the stack drains clean", w.document.querySelectorAll(".sx-toast").length === 0);
+      }
       // (v0.150.0, V1.1 FE) reduced motion unified on ONE attribute: <html data-motion>
       {
         SN.core.profile.settings.reducedMotion = true; shell._applyMotion();

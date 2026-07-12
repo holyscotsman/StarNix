@@ -1615,12 +1615,41 @@
   };
 
   /* ---- toast --------------------------------------------------------- */
+  // (v0.151.0, V1.1 FE#4) toast service: simultaneous unlocks used to render exactly on top
+  // of each other at one absolute position with a flat 2.2s. Now: a vertical bottom-up stack,
+  // duration scaled to length (1800ms + 40ms/char, capped 6s), and an identical message on
+  // top of a live twin dedupes into a xN counter instead of a new pill.
   Shell.prototype._toast = function (msg, cls) {
     if (!this.stage) return;
+    var live = this._toasts || (this._toasts = []);
+    var top = live.length ? live[live.length - 1] : null;
+    if (top && top.msg === msg && top.node.parentNode) {                  // dedupe into xN
+      top.n++;
+      top.node.textContent = msg + "  \u00d7" + top.n;
+      return;
+    }
     var t = el("div", "sx-toast" + (cls ? " " + cls : ""), msg);
+    var rec = { node: t, msg: msg, n: 1 };
+    live.push(rec);
     this.stage.appendChild(t);
+    this._layoutToasts();
     var self = this;
-    global.setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 2200);
+    var dur = Math.min(6000, 1800 + 40 * String(msg).length);
+    global.setTimeout(function () {
+      if (t.parentNode) t.parentNode.removeChild(t);
+      var ix = live.indexOf(rec); if (ix >= 0) live.splice(ix, 1);
+      self._layoutToasts();
+    }, dur);
+  };
+  Shell.prototype._layoutToasts = function () {                           // bottom-up stack
+    var live = this._toasts || [];
+    var y = 28;
+    for (var i = live.length - 1; i >= 0; i--) {                          // newest sits lowest
+      var n = live[i].node;
+      if (!n.parentNode) continue;
+      n.style.bottom = y + "px";
+      y += (n.offsetHeight || 40) + 8;
+    }
   };
 
   /* ---- shell CSS (static; tokens via core theme vars) ---------------- */
