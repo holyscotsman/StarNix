@@ -1519,7 +1519,7 @@
       var core = dq[dqi];
       setState("DEPOT_Q");
       showQuestion(core.q, "⬢ Depot install " + (dqi + 1) + " / " + dq.length + " · " + conceptTag(core), true, function (ok) {
-        if (ok) { stationBuild++; coins += 25; dIn++; dCoins += 25; sfx("correct"); }
+        if (ok) { var dPay = 25 + sector * 2; stationBuild++; coins += dPay; dIn++; dCoins += dPay; sfx("correct"); }   // (v0.161.0, ARM#5) install pay ramps with depth (27c s1 -> 49c s12)
         else { dLost++; sectorLost.push(core.q); sfx("wrong"); }   // (ARM#1) depot fails resurface too
         dqi++; hud(); stepDeposit();
       });
@@ -1591,19 +1591,32 @@
       setState("GAMEOVER"); sfx("explode");
       burst(ship.x, ship.y, COL.peach, 40); burst(ship.x, ship.y, COL.gold, 24); deathTimer = 1.1;
     }
-    function showGameOverPanel() {
-      var keys = [];
-      for (var k in lvl) if (lvl[k] > 0) keys.push(k);
-      keys.sort(function (a, b) { return lvl[b] - lvl[a]; });
-      var lost = keys.slice(0, 2);
-      for (var i = 0; i < lost.length; i++) lvl[lost[i]]--;
+    // (v0.161.0, V1.1 ARM#5) the death penalty stripped your TWO HIGHEST upgrades — up to
+    // ~540c of spend, ~2 sectors of income, and it systematically flattened whatever build
+    // you invested in. Now: ONE level, drawn at random among OWNED upgrades via runRng
+    // (seeded, pinnable), and the panel prices the loss honestly.
+    function applyDeathPenalty() {
+      var owned = [];
+      for (var k in lvl) if (lvl[k] > 0) owned.push(k);
+      if (!owned.length) return null;
+      owned.sort();                                             // stable draw order across engines
+      var key = owned[Math.floor(runRng.next() * owned.length)];
+      lvl[key]--;
+      // mirrors the depot's price table (baseCost + lvl*60, arm shop) — the arm-run pin
+      // cross-checks both, so a drift on either side goes red
+      var penBase = { engine: 120, maneuver: 110, capacitor: 130, shieldCell: 130, rapid: 140 };
+      var cost = penBase[key] + lvl[key] * 60;                  // what buying that level back costs
       deriveStats();
+      return { key: key, cost: cost };
+    }
+    function showGameOverPanel() {
+      var pen = applyDeathPenalty();
       var names = { engine: "Engine", maneuver: "Maneuvering", capacitor: "Capacitor", shieldCell: "Shield Cell", rapid: "Rapid Fire" };
       panel.className = "arm-panel peach"; clear(panel);
       panel.appendChild(mk("div", "arm-eyebrow e-peach", "✖ Hull lost"));
       panel.appendChild(mk("h1", null, "Ship destroyed"));
       var costTxt = "";
-      if (lost.length) { var nm = []; for (var j = 0; j < lost.length; j++) nm.push(names[lost[j]]); costTxt = " Salvage stress cost you: " + nm.join(", ") + " (−1 level)."; }
+      if (pen) costTxt = " Salvage stress cost you: " + names[pen.key] + " (\u22121 level \u00b7 " + pen.cost + "c to rebuy).";
       panel.appendChild(mk("p", "arm-body", "Shields failed and your ship broke apart. The sector resets and any cargo you were carrying scatters back into the field." + costTxt + " Your coins and installed station are safe."));
       panel.appendChild(btn("arm-act aqua", "Relaunch sector ▸", function () {
         sfx("click"); held = []; sectorLost = []; deriveStats(); charges = maxCharges; shields = maxShields; rechargeTimer = rechargeTime;
@@ -2316,7 +2329,7 @@
             if (--en.hp <= 0) {
               burst(en.x, en.y, COL.peach, 12); sfx("explode");
               enemies[i] = enemies[enemies.length - 1]; enemies.pop();
-              coins += 3; hud();   // (v0.96.0, A6) income halved — upgrades are the long game now
+              coins += 3 + tierOf(sector); hud();   // (v0.96.0, A6 / v0.161.0, ARM#5) bounty ramps 3/4/5 by tier — late tiers reachable when tier-2 difficulty needs them
             } else { burst(en.x, en.y, COL.peach, 5); sfx("hit"); }
             break;
           }
@@ -3184,6 +3197,9 @@
         bossEscorts: function () { return countEnemies(null); },
         refillShields: function () { shields = maxShields; },
         breakWeakpoints: function (n) { if (!boss) return; for (var i = 0; i < n && i < boss.wps.length; i++) boss.wps[i].dead = true; },
+        applyDeathPenalty: function () { return applyDeathPenalty(); },   // (v0.161.0, ARM#5)
+        setLvl: function (o) { for (var k in o) if (Object.prototype.hasOwnProperty.call(lvl, k)) lvl[k] = o[k] | 0; deriveStats(); },
+        getLvl: function () { return { engine: lvl.engine, maneuver: lvl.maneuver, capacitor: lvl.capacitor, shieldCell: lvl.shieldCell, rapid: lvl.rapid }; },
         solvePuzzle: function () { var d = pendingPuzzleDone; if (d) { pendingPuzzleDone = null; d(); return true; } return false; },
         openPuzzleAt: function (idx, type) { var c = cores[idx]; if (c) { if (type) c.puzType = type; else c.puzType = c.puzType || c.ch.type; openPuzzle(c); return puzzleCore && (puzzleCore.puzType || puzzleCore.ch.type); } return null; },
         puzzleInfo: function () {

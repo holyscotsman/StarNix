@@ -130,8 +130,9 @@ var detSector3 = null;   // captured for the determinism probe against window 2
   T.dock();
   ok(T.state() === 'DEPOT_Q' && T.hasQuestion(), 'docking opens the depot install question for the carried core');
   T.answer(true);
-  ok(T.state() === 'DEPOT_SUM' && T.station() === station0 + 1 && T.coins() === coins0 + 25,
-     'right install → station +1, +25 coins, delivery summary');
+  var dPayPin = 25 + T.sector() * 2;   // (v0.161.0, ARM#5) install pay ramps with depth
+  ok(T.state() === 'DEPOT_SUM' && T.station() === station0 + 1 && T.coins() === coins0 + dPayPin,
+     'right install → station +1, +' + dPayPin + ' coins (depth-ramped), delivery summary');
   T.closeSummary();
   ok(T.state() === 'SHOP', 'summary → SHOP');
   T.closeShop();
@@ -391,6 +392,29 @@ var detSector3 = null;   // captured for the determinism probe against window 2
     T.spawnTyped(null, 640, 520);
     T.step(1 / 60);
     ok(shC0 - T.puzzleInfo().shields === 18, 'ARM#3 RAM control: a chaser ram stays 18');
+  })();
+  // (v0.161.0, V1.1 ARM#5) death costs ONE random owned level (priced), not your two best
+  (function () {
+    var sum = function (o) { return o.engine + o.maneuver + o.capacitor + o.shieldCell + o.rapid; };
+    T.setLvl({ engine: 3, maneuver: 2, capacitor: 0, shieldCell: 0, rapid: 0 });
+    var before = T.getLvl(), pen = T.applyDeathPenalty(), after = T.getLvl();
+    ok(!!pen && sum(after) === sum(before) - 1 && before[pen.key] - after[pen.key] === 1 && (pen.key === 'engine' || pen.key === 'maneuver'),
+       'ARM#5: death strips exactly ONE level, drawn among OWNED upgrades (' + pen.key + ')');
+    var baseC = { engine: 120, maneuver: 110, capacitor: 130, shieldCell: 130, rapid: 140 };
+    ok(pen.cost === baseC[pen.key] + after[pen.key] * 60, 'ARM#5: the panel price = the real rebuy cost (' + pen.cost + 'c)');
+    // distribution: a 5/1 spread must NOT always bleed the tall pillar (the old flattener)
+    var tall = 0, small = 0;
+    for (var dp = 0; dp < 60; dp++) {
+      T.setLvl({ engine: 5, maneuver: 0, capacitor: 0, shieldCell: 0, rapid: 1 });
+      var p2 = T.applyDeathPenalty();
+      if (p2.key === 'engine') tall++; else if (p2.key === 'rapid') small++;
+    }
+    ok(tall > 0 && small > 0, 'ARM#5: the draw is uniform-among-owned, not best-first (engine ' + tall + ' / rapid ' + small + ' over 60)');
+    T.setLvl({ engine: 0, maneuver: 0, capacitor: 0, shieldCell: 0, rapid: 0 });
+    ok(T.applyDeathPenalty() === null, 'ARM#5: a bare ship loses nothing (no crash, no negative levels)');
+    // income ramp sources
+    ok(/coins \+= 3 \+ tierOf\(sector\); hud\(\)/.test(H.ARM_SRC) && /var dPay = 25 \+ sector \* 2;/.test(H.ARM_SRC),
+       'ARM#5: kill bounty ramps by tier (3/4/5) and depot install pay ramps by sector (27c -> 49c)');
   })();
   // (v0.155.0, V1.1 ARM#4) the tier cliffs are smoothed — and the 02 s3D shape toggle exists
   (function () {

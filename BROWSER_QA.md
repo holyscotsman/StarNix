@@ -229,6 +229,13 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-ARM-PENALTY — death has a fair price (added v0.161.0).** Build a lopsided loadout
+  (say Engine 4, one point elsewhere), die twice: the loss should NOT always be Engine, and
+  the Ship-destroyed panel must name the upgrade with its rebuy cost in coins. Also check the
+  feel of the income ramp: kills pay a bit more in later sectors, and depot installs visibly
+  more (~doubling by sector 12). WRONG: always losing your best stat, or losing anything on
+  a stock ship.
+
 - **QA-CC-NEWROWS — chains + rockfalls (added v0.160.0).** Fly CC a few minutes: (a) CHAIN
   rows — a jump wall with an arch ~a beat behind it; the jump must land comfortably before the
   duck (report if you ever eat the arch mid-arc at top speed); (b) ROCKFALL — a boulder
