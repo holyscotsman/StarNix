@@ -42,10 +42,24 @@ function read(p) { return readFileSync(new URL("./" + p, import.meta.url), "utf8
 function safe(s) { return s.replace(/<\/script>/gi, "<\\/script>"); }
 
 const sizeLedger = {};   // (v0.166.0, V1.1 Backend#6) per-module bytes — printed + budget-gated
+// (v0.198.0, V1.1 FE#9) ship power-on: each module block is preceded by a one-line status
+// script, so the splash shows REAL inter-module parse progress — zero framework.
+const BOOT_MSGS = {
+  core: "Initializing core systems\u2026",
+  questions: "Loading the question bank\u2026",
+  assets: "Decoding ship art\u2026",
+  shell: "Powering up the bridge\u2026",
+  audio: "Warming the synth racks\u2026",
+  arm: "Fueling the rescue wing\u2026",
+  cc: "Spinning up the chasm\u2026",
+  kbb: "Charting the Kuiper Belt\u2026",
+  exam: "Arming the Testing station\u2026"
+};
 const blocks = modules.map(([file, name]) => {
   const src = safe(read(file));
   sizeLedger[name] = Buffer.byteLength(src, "utf8");
-  return `<!-- ===== ${name} (${file}) ===== -->\n<script>\n${src}\n</script>`;
+  const msg = BOOT_MSGS[name] || ("Loading " + name + "\u2026");
+  return `<script>window.__sxBoot && __sxBoot(${JSON.stringify(msg)});</script>\n<!-- ===== ${name} (${file}) ===== -->\n<script>\n${src}\n</script>`;
 }).join("\n\n");
 
 // ---- exhibits: inline present exhibit-images/* as data URIs (window.STARNIX_EXHIBITS).
@@ -82,6 +96,8 @@ const boot = `<!-- ===== boot ===== -->
 (function () {
   "use strict";
   function fail(msg) {
+    var bsF = document.getElementById("sx-boot");
+    if (bsF && bsF.parentNode) bsF.parentNode.removeChild(bsF);   // (v0.198.0, FE#9) never hang on the splash
     var app = document.getElementById("app");
     if (app) {
       app.textContent = "";
@@ -95,7 +111,10 @@ const boot = `<!-- ===== boot ===== -->
   function start() {
     try {
       if (!window.StarNix || typeof window.StarNix.boot !== "function") return fail("core/shell not loaded");
-      Promise.resolve(window.StarNix.boot(document.getElementById("app"), {})).catch(function (e) {
+      Promise.resolve(window.StarNix.boot(document.getElementById("app"), {})).then(function () {
+        var bs2 = document.getElementById("sx-boot");                 // (v0.198.0, FE#9) the shell has the bridge
+        if (bs2 && bs2.parentNode) bs2.parentNode.removeChild(bs2);
+      }).catch(function (e) {
         fail((e && e.message) || String(e));
       });
     } catch (e) { fail((e && e.message) || String(e)); }
@@ -120,15 +139,50 @@ ${fontCss}</style>
   html, body { margin: 0; height: 100%; background: #07070e; color: #F2F2F7;
     font-family: 'Montserrat', Arial, sans-serif; overflow: hidden; }
   #app { position: fixed; inset: 0; }
-  /* loading splash shown until the shell paints */
-  #app:empty::after { content: "Loading StarNix…"; position: absolute; inset: 0;
-    display: flex; align-items: center; justify-content: center; color: #6d6d80;
-    font-size: 14px; letter-spacing: .04em; }
+  /* (v0.198.0, V1.1 FE#9) ship power-on splash — real inter-module progress, removed by boot */
+  #sx-boot { position: fixed; inset: 0; z-index: 999; background: #07070e; display: flex;
+    flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+  #sx-boot .sxb-crest svg { width: 54px; height: 60px; animation: sxbSpin 2.6s linear infinite; }
+  #sx-boot .sxb-title { font-size: 12px; font-weight: 800; letter-spacing: .3em; color: #AC9BFD; }
+  #sx-boot .sxb-status { font-size: 13px; color: #6d6d80; letter-spacing: .04em; min-height: 18px; }
+  #sx-boot .sxb-bar { width: min(300px, 60vw); height: 3px; border-radius: 3px; background: #1c1c2c; overflow: hidden; }
+  #sx-boot .sxb-bar i { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, #7855FA, #1FDDE9); transition: width .18s ease; }
+  @keyframes sxbSpin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { #sx-boot .sxb-crest svg { animation: none; } }
 </style>
 </head>
 <body>
 <div id="app"></div>
+<div id="sx-boot" aria-hidden="true">
+  <div class="sxb-crest"><svg viewBox="0 0 60 66"><polygon points="30,2 57,17 57,49 30,64 3,49 3,17" fill="none" stroke="#1FDDE9" stroke-width="2.5"/></svg></div>
+  <div class="sxb-title">NX-SRC \u00b7 STARNIX</div>
+  <div class="sxb-status" id="sx-boot-status">Ship power-on\u2026</div>
+  <div class="sxb-bar"><i id="sx-boot-bar"></i></div>
+</div>
+<script>
+/* (v0.198.0, FE#9) the splash stepper + a pre-shell parse-fault trap (the shell's own error
+   ring takes over the moment it exists). */
+window.__sxBoot = (function () {
+  var n = 0, total = ${modules.length + 1};
+  return function (msg) {
+    try {
+      var elS = document.getElementById("sx-boot-status"), barS = document.getElementById("sx-boot-bar");
+      n++;
+      if (elS) elS.textContent = msg;
+      if (barS) barS.style.width = Math.min(100, Math.round(n / total * 100)) + "%";
+    } catch (eS) {}
+  };
+})();
+window.addEventListener("error", function (ev) {
+  try {
+    if (window.StarNix && window.StarNix.shell) return;
+    var elE = document.getElementById("sx-boot-status");
+    if (elE) { elE.textContent = "Boot fault: " + ((ev && ev.message) || "script error"); elE.style.color = "#FF6B5B"; }
+  } catch (eE) {}
+});
+</script>
 
+<script>window.__sxBoot && __sxBoot("Inlining exhibits\u2026");</script>
 ${exhibits.html}
 
 ${blocks}

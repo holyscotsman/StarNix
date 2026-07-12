@@ -597,7 +597,15 @@ async function runFrames(n = 6) {
         SN.core.profile.settings.reducedMotion = false; shell._applyMotion();
         ok("FE-motion: toggling off removes the attribute", !w.document.documentElement.hasAttribute("data-motion"));
         const css = w.document.documentElement.innerHTML;
-        ok("FE#8: tabular numerals on ticking readouts + the 11px micro floor + type-scale tokens",
+        ok("FE#9: the ship power-on splash — stepper, 10 real progress steps, fault trap, reduced-motion static, boot removal",
+      html.includes('<div id="sx-boot"') && html.includes("window.__sxBoot = (function ()")
+      && (html.match(/__sxBoot\(/g) || []).length === 10   // 9 module steps + the exhibits step
+      && html.includes("Powering up the bridge") && html.includes("Loading the question bank")
+      && html.includes("@media (prefers-reduced-motion: reduce) { #sx-boot .sxb-crest svg { animation: none; } }")
+      && html.includes("Boot fault: ") && html.includes('bs2.parentNode.removeChild(bs2)'));
+    ok("FE#9: the splash is GONE once the shell has the bridge (boot removed it in this very DOM)",
+      !w.document.getElementById("sx-boot"));
+    ok("FE#8: tabular numerals on ticking readouts + the 11px micro floor + type-scale tokens",
       html.includes(":root{--fs-micro:11px;--fs-body:13px;--fs-label:12px;--fs-num:14px;}")
       && html.includes(".cc-dist{font-size:13px;color:#9a9aad;font-variant-numeric:tabular-nums;}")
       && html.includes(".sx-rank-xp{color:var(--mid);font-size:12px;font-variant-numeric:tabular-nums;}")

@@ -229,6 +229,14 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-BOOT-SPLASH — ship power-on (added v0.198.0).** Reload the deployed app (best on the
+  real Apps Script URL where the parse is slow): instead of the dead grey line you should see
+  the NX hex crest spinning over a rising iris-to-aqua bar with status lines actually
+  CHANGING ('Loading the question bank…' → 'Powering up the bridge…' → …), then the splash
+  vanishes the instant the title paints. With OS reduced motion, the crest holds still.
+  WRONG: a frozen status line, the splash lingering over the title screen, or a script error
+  leaving the spinner running forever instead of a peach 'Boot fault' line.
+
 - **QA-A14 — sectors with faces (added v0.197.0).** Fly ARM into sector 5+ then 9+: the
   backdrop must shift — iris-cool early, aqua-teal mid, ember-warning late — in both the
   nebula blobs and the star tint. Each regular sector carries ONE piece of far scenery (a
