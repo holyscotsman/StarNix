@@ -166,6 +166,27 @@ async function runFrames(n = 6) {
       brP.click(); await wait(10);
       ok("Menu#3: the board clicks through to the Codex", shell.screen === "stats");
       shell.showMenu(); await wait(10);
+      // (v0.163.0, V1.1 Flow#5) blueprint quotas: mechanism live + pinned, WEIGHTS quarantined
+      {
+        const BP = SN.blueprint;
+        ok("Flow#5: WEIGHTS ships QUARANTINED (null) — the official EBG publishes no section weights",
+          BP && BP.WEIGHTS === null);
+        const mkQ = (d, n) => Array.from({ length: n }, (_, i) => ({ id: d + i, domain: d }));
+        const poolQ = [...mkQ("storage", 40), ...mkQ("vms", 40), ...mkQ("networking", 40)];
+        const q1 = BP.quota(poolQ, 20, { storage: 0.5, vms: 0.3, networking: 0.2 });
+        const cnt = (r, d) => r.filter((x) => x.domain === d).length;
+        ok("Flow#5: quota fills per-domain shares exactly (10/6/4 of 20 at 50/30/20)",
+          q1.length === 20 && cnt(q1, "storage") === 10 && cnt(q1, "vms") === 6 && cnt(q1, "networking") === 4);
+        const thin = [...mkQ("storage", 3), ...mkQ("vms", 40)];
+        const q2 = BP.quota(thin, 20, { storage: 0.5, vms: 0.5 });
+        ok("Flow#5: a thin domain caps at its stock and the shortfall backfills (3 storage + 17 vms)",
+          q2.length === 20 && cnt(q2, "storage") === 3 && cnt(q2, "vms") === 17);
+        ok("Flow#5: null weights (the quarantine) return null — callers keep the flat shuffle",
+          BP.quota(poolQ, 20, null) === null);
+        const src = w.document.documentElement.innerHTML;
+        ok("Flow#5: the sim path gates on ratified WEIGHTS and never touches explicit-question launches",
+          /StarNix\.blueprint && StarNix\.blueprint\.WEIGHTS/.test(src) && /"sim" && !opts\.questions/.test(src));
+      }
       // (v0.159.0, V1.1 Menu#5) the Disruptor beam carries ARM's full layered treatment
       {
         const srcW = w.document.documentElement.innerHTML;

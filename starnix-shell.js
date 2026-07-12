@@ -894,6 +894,16 @@
     var pool = [];
     if (opts.questions && opts.questions.length) pool = opts.questions.slice();
     else { try { pool = core.questions.pool(); } catch (e) {} }
+    // (v0.163.0, V1.1 Flow#5) blueprint quotas for SIMS — live only once Jason ratifies
+    // StarNix.blueprint.WEIGHTS (quarantined null today: the official EBG publishes no
+    // section weights). With weights, the sim pool is pre-filled per-domain before the
+    // exam module shuffles presentation order.
+    try {
+      if ((opts.mode || this._examMode) === "sim" && !opts.questions && StarNix.blueprint && StarNix.blueprint.WEIGHTS) {
+        var bq = StarNix.blueprint.quota(pool, (count && count > 0) ? Math.min(count, pool.length) : pool.length, StarNix.blueprint.WEIGHTS);
+        if (bq && bq.length) pool = bq;
+      }
+    } catch (eBq) {}
     var ec = (count && count > 0 && count < pool.length) ? count : pool.length;
     var prevBest = 0;
     try { var xk2 = core.profile.settings && core.profile.settings.extraTime ? ":xt" : ""; var eb = core.profile.bests && core.profile.bests.EXAM && core.profile.bests.EXAM[String(ec) + xk2]; if (eb) prevBest = eb.pts || 0; } catch (e) {}

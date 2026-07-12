@@ -24,7 +24,7 @@
   var CORE_VERSION = "1.1.0";              // internal contract version (changes rarely)
   // User-facing playable-build stamp. BUMP THIS (and the date) on every delivered index.html so the
   // version shown in-game tells us exactly which build is being played/tested. Shown by the shell.
-  var BUILD_VERSION = "0.162.0";
+  var BUILD_VERSION = "0.163.0";
   var BUILD_DATE = "2026-07-03";
   var BUILD_LABEL = "v" + BUILD_VERSION + " \u00b7 " + BUILD_DATE;
   var SCHEMA_VERSION = 1;
@@ -1341,6 +1341,53 @@
    * Leitner ledger instead of a second persisted store: every wrong bumps m.incorrect and
    * resets m.streak, so `incorrect > 0 && streak < 2` IS "missed and not yet redeemed by two
    * consecutive corrects" — across every surface (games + exams), with zero bookkeeping drift. */
+  /* Blueprint quotas (v0.163.0, V1.1 Flow#5) — the MECHANISM ships; the WEIGHTS are
+   * QUARANTINED. Checked 2026-07-11: the official NCP-MCI 6.5 Exam Blueprint Guide
+   * (nutanix.com .../ebg-ncp-mci-6-5.pdf) publishes NO per-section weights — s1.5 says only
+   * that question counts per objective "relate to the criticality of the task". Per the
+   * learning-integrity rule, unverifiable values do not ship: WEIGHTS stays null and sims
+   * keep today's flat shuffle until Jason ratifies a table (evidence packet in
+   * BLUEPRINT_EVIDENCE.md, including the objectives-per-section proxy and the needed
+   * official-section -> house-domain mapping). quota() itself is pure and gate-pinned. */
+  StarNix.blueprint = {
+    WEIGHTS: null,
+    quota: function (pool, count, weights) {
+      if (!weights || !pool || !pool.length || !(count > 0)) return null;   // quarantined / degenerate -> caller falls back to flat
+      var byDom = {}, doms = [], i, d;
+      for (i = 0; i < pool.length; i++) {
+        d = pool[i].domain || "?";
+        if (!byDom[d]) { byDom[d] = []; doms.push(d); }
+        byDom[d].push(pool[i]);
+      }
+      var want = {}, assigned = 0;
+      for (i = 0; i < doms.length; i++) {
+        d = doms[i];
+        var w = weights[d] || 0;
+        want[d] = Math.min(byDom[d].length, Math.round(count * w));
+        assigned += want[d];
+      }
+      // rounding drift + thin domains: top up round-robin from domains that still have stock
+      var guard = 0;
+      while (assigned < count && guard++ < 1000) {
+        var grew = false;
+        for (i = 0; i < doms.length && assigned < count; i++) {
+          d = doms[i];
+          if (want[d] < byDom[d].length) { want[d]++; assigned++; grew = true; }
+        }
+        if (!grew) break;                                     // the pool itself is smaller than count
+      }
+      while (assigned > count) {                               // trim overshoot from the largest takes
+        var big = null;
+        for (i = 0; i < doms.length; i++) { d = doms[i]; if (want[d] > 0 && (big === null || want[d] > want[big])) big = d; }
+        if (big === null) break;
+        want[big]--; assigned--;
+      }
+      var out = [];
+      for (i = 0; i < doms.length; i++) { d = doms[i]; for (var k = 0; k < want[d]; k++) out.push(byDom[d][k]); }
+      return out;
+    }
+  };
+
   StarNix.missPile = {
     ids: function (masteryMap, cap) {
       var out = [];
