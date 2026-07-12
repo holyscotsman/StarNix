@@ -166,6 +166,44 @@ async function runFrames(n = 6) {
       brP.click(); await wait(10);
       ok("Menu#3: the board clicks through to the Codex", shell.screen === "stats");
       shell.showMenu(); await wait(10);
+      // (v0.164.0, V1.1 FE#5) screen-reader pass: semantics + live announcements
+      {
+        shell.showExam(3, { mode: "study" }); await wait(30);
+        // graded answers below touch mastery + daily counters — snapshot and restore (the
+        // NIT#4 lesson) so the downstream flight-plan/due pins see unchanged state
+        const feMm = SN.core.mastery.all();
+        const fePrev = {};
+        shell._exam._state.order.forEach((q) => { fePrev[q.id] = feMm[q.id] ? JSON.parse(JSON.stringify(feMm[q.id])) : null; });
+        const feDailyCorrect = SN.core.profile.daily ? (SN.core.profile.daily.correct | 0) : null;
+        const optsH = w.document.querySelector(".sx-exam-opts");
+        const opt0 = w.document.querySelector(".sx-exam-opt");
+        const isMulti = optsH.getAttribute("role") === "group";
+        ok("FE#5: options carry group semantics (radiogroup/radio or group/aria-pressed) with Option-letter names",
+          !!optsH.getAttribute("role")
+          && /^Option [A-E]: /.test(opt0.getAttribute("aria-label") || "")
+          && (isMulti ? opt0.getAttribute("aria-pressed") === "false" : opt0.getAttribute("role") === "radio" && opt0.getAttribute("aria-checked") === "false"));
+        const lives = w.document.querySelectorAll(".sx-exam-live");
+        ok("FE#5: one polite + one assertive live region exist",
+          lives.length === 2 && lives[0].getAttribute("aria-live") === "polite" && lives[1].getAttribute("aria-live") === "assertive");
+        ok("FE#5: navigation announced ('Question 1 of 3')", /Question 1 of 3/.test(lives[0].textContent));
+        opt0.click(); await wait(10);
+        if (!isMulti) ok("FE#5: picking flips aria-checked live", opt0.getAttribute("aria-checked") === "true");
+        else ok("FE#5: picking flips aria-pressed live", opt0.getAttribute("aria-pressed") === "true");
+        const cfB = w.document.querySelector(".sx-exam-confirm");
+        if (cfB) { cfB.click(); await wait(20); }
+        ok("FE#5: grading announces the verdict + explanation summary",
+          /^(Correct\.|Incorrect\.)/.test(lives[0].textContent));
+        for (const fk in fePrev) { if (fePrev[fk]) feMm[fk] = fePrev[fk]; else delete feMm[fk]; }
+        if (feDailyCorrect != null && SN.core.profile.daily) SN.core.profile.daily.correct = feDailyCorrect;
+        shell.showMenu(); await wait(10);
+        shell._toast("sr probe toast");
+        const tEl = [...w.document.querySelectorAll(".sx-toast")].pop();
+        ok("FE#5: toasts announce (role=status)", !!tEl && tEl.getAttribute("role") === "status");
+        await wait(2300);
+        const srcA = w.document.documentElement.innerHTML;
+        ok("FE#5: the sim clock's final minute warns ASSERTIVELY, once",
+          /S\._warned1m = true; announce\("One minute remaining", true\)/.test(srcA));
+      }
       // (v0.163.0, V1.1 Flow#5) blueprint quotas: mechanism live + pinned, WEIGHTS quarantined
       {
         const BP = SN.blueprint;

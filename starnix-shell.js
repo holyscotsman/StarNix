@@ -1732,6 +1732,7 @@
       return;
     }
     var t = el("div", "sx-toast" + (cls ? " " + cls : ""), msg);
+    t.setAttribute("role", "status");   // (v0.164.0, FE#5) achievements/rank-ups announce to SRs
     var rec = { node: t, msg: msg, n: 1 };
     live.push(rec);
     this.stage.appendChild(t);

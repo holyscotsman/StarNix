@@ -229,6 +229,14 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-SR-EXAM — the exam speaks (added v0.164.0, EARS + VoiceOver).** With VoiceOver (or NVDA)
+  on, take a short Study session and a Sim: options should read as "Option A: <text>, radio
+  button, 1 of 4" (or toggle buttons on multi), picks should announce their state, every
+  navigation should say "Question n of m", grades should read the verdict plus a summary of
+  the explanation, and the sim's last minute should interrupt with "One minute remaining"
+  exactly once. Achievement toasts should announce without focus. WRONG: silent grades, or
+  the minute warning firing repeatedly.
+
 - **QA-KBB-MECH6 — the Deep Belt bosses (added v0.162.0).** Push past the Flagship into
   section 4+: bosses should vary run to run — a HYDRA that splits at half health (watch for
   the "Escort ♥ N" chip; the fight must not end until the escort dies), a SIPHON that

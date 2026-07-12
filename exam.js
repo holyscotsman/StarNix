@@ -123,6 +123,7 @@
       ".sx-exam-stem{font-size:17px;line-height:1.5;font-weight:600;margin-bottom:16px;white-space:pre-wrap;}",
       ".sx-exam-img{display:block;max-width:100%;border-radius:10px;margin:0 0 14px;border:1px solid rgba(255,255,255,.12);}",
       ".sx-exam-opts{display:flex;flex-direction:column;gap:9px;}",
+      ".sx-exam-live{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;}",
       ".sx-exam-opt{display:flex;gap:11px;align-items:flex-start;text-align:left;background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.12);border-radius:11px;padding:12px 14px;font:600 15px Montserrat,Arial,sans-serif;color:" + P.ink + ";cursor:pointer;transition:border-color .12s,background .12s;}",
       ".sx-exam-opt:hover{border-color:" + P.iris + ";background:rgba(120,85,250,.10);}",
       ".sx-exam-opt .k{flex:0 0 22px;height:22px;border-radius:6px;background:rgba(255,255,255,.10);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:" + P.dim + ";}",
@@ -386,6 +387,11 @@
     container.appendChild(rootEl);
 
     var progEl = wrap.querySelector(".sx-exam-prog");
+    // (v0.164.0, V1.1 FE#5) screen-reader channel: one polite region (grades, navigation),
+    // one assertive (the sim clock's final-minute warning). Visually hidden, never display:none.
+    var liveEl = el("div", "sx-exam-live"); liveEl.setAttribute("role", "status"); liveEl.setAttribute("aria-live", "polite"); wrap.appendChild(liveEl);
+    var liveHot = el("div", "sx-exam-live"); liveHot.setAttribute("role", "alert"); liveHot.setAttribute("aria-live", "assertive"); wrap.appendChild(liveHot);
+    function announce(t, hot) { var n = hot ? liveHot : liveEl; try { n.textContent = ""; n.textContent = t; } catch (eA) {} }
     var scoreEl = wrap.querySelector(".sx-exam-score");
     var comboEl = wrap.querySelector(".sx-exam-combo");
     // (v0.58.0) blitz combo meter: shows the chain + the multiplier the NEXT correct earns.
@@ -473,6 +479,7 @@
           if (ptsEl) ptsEl.textContent = ans + " of " + S.order.length + " answered";
           if (tmrEl) tmrEl.textContent = fmtClock(rem);
           if (S.clockEl) S.clockEl.textContent = fmtClockLong(rem);   // (D7) the station's only motion
+          if (rem <= 60000 && !S._warned1m && rem > 0) { S._warned1m = true; announce("One minute remaining", true); }   // (FE#5)
           if (rem <= 0) submitSim(false);
         }
       }
@@ -487,6 +494,7 @@
       var multi = Array.isArray(q.correctIndices) && q.correctIndices.length;
       var graded = (S.mode !== "sim") && !!S.results[idx];        // study back-browse: read-only graded view
       progEl.textContent = "Question " + (idx + 1) + " of " + order.length;
+      announce("Question " + (idx + 1) + " of " + order.length + (multi ? ", select " + q.correctIndices.length + " answers" : ""));   // (FE#5)
       scoreEl.textContent = (S.mode === "blitz") ? (S.score + " pts") : (S.mode === "sim" ? "Exam sim" : "Study");
       if (S.mode === "blitz") barsEl.style.visibility = "visible";
 
@@ -506,13 +514,20 @@
       var optsHost = card.querySelector(".sx-exam-opts");
       var letters = "ABCDE";
       var draft = S.drafts[idx];
+      // (v0.164.0, V1.1 FE#5) group semantics: single-answer = a radiogroup of radios;
+      // multi-answer = toggle buttons with aria-pressed. Names carry the "Option A" prefix.
+      optsHost.setAttribute("role", multi ? "group" : "radiogroup");
+      optsHost.setAttribute("aria-label", multi ? "Answer options, select " + q.correctIndices.length : "Answer options");
 
       q.options.forEach(function (text, oi) {
         var b = el("button", "sx-exam-opt" + (multi ? " multi" : "")); b.type = "button";   // (D7) square checkbox glyph for multi
         b.innerHTML = '<span class="k">' + letters.charAt(oi) + '</span><span class="t">' + esc(text) + "</span>";
+        b.setAttribute("aria-label", "Option " + letters.charAt(oi) + ": " + text);
+        if (multi) b.setAttribute("aria-pressed", "false");
+        else { b.setAttribute("role", "radio"); b.setAttribute("aria-checked", "false"); }
         if (S.mode === "sim" && draft != null) {
           var dArr = Array.isArray(draft) ? draft : [draft];
-          if (dArr.indexOf(oi) >= 0) b.classList.add("sel");
+          if (dArr.indexOf(oi) >= 0) { b.classList.add("sel"); if (multi) b.setAttribute("aria-pressed", "true"); else b.setAttribute("aria-checked", "true"); }
         }
         on(b, "click", function () { pick(oi, b, card); });
         optsHost.appendChild(b);
@@ -564,14 +579,15 @@
         var k = S.multiSel.indexOf(oi);
         if (k >= 0) S.multiSel.splice(k, 1); else S.multiSel.push(oi);
         btnEl.classList.toggle("sel", k < 0);
+        btnEl.setAttribute("aria-pressed", k < 0 ? "true" : "false");   // (FE#5)
         if (S.mode === "sim") { S.drafts[S.view] = S.multiSel.length ? S.multiSel.slice() : null; emitDraft(); }
         var hint = host2.querySelector(".sx-exam-multi");
         if (hint) hint.textContent = "Select " + q.correctIndices.length + " answers \u00b7 " + S.multiSel.length + " selected.";
         var cf1 = host2.querySelector(".sx-exam-confirm"); if (cf1) cf1.classList.toggle("on", S.multiSel.length >= 1);
       } else {
         var all = host2.querySelectorAll(".sx-exam-opt");
-        for (var bi = 0; bi < all.length; bi++) all[bi].classList.remove("sel");
-        btnEl.classList.add("sel");
+        for (var bi = 0; bi < all.length; bi++) { all[bi].classList.remove("sel"); all[bi].setAttribute("aria-checked", "false"); }
+        btnEl.classList.add("sel"); btnEl.setAttribute("aria-checked", "true");   // (FE#5)
         S.selected = oi;
         if (S.mode === "sim") { S.drafts[S.view] = oi; emitDraft(); }
         var cf2 = host2.querySelector(".sx-exam-confirm"); if (cf2) cf2.classList.add("on");
@@ -601,6 +617,7 @@
       }
       var cf = card.querySelector(".sx-exam-confirm"); if (cf) cf.style.display = "none";
       var fb = el("div", "sx-exam-fb");
+      announce((r.correct ? "Correct. " : "Incorrect. ") + String(q.explanation || "").slice(0, 160));   // (FE#5) grades stop being silent
       var h = '<div class="v ' + (r.correct ? "ok" : "bad") + '">' + (r.correct ? "Correct" : "Not quite") + "</div>";
       if (q.explanation) h += capExplainHTML(q.explanation);   // (J8) 150-word display cap
       if (q.optionNotes) {
