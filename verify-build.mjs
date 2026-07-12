@@ -586,7 +586,16 @@ async function runFrames(n = 6) {
         SN.core.profile.settings.reducedMotion = false; shell._applyMotion();
         ok("FE-motion: toggling off removes the attribute", !w.document.documentElement.hasAttribute("data-motion"));
         const css = w.document.documentElement.innerHTML;
-        ok("FE#7: shell small-screen breakpoint + 44px touch targets + safe-area insets in the build",
+        ok("FE#8: tabular numerals on ticking readouts + the 11px micro floor + type-scale tokens",
+      html.includes(":root{--fs-micro:11px;--fs-body:13px;--fs-label:12px;--fs-num:14px;}")
+      && html.includes(".cc-dist{font-size:13px;color:#9a9aad;font-variant-numeric:tabular-nums;}")
+      && html.includes(".sx-rank-xp{color:var(--mid);font-size:12px;font-variant-numeric:tabular-nums;}")
+      && html.includes(".sx-dom-count{width:48px;text-align:right;color:var(--text);font-weight:700;font-variant-numeric:tabular-nums;}")
+      && html.includes(".kbb-ring .rt.tiny{font-size:11px")
+      && html.includes(".kbb-acard .an{font-weight:800;font-size:11px")
+      && !/\.kbb-[^}]{0,220}font-size:10(\.5)?px/.test(html)
+      && html.includes(".arm-srow b{color:") && html.includes("letter-spacing:.02em;font-variant-numeric:tabular-nums;}"));
+    ok("FE#7: shell small-screen breakpoint + 44px touch targets + safe-area insets in the build",
       html.includes("@media (max-width:600px){.sx-bridge-topright{flex-direction:column")
       && (html.match(/env\(safe-area-inset-/g) || []).length >= 8
       && html.includes(".sx-back{padding:7px 14px;font-size:13px;min-height:44px")

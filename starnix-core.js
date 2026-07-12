@@ -24,7 +24,7 @@
   var CORE_VERSION = "1.1.0";              // internal contract version (changes rarely)
   // User-facing playable-build stamp. BUMP THIS (and the date) on every delivered index.html so the
   // version shown in-game tells us exactly which build is being played/tested. Shown by the shell.
-  var BUILD_VERSION = "0.186.0";
+  var BUILD_VERSION = "0.187.0";
   var BUILD_DATE = "2026-07-03";
   var BUILD_LABEL = "v" + BUILD_VERSION + " \u00b7 " + BUILD_DATE;
   var SCHEMA_VERSION = 1;
@@ -993,7 +993,9 @@
       // got invisible browser-default rings everywhere outside high-contrast mode.
       ':focus-visible{outline:2px solid var(--aqua);outline-offset:2px;border-radius:4px;}' +
       ':root[data-contrast="high"] :focus-visible{outline-width:3px;}';
-    return base + hc + hcRules;
+    // (v0.187.0, V1.1 FE#8) type-scale tokens: shared sizes surfaces converge on (11px micro floor)
+    var scale = ':root{--fs-micro:11px;--fs-body:13px;--fs-label:12px;--fs-num:14px;}';
+    return base + scale + hc + hcRules;
   }
   function injectTheme(doc) {
     if (!doc || !doc.head) return;

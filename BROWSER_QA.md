@@ -229,6 +229,13 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-TYPE-PASS — steady digits, readable micro-text (added v0.187.0).** Watch CC's
+  distance counter run and KBB's HP/energy tick through a battle: digits must change in
+  place with ZERO horizontal jitter (same for the rank strip XP line and Codex percentages).
+  In KBB, squint at the smallest text — ring numbers, card names, rarity chips, slot
+  labels — nothing should feel like 8px mouse-print anymore. WRONG: a counter that
+  wobbles as 1s become 7s, or any KBB label you genuinely cannot read at arm's length.
+
 - **QA-STATION-VISTA — the station re-lights (added v0.186.0).** On the bridge, the right
   column now opens with the MCI Station vista: the station art with dark unbuilt segments and
   lit gold-tinted ones matching the ARM strip's 'Station n/60'. Master more cards (any game or

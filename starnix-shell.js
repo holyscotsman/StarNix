@@ -2108,7 +2108,7 @@
       ".sx-dom-name{width:120px;color:var(--mid);text-transform:capitalize;}",
       ".sx-dom-bar{flex:1;height:8px;border-radius:5px;border:1px solid var(--border);overflow:hidden;}",
       ".sx-dom-fill{display:block;height:100%;background:linear-gradient(90deg,var(--mantis),#6fae18);}",
-      ".sx-dom-count{width:48px;text-align:right;color:var(--text);font-weight:700;}",
+      ".sx-dom-count{width:48px;text-align:right;color:var(--text);font-weight:700;font-variant-numeric:tabular-nums;}",
       ".sx-dom-due{width:52px;text-align:right;font-size:10.5px;font-weight:800;letter-spacing:.03em;color:var(--aqua);}",
       ".sx-dom-due.none{opacity:0;}",
       ".sx-dom-fill.weak{background:repeating-linear-gradient(135deg,#ff8a7d 0 4px,#b24537 4px 8px);}",   // (v0.170.0, FE#6) dense stripes = weak — pattern, not just hue
@@ -2131,7 +2131,7 @@
       ".sx-heatmap{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-start;}",
       ".sx-heat{min-width:96px;flex:1 1 96px;max-width:150px;padding:9px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.10);text-align:left;}",
       ".sx-heat-dom{font-size:11px;color:var(--fg);opacity:.9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}",
-      ".sx-heat-pct{font-size:17px;font-weight:800;margin-top:2px;}",
+      ".sx-heat-pct{font-size:17px;font-weight:800;margin-top:2px;font-variant-numeric:tabular-nums;}",
       ".sx-heat-due{font-size:10px;color:var(--gold);margin-top:1px;}",
       ".sx-heat.t0{background:rgba(255,255,255,0.03);color:var(--mid);}",
       ".sx-heat.t1{background:rgba(255,107,91,0.14);border-color:rgba(255,107,91,0.35);border-style:dotted;} .sx-heat.t1 .sx-heat-pct{color:var(--peach);}",
@@ -2195,7 +2195,7 @@
       ".sx-rank-name{color:var(--gold);font-weight:800;letter-spacing:.06em;text-transform:uppercase;font-size:12px;}",
       ".sx-rank-bar{width:150px;height:8px;border-radius:5px;border:1px solid var(--border);overflow:hidden;display:inline-block;background:rgba(5,5,9,.6);}",
       ".sx-rank-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--iris),var(--gold));}",
-      ".sx-rank-xp{color:var(--mid);font-size:12px;}",
+      ".sx-rank-xp{color:var(--mid);font-size:12px;font-variant-numeric:tabular-nums;}",   /* (v0.187.0, FE#8) */
       ".sx-rank-up{animation:sxRankPulse 1.6s ease-out 3;}",
       "@keyframes sxRankPulse{0%{filter:brightness(1);}30%{filter:brightness(1.7);}100%{filter:brightness(1);}}",
       "@media (prefers-reduced-motion: reduce){.sx-rank-up{animation:none;}}",

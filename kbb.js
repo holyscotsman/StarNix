@@ -1009,7 +1009,7 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
     css.push('.kbb-ring .arc{fill:none;stroke-width:7;stroke-linecap:round;transition:stroke-dashoffset .25s ease;}');
     css.push('.kbb-ring .arc.shield{stroke:' + P.aqua + ';}.kbb-ring .arc.hp{stroke:' + P.mantis + ';}.kbb-ring .arc.ehp{stroke:' + P.peach + ';}');
     css.push('.kbb-ring .rt{fill:' + P.text + ';font-size:22px;font-weight:800;text-anchor:middle;font-family:Montserrat,Arial,sans-serif;}');
-    css.push('.kbb-ring .rt.sm{font-size:18px;}.kbb-ring .rt.tiny{font-size:10px;font-weight:600;fill:' + P.dim + ';}');
+    css.push('.kbb-ring .rt.sm{font-size:18px;}.kbb-ring .rt.tiny{font-size:11px;font-weight:600;fill:' + P.dim + ';letter-spacing:-.2px;}');   /* (v0.187.0, FE#8) 11px floor */
     css.push('.kbb-actions{display:flex;gap:8px;margin:0 0 10px;}');
     css.push('.kbb-action{flex:1;background:rgba(255,255,255,.05);border:1.5px solid ' + P.border + ';border-radius:10px;padding:9px 6px;color:' + P.dim + ';font:700 12.5px Montserrat,Arial,sans-serif;cursor:pointer;transition:border-color .12s,color .12s;}');
     css.push('.kbb-action.on{border-color:' + P.aqua + ';color:' + P.text + ';background:rgba(31,221,233,.10);}');
@@ -1024,7 +1024,7 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
     css.push('.kbb-root:not(.kbb-reduced) .kbb-acard:hover{transform:translateY(-10px);z-index:2;}');
     css.push('.kbb-root:not(.kbb-reduced) .kbb-acard.a0:hover{transform:rotate(-8deg) translateY(-8px);}.kbb-root:not(.kbb-reduced) .kbb-acard.a1:hover{transform:rotate(-4deg) translateY(-9px);}.kbb-root:not(.kbb-reduced) .kbb-acard.a3:hover{transform:rotate(4deg) translateY(-9px);}.kbb-root:not(.kbb-reduced) .kbb-acard.a4:hover{transform:rotate(8deg) translateY(-8px);}');
     css.push('.kbb-reduced .kbb-acard{transition:none;}');
-    css.push('.kbb-acard .an{font-weight:800;font-size:10.5px;color:' + P.text + ';text-align:center;line-height:1.15;}');
+    css.push('.kbb-acard .an{font-weight:800;font-size:11px;color:' + P.text + ';text-align:center;line-height:1.15;letter-spacing:-.1px;}');
     css.push('.kbb-acard .ai{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;flex:none;}');
     css.push('.kbb-acard .ad{font-weight:600;font-size:8.5px;line-height:1.35;color:' + P.mid + ';text-align:center;overflow:hidden;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;}');
     css.push('.kbb-acard .af{margin-top:auto;font-weight:800;font-size:7.5px;letter-spacing:.12em;padding:2px 6px;border-radius:5px;}');
@@ -1052,7 +1052,7 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
     css.push('.kbb-enemy{grid-area:stage;justify-self:end;align-self:start;width:288px;margin:8px;min-width:0;z-index:6;background:rgba(14,14,24,.82);border:1px solid ' + P.border + ';border-radius:12px;padding:11px 13px;display:flex;align-items:center;gap:12px;justify-content:space-between;}');
     css.push('.kbb-enemy .entext{text-align:left;min-width:0;flex:1;}');
     css.push('.kbb-enemy .ennm{font-weight:800;font-size:17px;color:' + P.gold + ';margin:1px 0 7px;overflow:hidden;text-overflow:ellipsis;}');
-    css.push('.kbb-statline{display:flex;gap:12px;font-size:11px;color:' + P.dim + ';margin-top:7px;}');
+    css.push('.kbb-statline{display:flex;gap:12px;font-size:11px;color:' + P.dim + ';margin-top:7px;font-variant-numeric:tabular-nums;}');   /* (v0.187.0, FE#8) */
     css.push('.kbb-statline b{color:' + P.text + ';font-weight:700;}');
     css.push('.kbb-intent{display:inline-block;font-size:13.5px;font-weight:800;padding:3px 9px;border-radius:8px;border:1px solid ' + P.peach + ';color:' + P.peach + ';white-space:nowrap;}');
     css.push('.kbb-intent.charge{border-color:' + P.gold + ';color:' + P.gold + ';}');
@@ -1102,7 +1102,7 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
     css.push('.kbb-won .kbb-lost-card{border-color:' + P.gold + ';box-shadow:0 0 40px rgba(255,200,87,.25);}');
     css.push('.kbb-won-note{font-size:12.5px;color:' + P.dim + ';text-align:center;margin-top:8px;}');
     css.push('.kbb-won-push{border-color:' + P.gold + ';color:' + P.gold + ';}');
-    css.push('.kbb-pity{margin-left:8px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:' + P.gold + ';border:1px solid ' + P.gold + ';border-radius:999px;padding:1px 7px;}');
+    css.push('.kbb-pity{margin-left:8px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:' + P.gold + ';border:1px solid ' + P.gold + ';border-radius:999px;padding:1px 7px;}');
     css.push('.kbb-debrief summary{cursor:pointer;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:' + P.gold + ';}');
     css.push('.kbb-debrief-row{margin:8px 0 2px;border-left:3px solid ' + P.peach + ';padding-left:10px;}');
     css.push('.kbb-debrief-stem{font-size:12.5px;color:' + P.text + ';}');
@@ -1173,7 +1173,7 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
     css.push('.kbb-card{display:flex;gap:11px;align-items:stretch;padding:11px;border-radius:12px;border:1px solid ' + P.border + ';background:rgba(24,24,35,.7);margin-bottom:8px;border-left-width:4px;}');
     css.push('.kbb-card .body{flex:1;min-width:0;}');
     css.push('.kbb-card .nm{font-weight:800;font-size:14px;}');
-    css.push('.kbb-card .rar{font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;padding:1px 7px;border-radius:6px;margin-left:7px;vertical-align:middle;}');
+    css.push('.kbb-card .rar{font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;padding:1px 7px;border-radius:6px;margin-left:7px;vertical-align:middle;}');
     css.push('.kbb-card .desc{font-size:12px;color:' + P.dim + ';margin-top:4px;line-height:1.4;}');
     css.push('.kbb-card .side{display:flex;flex-direction:column;justify-content:center;gap:6px;align-items:flex-end;}');
     css.push('.kbb-cons{display:flex;gap:8px;flex-wrap:wrap;}');
@@ -1196,10 +1196,10 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
     // filled ones show the full card; the shop pins Reroll/Next-battle outside its scroll.
     css.push('.kbb-slots{display:flex;flex-direction:column;flex-wrap:nowrap;gap:8px;}');
     css.push('.kbb-slot{border:1px solid ' + P.border + ';border-left:3px solid ' + P.iris300 + ';border-radius:10px;background:rgba(28,28,40,.65);padding:8px 10px;min-height:44px;}');
-    css.push('.kbb-slot.empty{border-style:dashed;border-left-width:1px;background:rgba(28,28,40,.28);display:flex;align-items:center;justify-content:center;color:' + P.dim + ';font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;}');
+    css.push('.kbb-slot.empty{border-style:dashed;border-left-width:1px;background:rgba(28,28,40,.28);display:flex;align-items:center;justify-content:center;color:' + P.dim + ';font-size:11px;letter-spacing:.06em;text-transform:uppercase;}');
     css.push('.kbb-slot .nm{font-size:12px;font-weight:700;display:flex;align-items:center;gap:7px;}');
     css.push('.kbb-slot .nm .rar{font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-left:auto;}');
-    css.push('.kbb-slot .desc{font-size:10.5px;line-height:1.45;color:' + P.dim + ';margin-top:3px;}');
+    css.push('.kbb-slot .desc{font-size:11px;line-height:1.42;color:' + P.dim + ';margin-top:3px;}');
     css.push('.kbb-main.is-shop{display:flex;flex-direction:column;overflow:hidden;}');
     css.push('.kbb-shop-scroll{flex:1 1 auto;min-height:0;overflow:auto;padding-right:4px;}');
     css.push('.kbb-shop-actions{flex:none;margin-top:10px;padding-top:10px;border-top:1px solid ' + P.border + ';}');
@@ -1209,7 +1209,7 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
     css.push('.kbb-tile.draggable{cursor:grab;touch-action:none;}');
     css.push('.kbb-tile.draggable:hover{border-color:' + P.iris300 + ';}');
     css.push('.kbb-tile.nosell{opacity:.78;}');
-    css.push('.kbb-tile .lock{font-size:10px;color:' + P.dim + ';}');
+    css.push('.kbb-tile .lock{font-size:11px;color:' + P.dim + ';}');
     css.push('.kbb-tile.picking{border-color:' + P.gold + ';box-shadow:0 0 12px rgba(255,200,87,.4);cursor:pointer;}');
     css.push('.kbb-tile.tipped{cursor:help;}');
     css.push('.kbb-tile:focus-visible{border-color:' + P.aqua + ';box-shadow:0 0 0 2px rgba(31,221,233,.4);}');
