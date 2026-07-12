@@ -229,6 +229,14 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-ARM-PUZZLES — decrypt + trace (added v0.176.0).** Reach a T1 sector (5+) and open
+  puzzle cores until TRACE appears: the lit conduits must be readable, tapping a linked node
+  extends the aqua trace, tapping the head backs up, and there is ALWAYS a route to OUT. In
+  T2 (9+), find DECRYPT: glyph slots cycle on tap, TRANSMIT feeds gold/aqua pips that
+  actually match your guess, and 32s is tight-but-fair. Both must breach (shield hit) on
+  timer expiry like any puzzle. WRONG: an unsolvable maze, pips that lie, or the new types
+  showing up in sectors 1-4.
+
 - **QA-CC-SQUEEZE — the canyon actually narrows (added v0.175.0).** Fly CC into a squeeze
   stretch (~every 2-4 km): a "⚠ CANYON NARROWS · keep RIGHT/LEFT" banner + rising sting at
   entry, then the sealed side must read as ONE continuous rock wall for the whole 1-2 km —

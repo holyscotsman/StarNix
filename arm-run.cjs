@@ -416,6 +416,57 @@ var detSector3 = null;   // captured for the determinism probe against window 2
     ok(/coins \+= 3 \+ tierOf\(sector\); hud\(\)/.test(H.ARM_SRC) && /var dPay = 25 \+ sector \* 2;/.test(H.ARM_SRC),
        'ARM#5: kill bounty ramps by tier (3/4/5) and depot install pay ramps by sector (27c -> 49c)');
   })();
+  // (v0.176.0, V1.1 ARM#6) two spec-02 s3D puzzles: DECRYPT (mastermind) + TRACE (node maze)
+  (function () {
+    var seen0 = {}, seen1 = {}, seen2 = {}, hardFirstOk = true;
+    var HARD = { decrypt: 1, trace: 1, rewire: 1, vcpu: 1 };
+    for (var rr = 0; rr < 30; rr++) {
+      T.puzzleRoster(0).forEach(function (t) { seen0[t] = 1; });
+      T.puzzleRoster(1).forEach(function (t) { seen1[t] = 1; });
+      var r2 = T.puzzleRoster(2);
+      r2.forEach(function (t) { seen2[t] = 1; });
+      for (var h4 = 0; h4 < 4; h4++) if (!HARD[r2[h4]]) hardFirstOk = false;
+    }
+    ok(!seen0.trace && !seen0.decrypt, 'ARM#6 roster T0: the classic six only (onboarding untouched)');
+    ok(seen1.trace === 1 && !seen1.decrypt, 'ARM#6 roster T1: TRACE joins, DECRYPT waits');
+    ok(seen2.trace === 1 && seen2.decrypt === 1 && hardFirstOk, 'ARM#6 roster T2: both live AND the hard half deals first');
+    ok(T.puzzleSecs('decrypt', 0, false) === 32 && T.puzzleSecs('trace', 0, false) === 24
+       && T.puzzleSecs('decrypt', 0, true) === 48, 'ARM#6 timers: decrypt 32s / trace 24s, extra-time x1.5');
+    // land in a REGULAR sector so cores exist (boss arenas hold their cores in the queue)
+    T.setupBossSector(3); T.nextSector(); T.skipBriefing(); T.flushWarp();
+    ok(T.state() === 'SECTOR' && T.sectorNum() === 4, 'ARM#6 probe: regular sector 4 reached');
+    // DECRYPT
+    var ty = T.openPuzzleAt(0, 'decrypt');
+    ok(ty === 'decrypt' && T.state() === 'PUZZLE', 'ARM#6 DECRYPT mounts');
+    var pd = T.puzzleProbe();
+    ok(pd.len === 4 && pd.alphabet === 5 && pd.tries === 0 && !pd.solved, 'ARM#6 DECRYPT shape: 4 slots x 5 glyphs, unsolved');
+    var sec = pd.secret.slice();
+    var swapped = sec.slice(); var tw = swapped[0]; swapped[0] = swapped[1]; swapped[1] = tw;
+    var g1 = T.puzzleTryGuess(swapped);
+    var expEx = (sec[0] === sec[1]) ? 4 : 2, expNear = (sec[0] === sec[1]) ? 0 : 2;
+    ok(g1.exact === expEx && g1.near === expNear, 'ARM#6 DECRYPT grading: a two-slot swap reads ' + expEx + ' locked + ' + expNear + ' misplaced');
+    if (expEx !== 4) {
+      var g2 = T.puzzleTryGuess(sec);
+      ok(g2.exact === 4 && T.puzzleProbe().solved === true, 'ARM#6 DECRYPT: the true cipher cracks it');
+    } else { ok(true, 'ARM#6 DECRYPT: the swap equalled the secret (double glyph) — solve already covered'); }
+    T.flushLater();
+    ok(T.state() !== 'PUZZLE', 'ARM#6 DECRYPT solve hands back to the core flow');
+    // the solve opened the core question — clear it so TRACE can mount cleanly
+    if (T.state() === 'CORE_Q' || T.hasQuestion()) { T.answer(true); }
+    // TRACE: solvable by construction across 20 regenerations
+    var allOk = true;
+    for (var tr = 0; tr < 20; tr++) {
+      var ty2 = T.openPuzzleAt(1 + (tr % 3), 'trace');
+      if (ty2 !== 'trace') { allOk = false; break; }
+      var pt = T.puzzleProbe();
+      if (!(pt.pathOk === true && pt.conduits >= pt.pathLen - 1 && !pt.solved)) allOk = false;
+      T.puzzleTapSolve();
+      if (!T.puzzleProbe().solved) allOk = false;
+      T.flushLater();
+      if (T.hasQuestion()) T.answer(true);
+    }
+    ok(allOk, 'ARM#6 TRACE: 20 regenerated mazes all self-validate solvable and tapSolve reaches OUT');
+  })();
   // (v0.155.0, V1.1 ARM#4) the tier cliffs are smoothed — and the 02 s3D shape toggle exists
   (function () {
     var dmg = []; for (var ds = 1; ds <= 12; ds++) dmg.push(T.shotDmg(ds));

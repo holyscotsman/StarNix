@@ -90,13 +90,18 @@
   // rewire/dials/sort retained pending the keep/cut/retune proposal — timers retuned now,
   // removals gated on Jason's confirmation (see doc 02 §S3 proposal).
   var PUZZLE_TYPES = ["simon", "battery", "vcpu", "rewire", "dials", "sort"];
+  // (v0.176.0, V1.1 ARM#6) spec 02 s3D's harder pair, tier-gated: TRACE from T1, DECRYPT from
+  // T2 — and T2 sectors draw the HARD half of the roster first, so puzzle difficulty finally
+  // has a curve to match combat's.
+  var PUZZLE_HARD = ["decrypt", "trace", "rewire", "vcpu"];
+  var PUZZLE_EASY = ["dials", "sort", "battery", "simon"];
   var PUZZLE_MIN = 10;            // floor, seconds (S3: was 12 — "timers much quicker overall")
   var PUZZLE_FAIL_DMG = 14;       // shield hit on a breach (timeout); ~1.5 combat hits, recoverable
   var QUESTION_TIMEOUT_DMG = 14;  // (v0.65.0, Jason's QA-A5 ruling) a FIELD core-scan timeout costs shields — the documented timeUp→wrong→damage→gameOver trace is now real. Depot installs stay forgiving (no damage).
   // S3: per-type completion-timer budget (seconds, pre extra-time). Replaces the old
   // per-question x1.5 model (which gave ~37s for EVERY puzzle). Simon is dynamic by sequence
   // length and is armed only AFTER its playback. See doc 02 §timers + the S3 proposal table.
-  var PUZZLE_SECS = { battery: 14, vcpu: 20, rewire: 26, dials: 18, sort: 16 };
+  var PUZZLE_SECS = { battery: 14, vcpu: 20, rewire: 26, dials: 18, sort: 16, trace: 24, decrypt: 32 };   // (v0.176.0, ARM#6)
   function puzzleSecsFor(type, len, extra) {
     var s = (type === "simon") ? (8 + (len || 5) * 2) : (PUZZLE_SECS[type] || 18);
     if (extra) s = Math.round(s * 1.5);
@@ -789,7 +794,7 @@
       // one question per core, distinct across the WHOLE run (usedIds persists between sectors).
       // No domain filter: a single domain has too few questions for multi-sector no-reuse.
       cores = []; bossQueue = []; bossActive = isBossSector(sector);   // boss sectors (3/6/9/12): the boss holds the cores
-      var ptypes = runRng.shuffle(PUZZLE_TYPES.slice()), pj = 0;   // per-sector puzzle order (runRng is forked per sector)
+      var ptypes = puzzleRosterFor(tierOf(sector)), pj = 0;   // (v0.176.0, ARM#6) tier-gated per-sector order (runRng is forked per sector)
       var pos = randomCorePositions(runRng);                      // seeded core positions, regenerated each sector
       commitLost();                                              // harvest any stragglers (defensive: nextSector path)
       var recoveredN = 0;
@@ -1779,6 +1784,126 @@
     /* ---------------------------------------------------------------------- */
     /* puzzles (ported; deterministic)                                        */
     /* ---------------------------------------------------------------------- */
+    // (v0.176.0, V1.1 ARM#6) T0 = the classic six; T1 adds TRACE; T2 adds DECRYPT and deals
+    // the hard half first so late-sector puzzle cores bite as hard as late-sector combat.
+    function puzzleRosterFor(t) {
+      if (t === 0) return runRng.shuffle(PUZZLE_TYPES.slice());
+      if (t === 1) return runRng.shuffle(PUZZLE_TYPES.concat(["trace"]));
+      return runRng.shuffle(PUZZLE_HARD.slice()).concat(runRng.shuffle(PUZZLE_EASY.slice()));
+    }
+    // (ARM#6) DECRYPT — 4-symbol mastermind against the stability timer. Tap slots to cycle
+    // glyphs, TRANSMIT to grade: gold pips = right glyph right slot, aqua = right glyph
+    // wrong slot. Crack it before the breach.
+    function puzzleDecrypt(done) {
+      panel.className = "arm-panel iris"; clear(panel);
+      var GLY = ["\u25B2", "\u25C6", "\u25CF", "\u25A0", "\u2726"], N = 4, A = GLY.length;
+      var secret = [], guess = [], tries = 0, lastEx = -1, lastNear = -1;
+      for (var i = 0; i < N; i++) { secret.push(rint(A)); guess.push(0); }
+      function grade(g) {
+        var ex = 0, sc = [0, 0, 0, 0, 0], gc = [0, 0, 0, 0, 0];
+        for (var k = 0; k < N; k++) { if (g[k] === secret[k]) ex++; else { sc[secret[k]]++; gc[g[k]]++; } }
+        var near = 0; for (var s2 = 0; s2 < A; s2++) near += Math.min(sc[s2], gc[s2]);
+        return { exact: ex, near: near };
+      }
+      activePuzzle = {
+        type: "decrypt",
+        probe: function () { return { len: N, alphabet: A, secret: secret.slice(), tries: tries, lastExact: lastEx, lastNear: lastNear, solved: lastEx === N }; },
+        tryGuess: function (g) { guess = g.slice(); return transmit(); },      // test seam: grade an arbitrary guess
+        tapSolve: function () { guess = secret.slice(); transmit(); }
+      };
+      panel.appendChild(mk("div", "arm-eyebrow e-iris", "\u26A1 Cipher lock"));
+      panel.appendChild(mk("h2", null, "Decrypt the BCM cipher"));
+      panel.appendChild(mk("p", "arm-sub", "Tap each slot to cycle its glyph, then TRANSMIT. Gold pips: right glyph, right slot. Aqua: right glyph, wrong slot."));
+      var pwrap = mk("div", "arm-pwrap"); var row = mk("div", "arm-dec-row"); pwrap.appendChild(row);
+      var pips = mk("div", "arm-dec-pips"); pwrap.appendChild(pips);
+      var ph = mk("div", "arm-hint"); ph.textContent = "Crack the 4-glyph cipher"; pwrap.appendChild(ph); panel.appendChild(pwrap);
+      var slotEls = [];
+      for (var i3 = 0; i3 < N; i3++) {
+        (function (i4) {
+          var b = mk("button", "arm-dec-slot"); b.textContent = GLY[guess[i4]];
+          on(b, "click", function () { guess[i4] = (guess[i4] + 1) % A; b.textContent = GLY[guess[i4]]; sfx("fire"); });
+          slotEls.push(b); row.appendChild(b);
+        })(i3);
+      }
+      var tx = mk("button", "arm-act aqua"); tx.textContent = "TRANSMIT \u25b8"; panel.appendChild(tx);
+      function transmit() {
+        tries++;
+        var r = grade(guess); lastEx = r.exact; lastNear = r.near;
+        clear(pips);
+        for (var p1 = 0; p1 < r.exact; p1++) pips.appendChild(mk("span", "arm-pip gold"));
+        for (var p2 = 0; p2 < r.near; p2++) pips.appendChild(mk("span", "arm-pip aqua"));
+        for (var p3 = r.exact + r.near; p3 < N; p3++) pips.appendChild(mk("span", "arm-pip off"));
+        if (r.exact === N) { ph.textContent = "Cipher cracked \u2726"; sfx("solve"); later(done, 450); }
+        else { ph.textContent = r.exact + " locked \u00b7 " + r.near + " misplaced \u00b7 keep going"; }
+        return r;
+      }
+      on(tx, "click", function () { sfx("click"); transmit(); });
+    }
+    // (ARM#6) TRACE — route the signal through the conduit maze. The path is generated FIRST
+    // (a seeded lattice walk), then decoy conduits are added: solvable by construction, the
+    // same guarantee rewire gives. Tap a linked node to extend the trace; tap the head to back up.
+    function puzzleTrace(done) {
+      panel.className = "arm-panel iris"; clear(panel);
+      var GW = 4, GH = 4;
+      var inY = rint(GH), outY = rint(GH);
+      var cond = {};                                             // "x,y-x2,y2" (ordered) -> conduit exists
+      function ck(x1, y1, x2, y2) { return (x1 < x2 || (x1 === x2 && y1 < y2)) ? x1 + "," + y1 + "-" + x2 + "," + y2 : x2 + "," + y2 + "-" + x1 + "," + y1; }
+      var path = [[0, inY]], px = 0, py = inY;
+      while (px < GW - 1 || py !== outY) {                       // lattice walk: step right, or drift toward outY
+        var stepRight = (px < GW - 1) && (py === outY || rint(2) === 0);
+        if (stepRight) { cond[ck(px, py, px + 1, py)] = 1; px++; }
+        else { var ny = py + (outY > py ? 1 : -1); cond[ck(px, py, px, ny)] = 1; py = ny; }
+        path.push([px, py]);
+      }
+      var pathOk = true;                                         // self-validation: every path hop has its conduit
+      for (var v1 = 1; v1 < path.length; v1++) { if (!cond[ck(path[v1 - 1][0], path[v1 - 1][1], path[v1][0], path[v1][1])]) pathOk = false; }
+      var decoys = 5 + rint(4);                                  // decoy conduits AFTER the true path (never removes it)
+      for (var d1 = 0; d1 < decoys; d1++) {
+        var dx = rint(GW), dy = rint(GH), dir = rint(2);
+        var ex2 = dir === 0 ? dx + 1 : dx, ey2 = dir === 0 ? dy : dy + 1;
+        if (ex2 < GW && ey2 < GH) cond[ck(dx, dy, ex2, ey2)] = 1;
+      }
+      var trace = [[0, inY]];
+      function head() { return trace[trace.length - 1]; }
+      function solvedNow() { var h = head(); return h[0] === GW - 1 && h[1] === outY; }
+      activePuzzle = {
+        type: "trace",
+        probe: function () { return { w: GW, h: GH, inY: inY, outY: outY, pathOk: pathOk, pathLen: path.length, traceLen: trace.length, conduits: Object.keys(cond).length, solved: solvedNow() }; },
+        tapSolve: function () { trace = path.slice(); render(); }
+      };
+      panel.appendChild(mk("div", "arm-eyebrow e-iris", "\u26A1 Signal trace"));
+      panel.appendChild(mk("h2", null, "Route the signal to the relay"));
+      panel.appendChild(mk("p", "arm-sub", "Tap a linked node to extend the trace from IN to OUT. Tap the trace head to back up. Only lit conduits carry signal."));
+      var pwrap = mk("div", "arm-pwrap"); var grid = mk("div", "arm-trace"); grid.style.gridTemplateColumns = "repeat(" + GW + ", 1fr)"; pwrap.appendChild(grid);
+      var ph = mk("div", "arm-hint"); pwrap.appendChild(ph); panel.appendChild(pwrap);
+      var nodeEls = [];
+      for (var gy = 0; gy < GH; gy++) for (var gx = 0; gx < GW; gx++) {
+        (function (x, y) {
+          var b = mk("button", "arm-trace-node");
+          b.textContent = (x === 0 && y === inY) ? "IN" : (x === GW - 1 && y === outY) ? "OUT" : "\u25CF";
+          on(b, "click", function () {
+            var h = head();
+            if (x === h[0] && y === h[1] && trace.length > 1) { trace.pop(); sfx("fire"); render(); return; }   // back up
+            var adj = (Math.abs(x - h[0]) + Math.abs(y - h[1])) === 1;
+            if (adj && cond[ck(h[0], h[1], x, y)] && !trace.some(function (t) { return t[0] === x && t[1] === y; })) {
+              trace.push([x, y]); sfx("fire"); render();
+            }
+          });
+          nodeEls[y * GW + x] = b; grid.appendChild(b);
+        })(gx, gy);
+      }
+      function render() {
+        for (var y2 = 0; y2 < GH; y2++) for (var x2 = 0; x2 < GW; x2++) {
+          var el2 = nodeEls[y2 * GW + x2], onTrace = trace.some(function (t) { return t[0] === x2 && t[1] === y2; });
+          var h2 = head(), isHead = h2[0] === x2 && h2[1] === y2;
+          var linked = cond[ck(h2[0], h2[1], x2, y2)] && (Math.abs(x2 - h2[0]) + Math.abs(y2 - h2[1])) === 1;
+          el2.className = "arm-trace-node" + (onTrace ? " lit" : "") + (isHead ? " head" : "") + (!onTrace && linked ? " link" : "");
+        }
+        if (solvedNow()) { ph.textContent = "Signal locked to the relay \u2726"; sfx("solve"); later(done, 450); }
+        else ph.textContent = "Trace: " + trace.length + " node" + (trace.length === 1 ? "" : "s");
+      }
+      render();
+    }
     function openPuzzle(core) {
       puzzleCore = core; puzzleDoneFlag = false;
       core.qOpen = true; clearActiveEBullets(); challengeLvl = coreLvl(core);
@@ -1793,6 +1918,8 @@
       else if (type === "vcpu") puzzleVcpu(puzzleFinish);
       else if (type === "rewire") puzzleRewire(puzzleFinish);
       else if (type === "sort") puzzleSort(puzzleFinish);
+      else if (type === "decrypt") puzzleDecrypt(puzzleFinish);   // (v0.176.0, ARM#6)
+      else if (type === "trace") puzzleTrace(puzzleFinish);
       else puzzleDials(puzzleFinish);
       armPuzzleTimer(puzzleSecsFor(type, 0, extraTime));   // panel already built; the bar goes on last
     }
@@ -3135,6 +3262,10 @@
         isBossSector: function (sec) { return isBossSector(sec); },
         nextSector: function () { nextSector(); },
         rollTypes: function (n, sec) { var keep = sector; if (sec) sector = sec; var out = []; for (var i = 0; i < (n || 100); i++) out.push(rollEnemyType()); sector = keep; return out; },   // (v0.148.0, ARM#3)
+        puzzleRoster: function (t) { return puzzleRosterFor(t); },   // (v0.176.0, ARM#6)
+        puzzleSecs: function (t, len, extra) { return puzzleSecsFor(t, len, extra); },
+        puzzleTryGuess: function (g) { return activePuzzle && activePuzzle.tryGuess ? activePuzzle.tryGuess(g) : null; },
+        flushLater: function () { var fired = 0; timers.forEach(function (rec, id) { win.clearTimeout(id); }); var fns = []; timers.forEach(function (rec) { fns.push(rec.fn); }); timers.clear(); for (var i = 0; i < fns.length; i++) { try { fns[i](); fired++; } catch (eF) {} } return fired; },
         hpMix: function (n, sec) { var keep = sector; if (sec) sector = sec; var out = {}; for (var i = 0; i < (n || 300); i++) { var h = enemyHpFor(sector); out[h] = (out[h] || 0) + 1; } sector = keep; return out; },   // (v0.155.0, ARM#4)
         shotDmg: function (sec) { return shotDmgFor(sec); },
         setSmoothDiff: function (v) { smoothDiff = !!v; },
@@ -3439,6 +3570,19 @@
       ".arm-ptimer.low .arm-ptimer-cap{color:" + C.peach + ";}",
       ".arm-ptimer.low .arm-ptimer-track>i{background:" + C.peach + ";box-shadow:0 0 12px rgba(255,107,91,.6);}",
       // S3 polarity bank (battery)
+      ".arm-dec-row{display:flex;gap:12px;justify-content:center;margin:8px 0;}",
+      ".arm-dec-slot{width:58px;height:58px;border-radius:14px;border:2px solid #34344a;background:" + C.panel2 + ";font-size:26px;color:" + C.aqua + ";cursor:pointer;}",
+      ".arm-dec-slot:active{transform:scale(.94);}",
+      ".arm-dec-pips{display:flex;gap:7px;justify-content:center;margin:10px 0 4px;min-height:14px;}",
+      ".arm-pip{width:12px;height:12px;border-radius:50%;border:1px solid #34344a;}",
+      ".arm-pip.gold{background:" + C.gold + ";border-color:" + C.gold + ";}",
+      ".arm-pip.aqua{background:" + C.aqua + ";border-color:" + C.aqua + ";}",
+      ".arm-pip.off{background:transparent;}",
+      ".arm-trace{display:grid;gap:10px;justify-content:center;margin:8px auto;max-width:280px;}",
+      ".arm-trace-node{width:52px;height:52px;border-radius:12px;border:2px solid #34344a;background:" + C.panel2 + ";color:#9a9aad;font-size:13px;font-weight:700;cursor:pointer;}",
+      ".arm-trace-node.link{border-color:" + C.iris300 + ";}",
+      ".arm-trace-node.lit{border-color:" + C.aqua + ";color:" + C.aqua + ";background:rgba(31,221,233,.10);}",
+      ".arm-trace-node.head{box-shadow:0 0 12px rgba(31,221,233,.6);}",
       ".arm-batt{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;}",
       ".arm-batt-slot{padding:6px 6px 4px;border-radius:14px;border:2px solid #34344a;background:" + C.panel2 + ";transition:border-color .12s,box-shadow .12s;}",
       ".arm-batt-slot.ok{border-color:" + C.green + ";box-shadow:0 0 16px rgba(146,221,35,.35);}",
