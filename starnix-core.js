@@ -24,7 +24,7 @@
   var CORE_VERSION = "1.1.0";              // internal contract version (changes rarely)
   // User-facing playable-build stamp. BUMP THIS (and the date) on every delivered index.html so the
   // version shown in-game tells us exactly which build is being played/tested. Shown by the shell.
-  var BUILD_VERSION = "0.200.0";
+  var BUILD_VERSION = "0.201.0";
   var BUILD_DATE = "2026-07-03";
   var BUILD_LABEL = "v" + BUILD_VERSION + " \u00b7 " + BUILD_DATE;
   var SCHEMA_VERSION = 1;
@@ -891,6 +891,8 @@
       station: 0,            // (v0.186.0, V1.1 Flow#8) MCI Station modules re-lit (0-60) — mastery-fed, latched forever
       onboarded: false,      // (v0.195.0, V1.1 Flow#9) first-run order ribbons + bridge tour latch
       blitzDaily: null,      // (v0.196.0, V1.1 NIT#9) daily gauntlet record: {last, streak, best, pts, pct}
+      kbbSalvage: 0,         // (v0.201.0, V1.1 KBB#10) persistent salvage banked at run end
+      kbbHangar: null,       // (v0.201.0, KBB#10) hangar fittings: {artifact?, hp?, slot?}
       settings: defaultSettings(),
       updatedAt: clock.now()
     };
@@ -916,6 +918,8 @@
     if (typeof p.station !== "number" || !(p.station >= 0)) p.station = 0;   // (v0.186.0, Flow#8)
     if (typeof p.onboarded !== "boolean") p.onboarded = !!(p.totals && p.totals.questionsSeen > 0);   // (v0.195.0, Flow#9) veterans skip the tour
     if (p.blitzDaily !== null && (typeof p.blitzDaily !== "object" || !p.blitzDaily)) p.blitzDaily = null;   // (v0.196.0, NIT#9)
+    if (typeof p.kbbSalvage !== "number" || !(p.kbbSalvage >= 0)) p.kbbSalvage = 0;   // (v0.201.0, KBB#10)
+    if (p.kbbHangar != null && typeof p.kbbHangar !== "object") p.kbbHangar = null;
     if (typeof p.streakDays !== "number") p.streakDays = 0;            // (v0.153.0, Flow#4)
     if (typeof p.streakDaysBest !== "number") p.streakDaysBest = 0;
     p.settings = Object.assign({}, def.settings, p.settings || {});
@@ -1330,6 +1334,7 @@
       assets: global.STARNIX_ASSETS || {},   // inlined sprites/art (assets.js); games read e.g. ctx.assets.armBoss
       settings: c.profile ? c.profile.settings : defaultSettings(),
       perks: rankPerks(c.profile && typeof c.profile.xp === "number" ? c.profile.xp : 0),   // (v0.179.0, Flow#7) rank perks snapshot — additive ctx key (01 s9a)
+      hangar: (c.profile && c.profile.kbbHangar) ? JSON.parse(JSON.stringify(c.profile.kbbHangar)) : null,   // (v0.201.0, KBB#10)
       rewards: null,   // reserved
       sanitize: c.escapeHTML
     };

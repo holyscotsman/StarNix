@@ -229,6 +229,14 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-KBB-HANGAR — death pays forward (added v0.201.0).** Lose a KBB run after earning
+  some coins: the log should show 'Salvage recovered' and the Run-over card now carries a
+  HANGAR section with your salvage balance and three purchases. Buy the starting artifact
+  (only commons offered), hit New run: it must be in your hand from battle one — same for
+  +5 HP and the fifth consumable slot. Everything is one-time ('fitted'); the panel scrolls
+  inside the card if cramped. WRONG: salvage from an abandoned mid-battle quit, a legendary
+  in the chooser, fittings missing on a restart, or the card overflowing the screen.
+
 - **QA-DOCK-CLOCK — the dailies say when (added v0.199.0).** On the bridge, the DAILY
   MISSIONS label should read 'resets in Hh Mm' (sanity-check it against your actual local
   midnight), and completing a mission without claiming must raise a gold count badge that

@@ -387,13 +387,13 @@
       heal: function (n) { s.hp = clamp(s.hp + Math.round(n), 0, s.maxHp); },
       hurt: function (n) { s.hp = Math.max(1, s.hp - Math.round(n)); },
       addShield: function (n) { s.shield = Math.max(0, s.shield + Math.round(n)); },
-      addCoins: function (n) { s.coins = Math.max(0, s.coins + Math.round(n)); },
+      addCoins: function (n) { s.coins = Math.max(0, s.coins + Math.round(n)); if (n > 0) run.coinsEarned = (run.coinsEarned | 0) + Math.round(n); },   // (KBB#10) ledger
       addMaxHp: function (n) { n = Math.round(n); s.maxHp = Math.max(1, s.maxHp + n); if (n > 0) s.hp += n; s.hp = clamp(s.hp, 0, s.maxHp); },
       addBasePower: function (n) { s.basePower = Math.max(0, s.basePower + n); },
       addMaxAttacks: function (n) { if (run.battle) run.battle.maxAttacks = Math.max(1, run.battle.maxAttacks + n); },
       damageEnemy: function (n) { if (run.battle && run.battle.enemy) run.battle.enemy.hp -= Math.max(0, Math.round(n)); },
       healEnemy: function (n) { if (run.battle && run.battle.enemy) { var e = run.battle.enemy; e.hp = Math.min(e.maxHp, e.hp + Math.round(n)); } },
-      grantConsumable: function (id) { if (run.consumables.length < CONFIG.consumableCap) run.consumables.push(id); },
+      grantConsumable: function (id) { if (run.consumables.length < (run.consumableCap || CONFIG.consumableCap)) run.consumables.push(id); },   // (KBB#10) rack-aware
       revealWrong: function () { revealOneWrong(run); }
     };
   }
@@ -432,6 +432,39 @@
       if (b.revealed.indexOf(i) >= 0) continue;
       b.revealed.push(i); return;
     }
+  }
+  // (v0.201.0, V1.1 KBB#10) THE HANGAR: three one-time unlocks, commons-only artifact —
+  // a bounded 155-salvage sink so knowledge, not grind, still wins runs.
+  var HANGAR_ITEMS = [
+    { id: 'artifact', name: 'Starting artifact', desc: 'Begin every run with a chosen COMMON artifact.', price: 60 },
+    { id: 'hp', name: 'Reinforced hull', desc: '+5 starting max HP, every run.', price: 45 },
+    { id: 'slot', name: 'Consumable rack', desc: 'A fifth consumable slot, every run.', price: 50 }
+  ];
+  function hangarState(profile) {
+    var hgS = (profile && profile.kbbHangar) || {};
+    var salv = (profile && profile.kbbSalvage) | 0;
+    return HANGAR_ITEMS.map(function (it) {
+      var owned = it.id === 'artifact' ? !!hgS.artifact : !!hgS[it.id];
+      return { id: it.id, name: it.name, desc: it.desc, price: it.price, owned: owned,
+        canBuy: !owned && salv >= it.price, artifact: it.id === 'artifact' ? (hgS.artifact || null) : undefined };
+    });
+  }
+  function hangarBuy(profile, id, artifactId) {
+    if (!profile) return { ok: false, reason: 'no-profile' };
+    var it = null;
+    for (var hb = 0; hb < HANGAR_ITEMS.length; hb++) if (HANGAR_ITEMS[hb].id === id) it = HANGAR_ITEMS[hb];
+    if (!it) return { ok: false, reason: 'unknown' };
+    var hg = profile.kbbHangar || (profile.kbbHangar = {});
+    if (id === 'artifact' ? !!hg.artifact : !!hg[id]) return { ok: false, reason: 'owned' };
+    if (id === 'artifact') {
+      var hdef = null;
+      for (var ha = 0; ha < ARTIFACTS.length; ha++) if (ARTIFACTS[ha].id === artifactId) hdef = ARTIFACTS[ha];
+      if (!hdef || hdef.rarity !== 'common') return { ok: false, reason: 'not-common' };
+    }
+    if (((profile.kbbSalvage | 0)) < it.price) return { ok: false, reason: 'salvage' };
+    profile.kbbSalvage = (profile.kbbSalvage | 0) - it.price;
+    if (id === 'artifact') hg.artifact = artifactId; else hg[id] = true;
+    return { ok: true, price: it.price };
   }
   function equipArtifact(run, id, fireAcquire) {
     var def = ARTIFACTS_BY_ID[id];
@@ -534,7 +567,18 @@
   }
   function scoreOf(run) { return run.depthClearedSection * 100 + run.depthClearedRound; }
   function depthLabel(run) { return run.depthClearedSection + '-' + run.depthClearedRound; }
+  // (v0.201.0, V1.1 KBB#10) salvage: ~10% of the run's EARNINGS outlive the run — a dead
+  // run finally pays something toward the hangar. Written to the LIVE profile via update().
+  function bankSalvage(run) {
+    var sv = Math.round((run.coinsEarned | 0) * 0.10);
+    if (sv > 0 && run.ctx && run.ctx.persistence && run.ctx.persistence.update) {
+      run.ctx.persistence.update(function (p) { p.kbbSalvage = (p.kbbSalvage | 0) + sv; });
+      run.log.push('Salvage recovered: +' + sv + ' \u2b21');
+    }
+    return sv;
+  }
   function finalizeLoss(run) {
+    bankSalvage(run);
     if (run.ctx.telemetry) run.ctx.telemetry.emit({ t: 'run_ended', game: 'KBB', result: 'loss', depth: depthLabel(run), score: scoreOf(run) });
   }
   function enemyDown(e) { return e.hp <= 0 && !(e.escortHp > 0); }   // (v0.162.0, KBB#5) a splitter's escort must ALSO die
@@ -547,6 +591,7 @@
     }
     coins = Math.max(0, Math.round(coins));
     run.squad.coins = Math.max(0, run.squad.coins + coins);
+    run.coinsEarned = (run.coinsEarned | 0) + coins;   // (v0.201.0, V1.1 KBB#10) the salvage ledger
     res.coinsGained = coins;
     fireSide(run, 'onBattleWon', {});
     run.depthClearedSection = run.section; run.depthClearedRound = run.round;
@@ -555,6 +600,7 @@
     // out. The Deep Belt past it stays endless, but it's now a choice, not the only mode.
     if (b.enemy.flagship && !run.won) {
       run.won = true;
+      bankSalvage(run);   // (v0.201.0, KBB#10) victory pays salvage too
       run.log.push('THE FLAGSHIP IS DOWN \u2014 the Belt is yours');
       if (run.ctx.telemetry) run.ctx.telemetry.emit({ t: 'run_ended', game: 'KBB', result: 'win', depth: depthLabel(run), score: scoreOf(run) });
       run.phase = 'won';
@@ -833,7 +879,7 @@
     var offer = run.shop.consumables[offerIndex];
     if (!offer) return { ok: false, reason: 'no-offer' };
     if (run.squad.coins < offer.price) return { ok: false, reason: 'coins' };
-    if (run.consumables.length >= CONFIG.consumableCap) return { ok: false, reason: 'inv-full' };
+    if (run.consumables.length >= (run.consumableCap || CONFIG.consumableCap)) return { ok: false, reason: 'inv-full' };   // (KBB#10)
     run.squad.coins -= offer.price;
     run.consumables.push(offer.id);
     if (run.ctx.telemetry) run.ctx.telemetry.emit({ t: 'shop_purchase', game: 'KBB', itemId: offer.id, cost: offer.price });
@@ -913,7 +959,7 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
     if (!ev) return { note: '' };
     if (ev.type === 'cache') { var g = claimCache(run, ev.coins); return { note: 'Salvage cache: <b>+' + g + '</b> coins' }; }
     if (ev.type === 'supply') {
-      if (run.consumables.length < CONFIG.consumableCap) {
+      if (run.consumables.length < (run.consumableCap || CONFIG.consumableCap)) {   // (KBB#10)
         run.consumables.push(ev.cid);
         run.log.push('Supply drop: ' + CONSUMABLES[ev.cid].name);
         return { note: 'Supply drop: <b>' + CONSUMABLES[ev.cid].name + '</b> added to your hold' };
@@ -950,6 +996,7 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
       coins: CONFIG.squad.coins + ((ctx.perks && ctx.perks.kbbCoins) | 0),   // (v0.179.0, V1.1 Flow#7) Lieutenant perk: richer loadout start
       artifacts: []
     };
+    if (ctx.hangar && ctx.hangar.hp) { squad.maxHp += 5; squad.hp += 5; }   // (v0.201.0, KBB#10) hangar hull
     var run = {
       ctx: ctx, seed: seed, rng: rng, section: 1, round: 1, squad: squad,
       consumables: [], phase: 'battle', shop: null, battle: null, flags: {}, log: [],
@@ -957,6 +1004,10 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
       depthClearedSection: 0, depthClearedRound: 0, bestScore: 0
     };
     run._api = makeApi(run);
+    // (v0.201.0, V1.1 KBB#10) hangar fittings ride ctx as createRun opts — NOT a revived
+    // pre-run shop (v0.68 J6 holds), so fresh starts and restarts both wear them.
+    if (ctx.hangar && ctx.hangar.slot) run.consumableCap = CONFIG.consumableCap + 1;
+    if (ctx.hangar && ctx.hangar.artifact) { try { equipArtifact(run, ctx.hangar.artifact, true); } catch (eHg) {} }
     fireSide(run, 'onRunStart', {});
     fireSide(run, 'onSectionStart', {});
     if (opts.preRunShop) { run._preRun = true; run.phase = 'shop'; buildShop(run); }  // loadout shop before the first battle (round stays 1)
@@ -988,6 +1039,7 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
     useConsumable: useConsumable, leaveShop: leaveShop, claimVictory: claimVictory,
     equipArtifact: equipArtifact, hasArtifact: hasArtifact,
     resonant: resonant, resonanceCount: resonanceCount,   // (v0.184.0, KBB#8)
+    hangar: { ITEMS: HANGAR_ITEMS, state: hangarState, buy: hangarBuy },   // (v0.201.0, KBB#10)
     currentIntent: currentIntent, makeEnemy: makeEnemy,
     scoreOf: scoreOf, depthLabel: depthLabel,
     // Test seam (harmless in prod): lets harnesses fire individual hooks and
@@ -1269,7 +1321,13 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
     css.push('.kbb-fb-more{margin-top:7px;}.kbb-fb-more summary{cursor:pointer;color:#1FDDE9;font-size:12.5px;font-weight:600;}.kbb-fb-more div{margin-top:5px;}');
     css.push('.kbb-toast{position:absolute;left:50%;top:10px;transform:translateX(-50%);background:rgba(13,13,24,.92);border:1px solid ' + P.border + ';border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;color:' + P.text + ';z-index:50;pointer-events:none;}');
     css.push('.kbb-lost{position:absolute;inset:0;z-index:45;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(5,5,11,.86);backdrop-filter:blur(4px);}');
-    css.push('.kbb-lost-card{width:min(440px,94%);background:rgba(20,20,29,.97);border:1px solid ' + P.border + ';border-radius:16px;padding:24px;text-align:center;box-shadow:0 0 40px rgba(255,107,91,.22);}');
+    css.push('.kbb-lost-card{width:min(440px,94%);max-height:88%;overflow-y:auto;background:rgba(20,20,29,.97);border:1px solid ' + P.border + ';border-radius:16px;padding:24px;text-align:center;box-shadow:0 0 40px rgba(255,107,91,.22);}');
+    css.push('.kbb-hangar{margin-top:16px;border-top:1px solid ' + P.border + ';padding-top:12px;text-align:left;}');   /* (v0.201.0, KBB#10) */
+    css.push('.kbb-hangar-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;border:1px solid ' + P.border + ';border-radius:9px;padding:7px 9px;margin-top:7px;}');
+    css.push('.kbb-hangar-row.owned{border-color:' + P.gold + ';}');
+    css.push('.kbb-hangar-row .hn{font-weight:800;font-size:12px;color:' + P.text + ';}');
+    css.push('.kbb-hangar-row .hd{font-size:11px;color:' + P.dim + ';flex:1;min-width:120px;}');
+    css.push('.kbb-hangar-choose{width:100%;display:flex;flex-wrap:wrap;gap:5px;margin-top:5px;}');
     css.push('.kbb-howto{position:absolute;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(5,5,11,.82);backdrop-filter:blur(4px);}');
     css.push('.kbb-howto-panel{width:min(440px,94%);background:rgba(20,20,29,.97);border:1px solid #34344a;border-radius:16px;padding:20px;box-shadow:0 0 40px rgba(120,85,250,.28);}');
     css.push('.kbb-howto-eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#1FDDE9;margin-bottom:6px;}');
@@ -1363,7 +1421,7 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
         }
         if (rz.flags) run.flags = rz.flags;                                          // (G4) Lazarus stays burned
         if (rz.depthClearedSection) { run.depthClearedSection = rz.depthClearedSection; run.depthClearedRound = rz.depthClearedRound || 0; }
-        if (rz.consumables) run.consumables = rz.consumables.slice(0, CONFIG.consumableCap);
+        if (rz.consumables) run.consumables = rz.consumables.slice(0, run.consumableCap || CONFIG.consumableCap);
         if (rz.map) run.map = JSON.parse(JSON.stringify(rz.map));                    // (v0.114.0, D6 / v0.116.0, R1) cloned — never alias the profile object
         if (rz.elite) run.pendingElite = true;                                       // (v0.116.0, R1) a checkpointed elite battle resumes AS an elite
         run.battle = null; startBattle(run);   // open ON the checkpointed round's battle
@@ -2384,6 +2442,52 @@ else if (id === 'intel') { run.flags.showAllIntent = true; fireSide(run, 'onCons
       var row = el(d, 'div', 'kbb-shoprow'); row.style.justifyContent = 'center'; row.style.marginTop = '16px';
       var again = el(d, 'button', 'kbb-btn', 'New run'); again.onclick = function () { restart(s); };
       row.appendChild(again); card.appendChild(row);
+      // (v0.201.0, V1.1 KBB#10) THE HANGAR — spend the run's salvage right here in the death loop
+      (function hangarPanel() {
+        var P4 = s.ctx.persistence;
+        if (!P4 || !P4.load) return;
+        Promise.resolve(P4.load()).then(function (prof4) {
+          if (!ov.parentNode || !prof4) return;
+          var hp4 = el(d, 'div', 'kbb-hangar');
+          hp4.appendChild(el(d, 'div', 'kbb-eyebrow', 'HANGAR \u00b7 \u2b21 ' + ((prof4.kbbSalvage | 0)) + ' salvage'));
+          function commitBuy(itId, artId) {
+            var res4 = hangarBuy(prof4, itId, artId);
+            if (!res4.ok) return;
+            try {
+              if (P4.update) P4.update(function (p5) { p5.kbbSalvage = prof4.kbbSalvage; p5.kbbHangar = prof4.kbbHangar; });
+              else if (P4.save) P4.save(prof4);
+            } catch (eHb) {}
+            try { s.ctx.hangar = JSON.parse(JSON.stringify(prof4.kbbHangar)); } catch (eHc) {}   // the next New run wears it NOW
+            renderLost(s);
+          }
+          hangarState(prof4).forEach(function (it4) {
+            var r4 = el(d, 'div', 'kbb-hangar-row' + (it4.owned ? ' owned' : ''));
+            r4.appendChild(el(d, 'span', 'hn', it4.name + (it4.owned ? (it4.id === 'artifact' && it4.artifact ? ' \u00b7 ' + it4.artifact : ' \u00b7 fitted') : '')));
+            r4.appendChild(el(d, 'span', 'hd', it4.desc));
+            if (!it4.owned) {
+              var b4 = el(d, 'button', 'kbb-btn alt', '\u2b21 ' + it4.price);
+              b4.disabled = !it4.canBuy;
+              b4.onclick = function () {
+                if (it4.id !== 'artifact') { commitBuy(it4.id, null); return; }
+                if (r4._chooser) return;
+                var ch4 = el(d, 'div', 'kbb-hangar-choose'); r4._chooser = ch4;
+                for (var ca = 0; ca < ARTIFACTS.length; ca++) {
+                  if (ARTIFACTS[ca].rarity !== 'common') continue;
+                  (function (cdef) {
+                    var cb4 = el(d, 'button', 'kbb-btn alt', cdef.name);
+                    cb4.onclick = function () { commitBuy('artifact', cdef.id); };
+                    ch4.appendChild(cb4);
+                  })(ARTIFACTS[ca]);
+                }
+                r4.appendChild(ch4);
+              };
+              r4.appendChild(b4);
+            }
+            hp4.appendChild(r4);
+          });
+          card.appendChild(hp4);
+        }).catch(function () {});
+      })();
       ov.appendChild(card); s.container.appendChild(ov);
     }
     function restart(s) {

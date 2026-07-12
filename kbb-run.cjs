@@ -857,6 +857,49 @@ function newWindow() {
   }
 })();
 
+/* ============ KBB#10 (v0.201.0): salvage + the hangar ============ */
+(function hangarMeta() {
+  group('KBB#10: a dead run pays salvage; hangar fittings apply at createRun (never a shop)');
+  var V = newWindow(), K = V.KBB;
+  // salvage banks on LOSS: 10% of EARNINGS, into the live profile via update()
+  var ctxL = H.makeCtx(K, { seed: SEED + 97 });
+  var rL = K.createRun(ctxL, { seed: SEED + 97 });
+  rL.coinsEarned = 137;
+  rL.squad.hp = 1; rL.squad.shield = 0;
+  var gL = 0;
+  while (rL.phase === 'battle' && gL++ < 12) {
+    var qL = K.drawQuestion(rL).question;
+    K.submitAnswer(rL, qL.multi ? [] : (qL.correctIndex + 1) % qL.options.length, 700, 'attack');
+    if (rL.phase === 'battle') { rL.squad.hp = 1; rL.squad.shield = 0; }   // hold it at death's door until a counter lands
+  }
+  var profL = JSON.parse(ctxL._store.profile || '{}');
+  ok(rL.phase === 'lost' && profL.kbbSalvage === 14, 'a loss banks round(137 x 10%) = 14 salvage to the profile');
+  // hangar purchase math (profile-pure)
+  var pH = { kbbSalvage: 160 };
+  ok(K.hangar.ITEMS.length === 3 && K.hangar.ITEMS.map(function (i2) { return i2.price; }).join(',') === '60,45,50',
+     'catalog pinned: artifact 60 / hull 45 / rack 50 — a bounded 155 sink, knowledge still wins runs');
+  ok(K.hangar.buy(pH, 'artifact', 'metadata-ring').reason === 'not-common', 'the artifact slot refuses non-commons');
+  ok(K.hangar.buy(pH, 'artifact', 'overclocked-core').ok === true && pH.kbbSalvage === 100 && pH.kbbHangar.artifact === 'overclocked-core',
+     'a common fits and debits 60');
+  ok(K.hangar.buy(pH, 'artifact', 'chevron-array').reason === 'owned', 'one artifact slot, ever');
+  ok(K.hangar.buy(pH, 'hp', null).ok === true && K.hangar.buy(pH, 'slot', null).ok === true && pH.kbbSalvage === 5,
+     'hull then rack buy clean — the full 155 build leaves 5 of 160');
+  ok(K.hangar.buy({ kbbSalvage: 10 }, 'slot', null).reason === 'salvage', '10 salvage cannot afford the 50 rack (no debt)');
+  // fittings apply at createRun — fresh starts AND restarts both route here (v0.68 J6 holds)
+  var ctxF = H.makeCtx(K, { seed: SEED + 98 });
+  ctxF.hangar = { hp: true, slot: true, artifact: 'overclocked-core' };
+  var rF = K.createRun(ctxF, { seed: SEED + 98 });
+  ok(rF.squad.maxHp === 45 && rF.squad.hp === 45, 'hangar hull: 40 -> 45 max HP at run start');
+  ok(rF.squad.artifacts.length === 1 && rF.squad.artifacts[0].def.id === 'overclocked-core',
+     'the chosen common boards slot 1 before the first battle');
+  ok(rF.consumableCap === 5, 'the rack raises the per-run consumable cap to 5');
+  for (var g5 = 0; g5 < 6; g5++) rF._api.grantConsumable('repair');
+  ok(rF.consumables.length === 5, 'grants respect the raised cap (5, never 6)');
+  var rN2 = K.createRun(H.makeCtx(K, { seed: SEED + 98 }), { seed: SEED + 98 });
+  for (var g6 = 0; g6 < 6; g6++) rN2._api.grantConsumable('repair');
+  ok(rN2.squad.maxHp === 40 && rN2.consumables.length === 4, 'no fittings: the stock 40 HP and 4-slot cap hold');
+})();
+
 /* ============ KBB#9 (v0.192.0): the gem is REAL — surge turns ============ */
 (function surge() {
   group('KBB#9: 3-streak charges a SURGE; the enemy counter waits for the LAST action');

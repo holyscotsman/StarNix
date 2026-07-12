@@ -87,7 +87,8 @@ function makeCtx(KBB, opts) {
     // Promise-shaped, matching the core: load() resolves the whole profile object; save(p) persists it.
     persistence: {
       load: function () { return Promise.resolve(store.profile ? JSON.parse(store.profile) : { bests: {}, settings: {} }); },
-      save: function (p) { store.profile = JSON.stringify(p); return Promise.resolve(); }
+      save: function (p) { store.profile = JSON.stringify(p); return Promise.resolve(); },
+      update: function (fn) { var p = store.profile ? JSON.parse(store.profile) : { bests: {}, settings: {} }; try { fn(p); } catch (e) {} store.profile = JSON.stringify(p); return Promise.resolve(); }   // (v0.201.0, KBB#10) live-profile seam, mock-shaped
     },
     telemetry: { emit: function (ev, data) { rec.telemetry.push({ ev: ev, data: data }); } },
     audio: {
