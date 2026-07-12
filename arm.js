@@ -196,6 +196,15 @@
     var briefCore = -1, briefMode = "TEACH", briefRepeat = 0, briefIntro = "", briefOutro = "", briefOpts = [];
     var introT = 0, introActive = false, introDone = null;   // P6a intro cutscene
     var NEBULA = null;                                        // P6a parallax backdrop blobs
+    // (v0.197.0, V1.1 ARM#9) sector identity: per-tier field tints + one seeded landmark.
+    var TIER_NEB = [
+      ["rgba(120,85,250,0.22)", "rgba(31,221,233,0.16)", "rgba(146,221,35,0.10)", "rgba(255,107,91,0.12)"],   // T0: the shipped iris-cool mix
+      ["rgba(31,221,233,0.22)", "rgba(120,85,250,0.14)", "rgba(31,221,233,0.12)", "rgba(146,221,35,0.10)"],   // T1: aqua-teal
+      ["rgba(255,107,91,0.20)", "rgba(255,200,87,0.14)", "rgba(120,85,250,0.10)", "rgba(255,107,91,0.14)"]    // T2: ember warning tones
+    ];
+    var TIER_STARS = ["#cfd2ff", "#c8ecf2", "#f2d8c8"];
+    var STAR_COL = TIER_STARS[0];
+    var landmark = null;                                      // one per standard sector, far parallax, never a collider
     var dq = [], dqi = 0, dIn = 0, dLost = 0, dCoins = 0;
     var sectorLost = [];              // collect-fails this attempt (commit on home)
     var lostPool = [];                // (v0.131.0, V1.1 ARM#1) run-level resurfacing pool — lost cores COME BACK
@@ -971,6 +980,29 @@
       }
       enemies = []; clearProjectiles(); clearParticles();
       for (var e = 0; e < (bossActive ? 0 : 5); e++) spawnRoamer();
+      // (v0.197.0, V1.1 ARM#9) the field wears the tier — nebula + star tint shift so sector 11
+      // stops being pixel-cousin to sector 1 (cached gradients invalidated for the re-tint)
+      var tierP = Math.max(0, Math.min(2, tierOf(sector)));
+      if (NEBULA) for (var nT = 0; nT < NEBULA.length; nT++) { NEBULA[nT].c0 = TIER_NEB[tierP][nT % 4]; NEBULA[nT].grad = null; }
+      STAR_COL = TIER_STARS[tierP];
+      // (ARM#9) one seeded landmark per standard sector — far parallax scenery, never a
+      // collider, placed clear of every core approach and the spawn (the v0.44 no-occluder ruling)
+      landmark = null;
+      if (!bossActive) {
+        var lkKinds = ['derelict', 'drift', 'planet'];
+        var lk = lkKinds[rint(3)], lp = null, lt = 0;
+        do { lp = { x: rnd(160, MAP_W - 160), y: rnd(160, MAP_H - 160) }; lt++; }
+        while ((nearAnyCore(lp.x, lp.y, 320) || dist2(lp.x, lp.y, ship.x, ship.y) < 300) && lt < 30);
+        if (lt < 30) {
+          landmark = { kind: lk, x: lp.x, y: lp.y,
+            r: lk === 'planet' ? rnd(180, 260) : (lk === 'drift' ? rnd(140, 220) : rnd(60, 90)),
+            rot: rnd(0, TAU), d: lk === 'planet' ? 0.25 : 0.5, rocks: null };
+          if (lk === 'drift') {
+            landmark.rocks = [];
+            for (var lr = 0; lr < 10; lr++) landmark.rocks.push({ ox: rnd(-1, 1), oy: rnd(-0.35, 0.35), r: rnd(6, 16), a: rnd(0.25, 0.55) });
+          }
+        }
+      }
       roamTimer = 4; returnReady = false; panicSpawned = false; invuln = 1.0; regenT = 0; setBanner("");
       if (bossActive) {
         // Galaga arena: just the dreadnought. Ship locked to the bottom, boss weaving across the top.
@@ -2673,7 +2705,7 @@
       var streak = (!reducedMotion && spd > 140) ? Math.min(16, (spd - 140) * 0.035) : 0;
       var nvx = spd > 1 ? ship.vx / spd : 0, nvy = spd > 1 ? ship.vy / spd : 0;
       var TW = W + 120, TH = H + 120;
-      c2d.fillStyle = "#cfd2ff"; c2d.strokeStyle = "#cfd2ff"; c2d.lineCap = "round";
+      c2d.fillStyle = STAR_COL; c2d.strokeStyle = STAR_COL; c2d.lineCap = "round";   // (v0.197.0, ARM#9) tier tint
       for (var i = 0; i < stars.length; i++) {
         var s = stars[i];
         if (fore ? s.d <= 1 : s.d > 1) continue;
@@ -2983,6 +3015,32 @@
         }
         var x = nb.fx * W - camx * nb.p, y = nb.fy * H - camy * nb.p;
         c2d.save(); c2d.globalAlpha = nb.a * nbAlpha; c2d.translate(x, y); c2d.fillStyle = nb.grad; c2d.fillRect(-nb.r, -nb.r, nb.r * 2, nb.r * 2); c2d.restore();
+      }
+      // (v0.197.0, V1.1 ARM#9) the sector landmark — static far-parallax scenery (reduced-motion
+      // safe by construction: nothing here animates)
+      if (landmark) {
+        var lx = landmark.x - camx * landmark.d, ly = landmark.y - camy * landmark.d;
+        c2d.save();
+        if (landmark.kind === 'planet') {
+          c2d.globalAlpha = 0.4 * nbAlpha;
+          c2d.beginPath(); c2d.arc(lx, ly, landmark.r, 0, TAU); c2d.clip();
+          if (spriteReady(SPR.planet)) c2d.drawImage(SPR.planet, lx - landmark.r, ly - landmark.r, landmark.r * 2, landmark.r * 2);
+          else { c2d.fillStyle = 'rgba(120,85,250,0.3)'; c2d.fillRect(lx - landmark.r, ly - landmark.r, landmark.r * 2, landmark.r * 2); }
+        } else if (landmark.kind === 'derelict') {
+          c2d.translate(lx, ly); c2d.rotate(landmark.rot);
+          c2d.globalAlpha = 0.35 * nbAlpha;
+          if (spriteReady(SPR.station)) c2d.drawImage(SPR.station, -landmark.r, -landmark.r, landmark.r * 2, landmark.r * 2);
+          else { c2d.fillStyle = 'rgba(154,154,173,0.35)'; c2d.fillRect(-landmark.r * 0.8, -landmark.r * 0.25, landmark.r * 1.6, landmark.r * 0.5); }
+        } else {
+          c2d.translate(lx, ly); c2d.rotate(landmark.rot);
+          c2d.fillStyle = 'rgba(154,154,173,0.5)';
+          for (var lr2 = 0; lr2 < landmark.rocks.length; lr2++) {
+            var rk = landmark.rocks[lr2];
+            c2d.globalAlpha = rk.a * nbAlpha;
+            c2d.beginPath(); c2d.arc(rk.ox * landmark.r, rk.oy * landmark.r, rk.r, 0, TAU); c2d.fill();
+          }
+        }
+        c2d.restore(); c2d.globalAlpha = 1;
       }
       c2d.restore();
 
@@ -3350,6 +3408,9 @@
         flushLater: function () { var fired = 0; timers.forEach(function (rec, id) { win.clearTimeout(id); }); var fns = []; timers.forEach(function (rec) { fns.push(rec.fn); }); timers.clear(); for (var i = 0; i < fns.length; i++) { try { fns[i](); fired++; } catch (eF) {} } return fired; },
         upgradeLvl: function (k) { return lvl[k]; },                 // (v0.179.0, Flow#7)
         regenDelay: function () { return shieldRegenDelay; },
+        landmark: function () { return landmark ? { kind: landmark.kind, x: landmark.x, y: landmark.y, r: landmark.r } : null; },   // (v0.197.0, ARM#9)
+        nebulaCols: function () { return NEBULA ? NEBULA.map(function (nb2) { return nb2.c0; }) : []; },
+        starCol: function () { return STAR_COL; },
         typeProbe: function () { return { active: typing.active, shown: typing.shown, total: typing.total, forced: typeForced, layerOn: !!(typeLayer && typeLayer.style.display === "block"), optsWait: !!(commsOpts && commsOpts.classList.contains("wait")) }; },   // (v0.180.0, ARM#7)
         typeForce: function (onF) { typeForced = !!onF; },
         typeSkip: function () { skipReveal(); },

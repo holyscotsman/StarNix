@@ -616,6 +616,40 @@ var detSector3 = null;   // captured for the determinism probe against window 2
   V3.mod.unmount();
 })();
 
+/* ============ ARM#9 (v0.197.0): sector identity — tier tints + the seeded landmark ============ */
+(function sectorIdentity() {
+  group('ARM#9: per-tier field tints + one deterministic landmark clear of every core');
+  function boot(seed) {
+    var Vx = newWindow(), cx9 = H.makeCtx({ seed: seed });
+    Vx.mod.mount(Vx.root, cx9);
+    var Tx = Vx.root.__armTest;
+    Tx.endBriefingIntro();
+    var gx = 0; while (Tx.state() === 'BRIEF' && gx++ < 12) { if (pickBrief(Tx, /hyperdrive/i)) break; pickBrief(Tx, /understand|go ahead/i); }
+    Tx.flushWarp(); Tx.step(0.1);
+    return { V: Vx, T: Tx };
+  }
+  var A9 = boot(SEED + 70), B9 = boot(SEED + 70);
+  ok(A9.T.starCol() === '#cfd2ff' && /120,85,250/.test(A9.T.nebulaCols()[0]),
+     'sector 1 (T0) keeps the shipped iris-cool field verbatim');
+  var lmA = A9.T.landmark(), lmB = B9.T.landmark();
+  ok(!!lmA && ['derelict', 'drift', 'planet'].indexOf(lmA.kind) >= 0,
+     'a standard sector seeds one landmark (' + (lmA && lmA.kind) + ')');
+  ok(!!lmB && lmA.kind === lmB.kind && lmA.x === lmB.x && lmA.y === lmB.y && lmA.r === lmB.r,
+     'the landmark is DETERMINISTIC: same seed, same landmark, twice');
+  var clear = true, cs9 = A9.T.cores();
+  for (var c9 = 0; c9 < cs9.length; c9++) {
+    var dx9 = lmA.x - cs9[c9].x, dy9 = lmA.y - cs9[c9].y;
+    if (Math.sqrt(dx9 * dx9 + dy9 * dy9) < 250) clear = false;
+  }
+  ok(clear, 'the landmark sits clear of every core approach ring (>=250 world units)');
+  // tier shift: a T1 sector wears the aqua-teal field
+  A9.T.setupBossSector(6); A9.T.nextSector(); A9.T.skipBriefing(); A9.T.flushWarp();
+  ok(A9.T.sectorNum() === 7 && A9.T.tierOf(7) === 1, 'setup: sector 7 (T1) reached');
+  ok(A9.T.starCol() === '#c8ecf2' && /31,221,233/.test(A9.T.nebulaCols()[0]),
+     'T1: the field re-tints aqua-teal (stars + lead nebula)');
+  A9.V.mod.unmount(); B9.V.mod.unmount();
+})();
+
 /* ============ ARM#8 (v0.189.0): the SHIP'S LOG — re-read briefings from the pause menu ============ */
 (function shipsLog() {
   group("ARM#8: ship's log — five CRT entries, live status, the answer lands LAST in each");

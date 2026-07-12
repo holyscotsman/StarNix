@@ -229,6 +229,14 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-A14 — sectors with faces (added v0.197.0).** Fly ARM into sector 5+ then 9+: the
+  backdrop must shift — iris-cool early, aqua-teal mid, ember-warning late — in both the
+  nebula blobs and the star tint. Each regular sector carries ONE piece of far scenery (a
+  dim derelict station, a drift of rocks, or a planet limb) drifting on deep parallax,
+  never near a core's approach ring and never blocking a firefight read. Re-enter the same
+  run's sector: the same landmark, same place. WRONG: scenery you could mistake for a
+  collider, a landmark crowding a core, or sector 11 still looking like sector 1.
+
 - **QA-GAUNTLET — one shot a day (added v0.196.0).** In the Testing station, run the ⚡
   Daily gauntlet: ten Blitz questions, then the tile flips to a locked scoreboard with your
   points and (from day two) a 🔥 streak chip. Relaunching that day must be impossible from
