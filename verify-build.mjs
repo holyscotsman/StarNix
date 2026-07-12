@@ -3067,6 +3067,35 @@ async function runFrames(n = 6) {
     }
   }
 
+  // F9. Flow#9 (v0.195.0): first-run order ribbons + the 3-step bridge tour
+  {
+    const p9 = SN.core.profile;
+    const save9 = { onboarded: p9.onboarded, seen: p9.totals.questionsSeen };
+    p9.onboarded = false; p9.totals.questionsSeen = 7;
+    shell.showMenu();
+    const ribs = [...w.document.querySelectorAll(".sx-strip-ribbon")].map(r => r.textContent);
+    ok("Flow#9: four order ribbons — ARM leads, NIT waits for ~50 cards (7/50 shown)",
+      ribs.length === 4 && /START HERE/.test(ribs[0]) && /7\/50/.test(ribs[3]));
+    ok("Flow#9: the tour opens on step 1 highlighting the rank strip",
+      !!w.document.querySelector(".sx-tour") && /Step 1 of 3/.test(w.document.querySelector(".sx-tour-name").textContent)
+      && w.document.querySelector(".sx-rank").classList.contains("sx-tour-hi"));
+    w.document.querySelector(".sx-tour-next").dispatchEvent(new w.Event("click", { bubbles: true }));
+    ok("Flow#9: step 2 moves the highlight to the daily dock",
+      /Step 2 of 3/.test(w.document.querySelector(".sx-tour-name").textContent)
+      && w.document.querySelector(".sx-bridge-dock").classList.contains("sx-tour-hi")
+      && !w.document.querySelector(".sx-rank").classList.contains("sx-tour-hi"));
+    w.document.querySelector(".sx-tour-next").dispatchEvent(new w.Event("click", { bubbles: true }));
+    w.document.querySelector(".sx-tour-next").dispatchEvent(new w.Event("click", { bubbles: true }));
+    ok("Flow#9: Done latches profile.onboarded", p9.onboarded === true);
+    shell.showMenu();
+    ok("Flow#9: an onboarded bridge shows no ribbons and no tour",
+      w.document.querySelectorAll(".sx-strip-ribbon").length === 0 && !w.document.querySelector(".sx-tour"));
+    ok("Flow#9: veterans migrate as already-onboarded (source)",
+      html.includes("p.onboarded = !!(p.totals && p.totals.questionsSeen > 0);"));
+    p9.onboarded = true; p9.totals.questionsSeen = save9.seen;
+    shell.showMenu();
+  }
+
   // NIT#8 (v0.190.0): domain-targeted study — clickable heatmap tiles + the setup domain lens
   {
     const st8 = SN.core.questions.stats();

@@ -229,6 +229,15 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-BRIDGE-TOUR — the first boot has a path (added v0.195.0).** On a FRESH profile (or
+  after clearing storage): the four strips wear numbered ribbons (ARM's aqua 'START HERE',
+  NIT counting toward 50 cards), and a violet tour card sits bottom-left stepping through
+  rank strip → daily dock → due chip/station board, each target glowing aqua in turn. Skip
+  or finish: the card and ribbons must never return, and playing a card seen from an OLD
+  profile must never show the tour at all. Nothing is ever locked — launch NIT immediately
+  if you insist. WRONG: the tour re-appearing after Done, ribbons on a veteran profile, or
+  the tour card covering the dock on a phone.
+
 - **QA-CC-BIOMES — the canyon changes character (added v0.194.0).** Run CC past 50 km: an
   aqua 'ENTERING: BIOLUMINESCENT NIGHT' banner should land as the whole canyon crossfades
   over ~2-3s — fog, light, rock tint AND the far horizon together (no stale warm rectangle

@@ -699,6 +699,13 @@
         '<span class="sx-strip-stat"><span class="l">' + sm.stat + '</span><span class="v">' + sm.val + '</span></span>' +
         '<span class="sx-strip-cta' + (isExam ? ' gold' : '') + '">' + (isExam ? 'Sit exam \u25b8' : 'LAUNCH \u25b8') + '</span>' +
         '<span class="sx-card-state" style="display:none">' + (loaded ? "Ready" : "Not in this build") + '</span>';
+      // (v0.195.0, V1.1 Flow#9) first-run order ribbons — guidance, never locks
+      if (!prof0.onboarded) {
+        var seen9 = (prof0.totals && prof0.totals.questionsSeen) | 0;
+        var ribTxt = id === "ARM" ? "1 \u00b7 START HERE" : id === "CC" ? "2 \u00b7 THEN" : id === "KBB" ? "3 \u00b7 THEN"
+          : (seen9 < 50 ? "4 \u00b7 AFTER ~50 CARDS (" + seen9 + "/50)" : "4 \u00b7 WHEN READY");
+        card.appendChild(el("span", "sx-strip-ribbon" + (id === "ARM" ? " lead" : ""), ribTxt));
+      }
       if (!loaded) card.classList.add("sx-card-disabled");
       self._on(card, "click", function () {
         try { StarNix.core.audio.sfx("click"); } catch (e) {}
@@ -795,6 +802,48 @@
         }
       }
     } catch (eCm) {}
+    // (v0.195.0, V1.1 Flow#9) the 3-step bridge tour: rank strip -> daily dock -> due chip
+    // (or the station board when nothing is due yet). Guidance only — never locks; finishing
+    // OR skipping latches profile.onboarded, and veterans migrate as already-onboarded.
+    try {
+      if (!prof0.onboarded) {
+        var tourSteps = [
+          { sel: ".sx-rank", name: "THE RANK STRIP", txt: "Every correct answer on ANY surface feeds this one XP pool \u2014 promotions pay real rewards." },
+          { sel: ".sx-bridge-dock", name: "THE DAILY DOCK", txt: "Three date-seeded missions a day, plus your Continue button. Streaks live and die here." },
+          { sel: ".sx-due-chip", name: "THE DUE CHIP", txt: "When reviews come due this chip appears \u2014 clear those first; spaced retrieval is the whole game.",
+            altSel: ".sx-bridge-right", altName: "STATION SYSTEMS", altTxt: "Your mastery readout \u2014 the station re-lights as you master the bank. Open the Codex for the full picture." }
+        ];
+        var tourI = 0, tourHi = null;
+        var coach = el("div", "sx-tour");
+        var coachName = el("div", "sx-tour-name"), coachTxt = el("div", "sx-tour-txt");
+        var coachRow = el("div", "sx-tour-row");
+        var coachNext = el("button", "sx-btn sx-btn-iris sx-tour-next", "Next \u25b8");
+        var coachSkip = el("button", "sx-btn sx-btn-ghost sx-tour-skip", "Skip tour");
+        coachRow.appendChild(coachNext); coachRow.appendChild(coachSkip);
+        coach.appendChild(el("div", "sx-eyebrow", "Bridge tour"));
+        coach.appendChild(coachName); coach.appendChild(coachTxt); coach.appendChild(coachRow);
+        var tourShow = function () {
+          var st9 = tourSteps[tourI];
+          var primary = s.querySelector(st9.sel);
+          var tgt = primary || (st9.altSel ? s.querySelector(st9.altSel) : null);
+          if (tourHi) tourHi.classList.remove("sx-tour-hi");
+          tourHi = tgt; if (tgt) tgt.classList.add("sx-tour-hi");
+          coachName.textContent = "Step " + (tourI + 1) + " of " + tourSteps.length + " \u00b7 " + (primary || !st9.altSel ? st9.name : st9.altName);
+          coachTxt.textContent = (primary || !st9.altSel) ? st9.txt : st9.altTxt;
+          coachNext.textContent = tourI === tourSteps.length - 1 ? "Done \u2713" : "Next \u25b8";
+        };
+        var tourEnd = function () {
+          if (tourHi) tourHi.classList.remove("sx-tour-hi");
+          try { coach.parentNode && coach.parentNode.removeChild(coach); } catch (eT1) {}
+          prof0.onboarded = true;
+          try { StarNix.core.persistence.update(function (p) { p.onboarded = true; }); } catch (eT2) {}
+        };
+        this._on(coachNext, "click", function () { if (tourI >= tourSteps.length - 1) tourEnd(); else { tourI++; tourShow(); } });
+        this._on(coachSkip, "click", tourEnd);
+        s.appendChild(coach);
+        tourShow();
+      }
+    } catch (eTour) {}
     this._focusScreen(s);   // (v0.135.0, FE#1) hand keyboard focus to the new screen
   };
 
@@ -2133,6 +2182,14 @@
       ".sx-diag-empty{color:var(--dim);}",
       ".sx-streak-chip{font-size:12px;font-weight:700;color:#FF9857;background:rgba(255,152,87,.12);border:1px solid rgba(255,152,87,.45);border-radius:999px;padding:2px 10px;}",
       ".sx-rank-crest{font-size:13px;color:var(--gold);border:1px solid rgba(255,200,87,.5);border-radius:6px;padding:0 6px;line-height:18px;}",
+      /* (v0.195.0, V1.1 Flow#9) order ribbons + bridge tour */
+      ".sx-strip-ribbon{position:absolute;top:-8px;left:14px;font-size:10.5px;font-weight:800;letter-spacing:.1em;color:var(--mid);background:#131320;border:1px solid var(--border);border-radius:999px;padding:2px 9px;}",
+      ".sx-strip-ribbon.lead{color:#04222a;background:var(--aqua);border-color:var(--aqua);}",
+      ".sx-tour{position:fixed;left:18px;bottom:18px;z-index:60;width:min(340px,86vw);background:rgba(13,13,24,.96);border:1px solid var(--iris);border-radius:14px;padding:14px 16px;box-shadow:0 0 40px rgba(120,85,250,.35);text-align:left;}",
+      ".sx-tour-name{font-size:11px;font-weight:800;letter-spacing:.12em;color:var(--aqua);margin:2px 0 6px;}",
+      ".sx-tour-txt{font-size:13px;line-height:1.5;color:var(--text);margin-bottom:10px;}",
+      ".sx-tour-row{display:flex;gap:8px;}",
+      ".sx-tour-hi{outline:2px solid var(--aqua);outline-offset:3px;border-radius:10px;box-shadow:0 0 24px rgba(31,221,233,.35);}",
       ".sx-reward{display:flex;gap:10px;align-items:baseline;border:1px solid var(--border);border-radius:8px;padding:6px 10px;margin:4px 0;opacity:.5;}",
       ".sx-reward.got{opacity:1;border-color:rgba(255,200,87,.5);}",
       ".sx-reward-rank{color:var(--gold);font-weight:800;font-size:11px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;}",
