@@ -166,6 +166,23 @@ async function runFrames(n = 6) {
       brP.click(); await wait(10);
       ok("Menu#3: the board clicks through to the Codex", shell.screen === "stats");
       shell.showMenu(); await wait(10);
+      // (v0.168.0, V1.1 Menu#6) first-run coach mark: one-shot, latched, launch-dismissed
+      {
+        const hadFlag = SN.core.profile.firstMenuSeen;
+        SN.core.profile.firstMenuSeen = false;
+        shell.showMenu(); await wait(10);
+        const tipC = w.document.querySelector(".sx-coach-tip");
+        const pulseC = w.document.querySelector(".sx-strip.sx-coach-pulse");
+        ok("Menu#6: a fresh recruit gets the tip + the pulsing ARM strip",
+          !!tipC && /New recruit\?/.test(tipC.textContent) && !!pulseC && /ARM/.test(pulseC.textContent));
+        w.document.querySelector(".sx-coach-x").click(); await wait(10);
+        ok("Menu#6: dismissing latches firstMenuSeen and clears both marks",
+          SN.core.profile.firstMenuSeen === true && !w.document.querySelector(".sx-coach-tip") && !w.document.querySelector(".sx-coach-pulse"));
+        shell.showMenu(); await wait(10);
+        ok("Menu#6: the latch is ONE-SHOT — the next menu render shows no coach mark",
+          !w.document.querySelector(".sx-coach-tip"));
+        SN.core.profile.firstMenuSeen = hadFlag !== undefined ? hadFlag : true;
+      }
       // (v0.167.0, V1.1 Flow#6) the due queue reaches beyond the bridge
       {
         const mmF = SN.core.mastery.all();

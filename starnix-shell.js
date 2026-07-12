@@ -696,6 +696,28 @@
     topBtn("Replay intro", function () { try { StarNix.core.audio.playTrack("cinematic"); } catch (e) {} self.showCinematic(); });
 
     this.stage.appendChild(s);
+    // (v0.168.0, V1.1 Menu#6) first-run coach mark: one flag, one pulse, one dismissible tip.
+    // A new recruit faces four strips + a divider + rank + dock with zero guidance otherwise.
+    try {
+      if (!prof0.firstMenuSeen) {
+        var armStrip = null, strips = s.querySelectorAll(".sx-strip");
+        for (var cm = 0; cm < strips.length; cm++) { if (/ARM/.test(strips[cm].textContent)) { armStrip = strips[cm]; break; } }
+        if (armStrip) {
+          armStrip.classList.add("sx-coach-pulse");
+          var tip = el("div", "sx-coach-tip");
+          tip.appendChild(el("span", "sx-coach-txt", "New recruit? Start with Acropolis Rescue \u2014 it teaches the core loop."));
+          var tipX = el("button", "sx-coach-x", "\u2715");
+          tip.appendChild(tipX);
+          armStrip.parentNode.insertBefore(tip, armStrip);
+          var dismissCoach = function () {
+            try { tip.parentNode && tip.parentNode.removeChild(tip); armStrip.classList.remove("sx-coach-pulse"); } catch (eC1) {}
+            try { StarNix.core.persistence.update(function (p) { p.firstMenuSeen = true; }); } catch (eC2) {}
+          };
+          this._on(tipX, "click", dismissCoach);
+          this._on(armStrip, "click", dismissCoach);   // launching the mission IS the dismissal
+        }
+      }
+    } catch (eCm) {}
     this._focusScreen(s);   // (v0.135.0, FE#1) hand keyboard focus to the new screen
   };
 
@@ -1946,6 +1968,12 @@
       ".sx-sim-trend{margin-top:12px;}",
       ".sx-pause-due{font-size:12.5px;color:var(--gold);border:1px solid rgba(255,200,87,.4);background:rgba(255,200,87,.08);border-radius:9px;padding:6px 10px;}",
       ".sx-debrief-due{font-size:12.5px;color:var(--gold);margin-top:8px;}",
+      ".sx-coach-tip{display:flex;align-items:center;gap:10px;background:rgba(120,85,250,.14);border:1px solid rgba(120,85,250,.55);border-radius:11px;padding:9px 12px;margin-bottom:8px;font-size:13px;color:var(--text);}",
+      ".sx-coach-x{background:none;border:none;color:var(--dim);cursor:pointer;font-size:13px;padding:2px 6px;margin-left:auto;}",
+      ".sx-coach-pulse{animation:sxCoach 1.6s ease-in-out infinite;border-color:rgba(120,85,250,.8) !important;}",
+      "@keyframes sxCoach{0%,100%{box-shadow:0 0 0 0 rgba(120,85,250,.0);}50%{box-shadow:0 0 22px 4px rgba(120,85,250,.45);}}",
+      "@media (prefers-reduced-motion: reduce){.sx-coach-pulse{animation:none;outline:2px solid rgba(120,85,250,.8);}}",
+      "[data-motion=reduced] .sx-coach-pulse{animation:none;outline:2px solid rgba(120,85,250,.8);}",
       ".sx-sim-trend-row{display:flex;gap:10px;font-size:12.5px;margin:4px 0;} .sx-sim-trend-row .n{flex:0 0 130px;color:var(--mid);} .sx-sim-trend-row .v{color:var(--text);font-variant-numeric:tabular-nums;}",
       ".sx-debrief{position:absolute;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:rgba(5,5,11,.62);}",
       ".sx-debrief-card{width:min(480px,92%);background:rgba(16,16,26,.97);border:1px solid var(--border);border-radius:16px;padding:22px 24px;box-shadow:0 18px 60px rgba(0,0,0,.6);}",

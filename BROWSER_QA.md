@@ -229,6 +229,12 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-COACH — the recruit's first look (added v0.168.0).** On a FRESH profile (clear site
+  data): the bridge should greet you with the iris tip pointing at a gently pulsing Acropolis
+  Rescue strip. Dismiss it (✕ or by launching ARM): it never returns — including after a
+  reload. Reduced motion: static outline, no pulse. WRONG: the pulse on a veteran profile,
+  or the tip surviving a reload after dismissal.
+
 - **QA-DUE-EVERYWHERE — the queue calls you back (added v0.167.0).** With a few reviews due:
   the title screen's Start should read "Start — N due", pausing any game shows the gold
   "reviews waiting" line, and finishing a sortie offers "Review due ▸" on the debrief —

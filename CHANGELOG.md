@@ -6,6 +6,9 @@ Sections per entry: **Added · Changed · Fixed · Removed**. Each line: `<what>
 
 ---
 
+## [0.168.0]
+- **V1.1 Menu#6 — first-run coach mark on the bridge.** A new player landed on four strips, an exam divider, a rank strip and a daily dock with zero guidance (KBB's internal tour was the only onboarding anywhere). Now a one-shot pass gated by a persisted `profile.firstMenuSeen` latch (the rankSeen pattern): the ARM strip pulses iris (reduced motion — both the OS query AND the v0.150 data-motion attribute — gets a static outline instead), with a dismissible tip above it: "New recruit? Start with Acropolis Rescue — it teaches the core loop." Dismissing via the ✕ OR launching the mission latches the flag through the persistence seam. One flag, one CSS class, one tip element. Pins: fresh recruit sees tip + pulse / dismissing latches and clears both / the next render is clean (one-shot). Negative control: removing the latch write failed exactly the two latch pins; restored. Gate: 18 suites ALL GREEN.
+
 ## [0.167.0]
 - **V1.1 Flow#6 — the due queue reaches beyond the bridge.** The tappable due chip lived only on the menu; the Leitner queue is the pedagogical engine and should call the player back from anywhere. New shared `_dueCount()` feeds three surfaces: the **TITLE screen's Start button** becomes "Start — 14 due" when the queue is non-empty; the **pause card** gains a gold "⏰ N reviews waiting on the bridge" nudge; the **post-sortie debrief** names the queue ("clear them while it's warm") and adds a direct **Review due ▸** button that launches Study on the due subset from right there — no bridge detour. Pins: title count / pause nudge / debrief CTA (with the no-answers-no-debrief path accepted), seeded via direct store mutation and cleaned up. Negative control: muting `_dueCount` failed exactly the title and pause pins; restored. Gate: 18 suites ALL GREEN.
 
