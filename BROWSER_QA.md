@@ -229,6 +229,13 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-STREAK — the study-day flame (added v0.153.0).** Answer anything today, come back
+  tomorrow and answer again: a 🔥 "2-day streak" chip appears beside the rank name; the first
+  daily claim that day pays a visibly larger toast (+kicker). Skip a full day: the chip is
+  gone and the next study day restarts at 1 (best is remembered — check the streak-7
+  achievement tile). WRONG: a chip with "1-day", a kicker on every claim, or a chain
+  surviving a skipped day.
+
 - **QA-CINE-SHATTER — the station art breaks apart (added v0.152.0).** Watch the intro
   cinematic to the shatter beat (~6.4s, don't skip): the REAL station image must visibly
   break into a 4×3 grid of tumbling pieces that fly outward and fade — not vanish and get

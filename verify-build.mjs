@@ -165,6 +165,57 @@ async function runFrames(n = 6) {
       brP.click(); await wait(10);
       ok("Menu#3: the board clicks through to the Codex", shell.screen === "stats");
       shell.showMenu(); await wait(10);
+      // (v0.153.0, V1.1 Flow#4) study-day streak: banks at rollover, extends live, dies on a gap
+      {
+        const P = { daily: null };
+        SN.daily.ensure(P, "2026-07-01"); P.daily.correct = 3;
+        SN.daily.ensure(P, "2026-07-02");
+        ok("Flow#4: an active day banks into the chain at rollover (1, best 1)",
+          P.streakDays === 1 && P.streakDaysBest === 1 && P.streakLast === "2026-07-01");
+        ok("Flow#4: an idle today SHOWS the banked chain but does not extend it", SN.daily.streak(P) === 1);
+        P.daily.correct = 2;
+        ok("Flow#4: answering today extends the flame live (2)", SN.daily.streak(P) === 2);
+        SN.daily.ensure(P, "2026-07-03"); P.daily.correct = 1;
+        SN.daily.ensure(P, "2026-07-05");   // 07-04 skipped entirely
+        ok("Flow#4: the chain banks through 07-03 (3 days)", P.streakDays === 3 && P.streakDaysBest === 3);
+        ok("Flow#4: a GAP DAY kills the visible flame (idle 07-05 shows 0)", SN.daily.streak(P) === 0);
+        P.daily.correct = 5;
+        ok("Flow#4: studying after a gap restarts at 1, best stays 3", SN.daily.streak(P) === 1 && P.streakDaysBest === 3);
+        SN.daily.ensure(P, "2026-07-06");
+        ok("Flow#4: BANKING after a gap restarts the stored chain at 1 (not +1)",
+          P.streakDays === 1 && P.streakDaysBest === 3 && P.streakLast === "2026-07-05");
+        // claim kicker: first claim of an on-streak day pays +5/chain-day (cap 25), once
+        const P2 = { daily: null, xp: 0, rankSeen: 0, achievements: {}, streaks: {}, streaksBest: {}, totals: { questionsSeen: 0 }, mastery: {}, bests: {}, settings: {} };
+        SN.daily.ensure(P2, "2026-07-01"); P2.daily.correct = 1;
+        SN.daily.ensure(P2, "2026-07-02"); P2.daily.correct = 1;   // chain = 2 live
+        P2.daily.missions[0].target = 0; P2.daily.missions[1].target = 0;   // instantly claimable
+        const base0 = P2.daily.missions[0].xp, base1 = P2.daily.missions[1].xp;
+        const paid0 = SN.daily.claim(P2, 0);
+        ok("Flow#4: the FIRST claim of an on-streak day pays the kicker (+" + (paid0 - base0) + ")",
+          paid0 === base0 + Math.min(25, 5 * 2) && P2.daily.streakBonusPaid === true);
+        ok("Flow#4: the second claim the same day pays plain XP", SN.daily.claim(P2, 1) === base1);
+        // achievements ride the same helper
+        const by2 = {}; SN.achievements.LIST.forEach((d) => { by2[d.id] = d; });
+        ok("Flow#4: streak-7 / streak-30 achievements gate on the LIVE chain",
+          by2["streak-7"].check({ profile: { streakDays: 6, streakLast: "2026-07-01", daily: { date: "2026-07-02", correct: 1 } } }) === true
+          && by2["streak-7"].check({ profile: { streakDays: 5, streakLast: "2026-07-01", daily: { date: "2026-07-02", correct: 1 } } }) === false
+          && by2["streak-30"].check({ profile: { streakDays: 30, streakLast: "2026-07-01", daily: { date: "2026-07-02", correct: 0 } } }) === true);
+        // the flame chip on the bridge: link the chain (streakLast = the day before today's daily)
+        SN.daily.ensure(SN.core.profile);
+        const todayK = SN.core.profile.daily.date.split("-").map(Number);
+        const yd = new Date(todayK[0], todayK[1] - 1, todayK[2] - 1);
+        const ydK = yd.getFullYear() + "-" + String(yd.getMonth() + 1).padStart(2, "0") + "-" + String(yd.getDate()).padStart(2, "0");
+        SN.core.profile.streakDays = 3; SN.core.profile.streakLast = ydK;
+        const prevCorrect = SN.core.profile.daily.correct | 0;
+        SN.core.profile.daily.correct = Math.max(1, prevCorrect);
+        shell.showMenu(); await wait(10);
+        const chipS = w.document.querySelector(".sx-streak-chip");
+        ok("Flow#4: the bridge rank strip wears the flame chip when a chain is live",
+          !!chipS && /4-day streak/.test(chipS.textContent));
+        SN.core.profile.streakDays = 0; SN.core.profile.streakLast = null; SN.core.profile.daily.correct = prevCorrect;
+        shell.showMenu(); await wait(10);
+        ok("Flow#4: no chain, no chip", !w.document.querySelector(".sx-streak-chip"));
+      }
       // (v0.152.0, V1.1 Menu#4) the cinematic shatter uses the REAL station art when ready
       {
         const src = w.document.documentElement.innerHTML;
@@ -2023,9 +2074,9 @@ async function runFrames(n = 6) {
   console.log("\nK5. Achievements (predicates / streaks / one-shot unlocks / Progress panel)");
   {
     const core = SN.core, A = SN.achievements, X = SN.xp;
-    ok("achievements API exposed: 13 defs with id/name/desc/icon/xp/check", !!A && Array.isArray(A.LIST) && A.LIST.length === 13
+    ok("achievements API exposed: 15 defs with id/name/desc/icon/xp/check (v0.153.0: +streak-7/streak-30)", !!A && Array.isArray(A.LIST) && A.LIST.length === 15
       && A.LIST.every(d => d.id && d.name && d.desc && d.icon && d.xp > 0 && typeof d.check === "function")
-      && new Set(A.LIST.map(d => d.id)).size === 13);
+      && new Set(A.LIST.map(d => d.id)).size === 15);
     // A3 (v0.94.0): the hidden Belt sweeper — mystery tile until earned, awarded off the flag
     {
       const bs = A.LIST.find(d => d.id === "belt-sweeper");
@@ -2130,8 +2181,9 @@ async function runFrames(n = 6) {
       const got = w.document.querySelectorAll(".sx-ach-tile.got");
       const unlocked = Object.keys(core.profile.achievements).length;
       const cnt = w.document.querySelector(".sx-ach-count");
-      ok("Progress panel: 12 tiles, unlocked ones marked .got, count line matches",
-        tiles.length === 13 && got.length === unlocked && !!cnt && cnt.textContent === unlocked + " / 13");
+      const achN = SN.achievements.LIST.length;
+      ok("Progress panel: one tile per achievement (" + achN + "), unlocked marked .got, count line matches",
+        tiles.length === achN && achN === 15 && got.length === unlocked && !!cnt && cnt.textContent === unlocked + " / " + achN);
       const gotNames = Array.prototype.map.call(got, t => t.querySelector(".sx-ach-name").textContent);
       ok("unlocked tiles include the live unlocks from this section",
         gotNames.indexOf("Hot streak") >= 0 && gotNames.indexOf("Station restored") >= 0 && gotNames.indexOf("Sim certified") >= 0);

@@ -24,7 +24,7 @@
   var CORE_VERSION = "1.1.0";              // internal contract version (changes rarely)
   // User-facing playable-build stamp. BUMP THIS (and the date) on every delivered index.html so the
   // version shown in-game tells us exactly which build is being played/tested. Shown by the shell.
-  var BUILD_VERSION = "0.152.0";
+  var BUILD_VERSION = "0.153.0";
   var BUILD_DATE = "2026-07-03";
   var BUILD_LABEL = "v" + BUILD_VERSION + " \u00b7 " + BUILD_DATE;
   var SCHEMA_VERSION = 1;
@@ -374,6 +374,12 @@
       check: function (s) { var p = s.profile; return !!(p && p.armBeltCleared); } }
   ];
   var achOnUnlock = null;   // shell-settable: function (newlyUnlockedDefs[]) — toast surface
+  ACH_LIST.push(
+    { id: "streak-7",  icon: "\ud83d\udd25", xp: 100, name: "Week of fire",  desc: "Study 7 days in a row.",
+      check: function (s) { return studyStreakDays(s.profile) >= 7; } },
+    { id: "streak-30", icon: "\ud83c\udf96\ufe0f", xp: 250, name: "Month of iron", desc: "Study 30 days in a row.",
+      check: function (s) { return studyStreakDays(s.profile) >= 30; } }
+  );   // (v0.153.0, V1.1 Flow#4) appended AFTER the pinned dozen — cascade order preserved
   function evaluateAchievements(profile) {
     if (!profile) return [];
     var a = profile.achievements || (profile.achievements = {});
@@ -443,10 +449,36 @@
     return out;
   }
   // Regenerate profile.daily when the calendar day changes (unclaimed progress expires — daily).
+  // (v0.153.0, V1.1 Flow#4) study-day streak helpers. A day is ACTIVE when it recorded a
+  // correct answer or a completed exam. The chain banks at rollover; today extends it live.
+  function dayGap(a, b) {
+    try {
+      var pa = String(a).split("-"), pb = String(b).split("-");
+      var da = new Date(+pa[0], +pa[1] - 1, +pa[2]), db = new Date(+pb[0], +pb[1] - 1, +pb[2]);
+      return Math.round((db - da) / 86400000);
+    } catch (e) { return 99; }
+  }
+  function dayActive(d) { return !!(d && ((d.correct | 0) > 0 || (d.exams | 0) > 0)); }
+  function studyStreakDays(profile) {
+    if (!profile) return 0;
+    var d = profile.daily, base = profile.streakDays | 0, last = profile.streakLast || null;
+    var linked = !!(last && d && dayGap(last, d.date) === 1);   // yesterday banked -> chain alive
+    if (dayActive(d)) return linked ? base + 1 : 1;
+    return linked ? base : 0;
+  }
   function ensureDaily(profile, dateStr) {
     if (!profile) return null;
     var key = dateStr || dayKey();
     if (!profile.daily || profile.daily.date !== key) {
+      // (v0.153.0, Flow#4) bank the OUTGOING day into the streak before regenerating
+      var prevD = profile.daily;
+      if (typeof profile.streakDays !== "number") profile.streakDays = 0;
+      if (typeof profile.streakDaysBest !== "number") profile.streakDaysBest = 0;
+      if (prevD && prevD.date && dayActive(prevD)) {
+        profile.streakDays = (profile.streakLast && dayGap(profile.streakLast, prevD.date) === 1) ? profile.streakDays + 1 : 1;
+        profile.streakLast = prevD.date;
+        if (profile.streakDays > profile.streakDaysBest) profile.streakDaysBest = profile.streakDays;
+      }
       profile.daily = {
         date: key, missions: genDaily(key),
         correct: 0, byGame: {}, bestStreak: 0, exams: 0, promotions: 0,
@@ -469,8 +501,16 @@
     var st = dailyMissionState(profile, i);
     if (!st || !st.done || st.claimed) return 0;
     profile.daily.missions[i].claimed = true;
-    addXP(profile, st.xp);
-    return st.xp;
+    var paid = st.xp;
+    // (v0.153.0, Flow#4) streak kicker: the FIRST claim of an on-streak day (>= 2) pays
+    // +5 XP per chain day, capped at +25 — small, but it makes the flame worth feeding.
+    var chain = studyStreakDays(profile);
+    if (chain >= 2 && !profile.daily.streakBonusPaid) {
+      profile.daily.streakBonusPaid = true;
+      paid += Math.min(25, 5 * chain);
+    }
+    addXP(profile, paid);
+    return paid;
   }
 
   /* =================================================================== *
@@ -758,6 +798,8 @@
     if (!p.streaksBest || typeof p.streaksBest !== "object") p.streaksBest = {};
     if (!p.achievements || typeof p.achievements !== "object") p.achievements = {};
     if (!p.trailsUnlocked || typeof p.trailsUnlocked !== "object") p.trailsUnlocked = {};
+    if (typeof p.streakDays !== "number") p.streakDays = 0;            // (v0.153.0, Flow#4)
+    if (typeof p.streakDaysBest !== "number") p.streakDaysBest = 0;
     p.settings = Object.assign({}, def.settings, p.settings || {});
     p.schemaVersion = SCHEMA_VERSION;
     return p;
@@ -1202,7 +1244,8 @@
     gen: genDaily,
     ensure: ensureDaily,
     state: dailyMissionState,
-    claim: claimDaily
+    claim: claimDaily,
+    streak: studyStreakDays
   };
 
   /* Flight plan (v0.141.0, V1.1 Flow#2) — "what should I do right now?" as a PURE ranking

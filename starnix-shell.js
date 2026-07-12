@@ -669,6 +669,9 @@
   Shell.prototype._renderRank = function (host) {
     if (!host) return;
     var core = StarNix.core, X = StarNix.xp;
+    // (v0.153.0, V1.1 Flow#4) the study-day flame — the strongest retention loop a daily app has
+    var streakN = 0;
+    try { streakN = StarNix.daily.streak(core.profile); } catch (eSt) {}
     var prof = core && core.profile;
     if (!prof || !X) { host.style.display = "none"; return; }
     var xp = (typeof prof.xp === "number" && prof.xp >= 0) ? prof.xp : 0;
@@ -683,6 +686,7 @@
       : "top rank";
     var line = el("span", "sx-rank-xp", xp.toLocaleString() + " XP · " + toNext);
     host.appendChild(name); host.appendChild(bar); host.appendChild(line);
+    if (streakN >= 2) host.appendChild(el("span", "sx-streak-chip", "\ud83d\udd25 " + streakN + "-day streak"));   // (v0.153.0, Flow#4)
     var seen = (typeof prof.rankSeen === "number" && prof.rankSeen >= 0) ? prof.rankSeen : 0;
     if (r.index > seen) {
       prof.rankSeen = r.index;
@@ -1827,6 +1831,7 @@
       ".sx-diag-sub{margin-top:8px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;font-size:10px;}",
       ".sx-diag-ev{color:var(--mid);font-size:10.5px;}",
       ".sx-diag-empty{color:var(--dim);}",
+      ".sx-streak-chip{font-size:12px;font-weight:700;color:#FF9857;background:rgba(255,152,87,.12);border:1px solid rgba(255,152,87,.45);border-radius:999px;padding:2px 10px;}",
       ".sx-debrief{position:absolute;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:rgba(5,5,11,.62);}",
       ".sx-debrief-card{width:min(480px,92%);background:rgba(16,16,26,.97);border:1px solid var(--border);border-radius:16px;padding:22px 24px;box-shadow:0 18px 60px rgba(0,0,0,.6);}",
       ".sx-debrief-stats{display:flex;gap:18px;flex-wrap:wrap;margin:12px 0 6px;font-size:13px;color:var(--mid);}",
