@@ -523,7 +523,7 @@
       if (q.image) {
         var exMap = (root && root.STARNIX_EXHIBITS) || {};
         var exSrc = exMap[q.image];
-        if (exSrc) inner += '<div class="sx-exam-exhibit" style="margin:2px 0 14px;"><img src="' + exSrc + '" alt="exhibit ' + esc(q.image) + '" style="display:block;max-width:100%;max-height:46vh;margin:0 auto;border-radius:10px;border:1px solid rgba(255,255,255,0.14);background:#0c0c16;" /></div>';
+        if (exSrc) inner += '<div class="sx-exam-exhibit" style="margin:2px 0 14px;"><img src="' + exSrc + '" alt="' + esc(q.imageAlt || ("exhibit " + q.image)) + '" style="display:block;max-width:100%;max-height:46vh;margin:0 auto;border-radius:10px;border:1px solid rgba(255,255,255,0.14);background:#0c0c16;" /></div>';
         else inner += '<div class="sx-exam-imgnote" style="font-size:12px;color:' + PALETTE.peach + ';margin:-6px 0 12px;">[exhibit ' + esc(q.image) + " — image pending]</div>";
       }
       inner += '<div class="sx-exam-opts"></div>';
@@ -891,7 +891,7 @@
           // (v0.91.0, review) the missed-question review must show the exhibit the question
           // refers to — it rendered stem/answers/explanation with the image missing.
           if (q.image && root.STARNIX_EXHIBITS && root.STARNIX_EXHIBITS[q.image]) {
-            s += '<div class="sx-exam-rv-exhibit"><img alt="Question exhibit" src="' + root.STARNIX_EXHIBITS[q.image] + '"></div>';
+            s += '<div class="sx-exam-rv-exhibit"><img alt="' + esc(q.imageAlt || "Question exhibit") + '" src="' + root.STARNIX_EXHIBITS[q.image] + '"></div>';
           }
           var yourTxt = chosenArr.length ? chosenArr.map(function (i) { return esc(q.options[i]); }).join("; ") : "(no answer" + (S.mode === "blitz" ? " — timed out" : "") + ")";
           s += '<div class="a bad">Your answer: ' + yourTxt + "</div>";

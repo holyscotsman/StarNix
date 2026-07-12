@@ -229,6 +229,14 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-E1-BANK — the canonical exam-1 set (added v0.173.0).** Play ARM until Vega briefs one
+  of the e1 questions (cluster lockdown, LCM logs, balloon driver...): the briefing should be
+  the new commander dialogue, and it must point at the RIGHT answer. In the Testing station,
+  find the six exhibit questions (SSH alert, CPU Ready chart, capacity runway x2, PC scale-out
+  dialog, runway diagram): images render crisp, and with VoiceOver the alt text reads a real
+  description, not "exhibit". Note: q16/q37 are large screenshots — check load feel on GAS.
+  WRONG: a briefing arguing for a different option than the graded key.
+
 - **QA-A6-PACK — the practice-exam 25 (added v0.172.0).** Play any game for a few minutes:
   the new practice-exam questions (LCM logs, maintenance-mode CLI, DSF features, balloon
   driver, bully VMs, rsyslog...) should come up noticeably often — they're weighted ~2x.

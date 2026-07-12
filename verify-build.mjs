@@ -157,6 +157,21 @@ async function runFrames(n = 6) {
         && w.STARNIX_QUESTIONS.questions.length === 254);   // the raw bank (pool() adds fixture seeds)
       ok("NIT#2: every bank question still carries optionNotes (indent-sensitive parse guard)",
         w.STARNIX_QUESTIONS.questions.filter((q) => q.optionNotes && q.optionNotes.some((nn) => nn && nn.length)).length === 254);
+      // (v0.173.0, Jason) the e1 interchange bank: canonical versions supersede classic dups
+      {
+        const e1 = w.STARNIX_QUESTIONS.questions.filter((q) => q.briefing && q.tags);
+        ok("E1: 47 canonical interchange questions live with briefing + tags (48th = q20, briefing stripped as factually wrong; q14/q25/q52 held on verifier findings)",
+          e1.length === 47 && e1.every((q) => q.briefing.length > 60 && Array.isArray(q.tags) && q.tags.length > 0)
+          && w.STARNIX_QUESTIONS.questions.filter((q) => q.tags && !q.briefing).length === 1);
+        const e1img = e1.filter((q) => q.image && /^ncp-mci-e1-/.test(q.image));
+        ok("E1: the six exhibits ship with authored image-alt text",
+          e1img.length === 6 && e1img.every((q) => typeof q.imageAlt === "string" && q.imageAlt.length > 40));
+        const srcAlt = w.document.documentElement.innerHTML;
+        ok("E1: the exam renders q.imageAlt as the exhibit's alt on BOTH surfaces (card + review)",
+          srcAlt.indexOf('esc(q.imageAlt || ("exhibit " + q.image))') >= 0 && srcAlt.indexOf('esc(q.imageAlt || "Question exhibit")') >= 0);
+        ok("E1: q52's twin stays HELD with the inherited a1q52 contradiction (one ruling covers both)",
+          !w.STARNIX_QUESTIONS.questions.some((q) => /evaluating Nutanix DR to protect some business-critical/.test(q.stem)));
+      }
       // (v0.172.0, Jason) the a6 practice-exam pack: 25 live, ALL priority-2, keys cross-checked
       {
         const a6 = w.STARNIX_QUESTIONS.questions.filter((q) => q.priority === 2);
@@ -296,9 +311,9 @@ async function runFrames(n = 6) {
         const fsMod = await import("node:fs");
         const ledger = JSON.parse(fsMod.readFileSync(new URL("./build-size.json", import.meta.url), "utf8"));
         const BUDGETS = {   // bytes; measured 2026-07-11 + ~10-15% headroom. Raise DELIBERATELY, in a reviewed diff.
-          assets: 2900000, three: 640000, questions: 430000, exhibits: 2500000,   // questions raised 360k->430k in v0.172.0: the a6 pack (+25) — a reviewed, deliberate raise
+          assets: 2900000, three: 640000, questions: 430000, exhibits: 3800000,   // deliberate raises: questions 360->430k (v0.172 a6 pack); exhibits 2.5->3.8M (v0.173 e1 hi-res exhibits — q16+q37 are 1.1MB of it, WebP candidates)
           core: 120000, shell: 200000, arm: 280000, kbb: 260000, cc: 240000, exam: 90000, audio: 130000, font: 60000,
-          total: 7600000,
+          total: 8700000,
         };
         const over = Object.keys(BUDGETS).filter((k) => (ledger[k] || 0) > BUDGETS[k]);
         ok("Backend#6: every module inside its declared byte budget" + (over.length ? " — OVER: " + over.map((k) => k + " " + ledger[k] + ">" + BUDGETS[k]).join(", ") : ""),
@@ -907,13 +922,16 @@ async function runFrames(n = 6) {
     ccSim.boostCharge = 1;
     ccSim._passGate(ccSim.gates.items[0]);               // gate opens the question
     ccNoteQ();
-    ccSim.answer((ccSim.pending.question.correctIndex + 1) % 4);   // a miss
+    ccSim.answer([]);                                    // a miss for BOTH shapes (empty pick grades wrong on single AND multi)
     ok("CC#1: a wrong answer drains half the charge (1 -> 0), no boost", ccSim.boostCharge === 0 && ccSim._boostPending === false);
     ccSim.resumeAfterQuestion();
     ccSim.boostCharge = cfg7.GATES_PER_BOOST - 1;        // one correct short of full
     ccSim._passGate(ccSim.gates.items[0]);
     ccNoteQ();
-    ccSim.answer(ccSim.pending.question.correctIndex);   // the charging correct
+    {   // the charging correct — shape-aware (the e1 bank swap moved a multi under this seed)
+      const pqC = ccSim.pending.question;
+      ccSim.answer(Array.isArray(pqC.correctIndices) ? pqC.correctIndices.slice() : pqC.correctIndex);
+    }
     ok("CC#1: a correct gate answer completes the charge and arms the boost", ccSim._boostPending === true && ccSim.boostCharge === 0);
     for (const ck in ccChgPrev) { if (ccChgPrev[ck]) ccMmAll[ck] = ccChgPrev[ck]; else delete ccMmAll[ck]; }
     ccSim.phase = "EXPLAIN"; ccSim.pending = null;       // jump to the resume point
@@ -1508,7 +1526,7 @@ async function runFrames(n = 6) {
     let exitCalled = false;
     const pool = [
       { id: "e1", domain: "vms", difficulty: 1, stem: "Q1", options: ["w", "r", "x"], correctIndex: 1, explanation: "x1" },
-      { id: "e2", domain: "storage", difficulty: 1, stem: "Q2", options: ["r", "w", "x"], correctIndex: 0, explanation: "x2", image: "a1q1" }   // (v0.91.0) real inlined exhibit key
+      { id: "e2", domain: "storage", difficulty: 1, stem: "Q2", options: ["r", "w", "x"], correctIndex: 0, explanation: "x2", image: "ncp-mci-e1-q1" }   // (v0.91.0/v0.173.0) a REAL inlined exhibit key — a1q1 was superseded by the e1 bank
     ];
     let completed = null;
     const h = EX.run({ container: cont, questions: pool, rng: erng, audio: mockAudio, mastery: mockMastery, reducedMotion: true, bestPoints: 0, onComplete: (sum) => { completed = sum; }, onExit: () => { exitCalled = true; }, onRetry: () => {} });

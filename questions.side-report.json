@@ -1,34 +1,207 @@
 {
-  "parsed": 258,
+  "parsed": 309,
   "live": 254,
-  "held": 4,
+  "held": 55,
   "multiLive": 32,
   "withOptionNotes": 254,
   "byDomain": {
-    "security": 23,
+    "security": 24,
     "architecture": 26,
-    "lifecycle": 20,
+    "lifecycle": 21,
     "networking": 35,
-    "vms": 44,
-    "performance": 17,
-    "storage": 31,
+    "vms": 41,
+    "monitoring": 35,
+    "performance": 14,
     "data-protection": 28,
-    "monitoring": 30
+    "storage": 30
   },
   "byDifficulty": {
-    "1": 21,
-    "2": 196,
-    "3": 37
+    "1": 24,
+    "2": 191,
+    "3": 39
   },
   "heldSummary": {
+    "content": 4,
+    "dup-stem (also ncp-mci-e1-q1)": 1,
+    "dup-stem (also ncp-mci-e1-q2)": 1,
+    "dup-stem (also ncp-mci-e1-q3)": 1,
+    "dup-stem (also ncp-mci-e1-q4)": 1,
+    "dup-stem (also ncp-mci-e1-q5)": 1,
+    "dup-stem (also ncp-mci-e1-q6)": 1,
+    "dup-stem (also ncp-mci-e1-q7)": 1,
+    "dup-stem (also ncp-mci-e1-q8)": 1,
+    "dup-stem (also ncp-mci-e1-q9)": 1,
+    "dup-stem (also ncp-mci-e1-q10)": 1,
+    "dup-stem (also ncp-mci-e1-q11)": 1,
+    "dup-stem (also ncp-mci-e1-q12)": 1,
     "key-unverified": 3,
-    "content": 1
+    "dup-stem (also ncp-mci-e1-q15)": 1,
+    "dup-stem (also ncp-mci-e1-q16)": 1,
+    "dup-stem (also ncp-mci-e1-q18)": 1,
+    "dup-stem (also ncp-mci-e1-q19)": 1,
+    "dup-stem (also ncp-mci-e1-q20)": 1,
+    "dup-stem (also ncp-mci-e1-q21)": 1,
+    "dup-stem (also ncp-mci-e1-q22)": 1,
+    "dup-stem (also ncp-mci-e1-q23)": 1,
+    "dup-stem (also ncp-mci-e1-q24)": 1,
+    "dup-stem (also ncp-mci-e1-q26)": 1,
+    "dup-stem (also ncp-mci-e1-q28)": 1,
+    "dup-stem (also ncp-mci-e1-q29)": 1,
+    "dup-stem (also ncp-mci-e1-q30)": 1,
+    "dup-stem (also ncp-mci-e1-q31)": 1,
+    "dup-stem (also ncp-mci-e1-q32)": 1,
+    "dup-stem (also ncp-mci-e1-q33)": 1,
+    "dup-stem (also ncp-mci-e1-q34)": 1,
+    "dup-stem (also ncp-mci-e1-q35)": 1,
+    "dup-stem (also ncp-mci-e1-q36)": 1,
+    "dup-stem (also ncp-mci-e1-q37)": 1,
+    "dup-stem (also ncp-mci-e1-q38)": 1,
+    "dup-stem (also ncp-mci-e1-q39)": 1,
+    "dup-stem (also ncp-mci-e1-q40)": 1,
+    "dup-stem (also ncp-mci-e1-q41)": 1,
+    "dup-stem (also ncp-mci-e1-q42)": 1,
+    "dup-stem (also ncp-mci-e1-q43)": 1,
+    "dup-stem (also ncp-mci-e1-q44)": 1,
+    "dup-stem (also ncp-mci-e1-q45)": 1,
+    "dup-stem (also ncp-mci-e1-q46)": 1,
+    "dup-stem (also ncp-mci-e1-q47)": 1,
+    "dup-stem (also ncp-mci-e1-q49)": 1,
+    "dup-stem (also ncp-mci-e1-q53)": 1,
+    "dup-stem (also ncp-mci-e1-q55)": 1,
+    "dup-stem (also ncp-mci-e1-q56)": 1,
+    "dup-stem (also ncp-mci-e1-q58)": 1,
+    "dup-stem (also ncp-mci-e1-q59)": 1
   },
   "heldItems": [
+    {
+      "src": "ncp-mci-e1-q14",
+      "stem": "An administrator is working with a network team to design the ne",
+      "reason": "content: @overall argues STATIC IP mapping is the best way while the key marks Offset-based — the block argues against its own key (workflow verifier finding) — needs Jason's ruling"
+    },
+    {
+      "src": "ncp-mci-e1-q25",
+      "stem": "What guest customization options are available when creating a V",
+      "reason": "content: @overall claims custom/guided scripts are ALSO guest customization options, contradicting the key's rejection of that option (workflow verifier finding) — needs Jason's ruling"
+    },
+    {
+      "src": "ncp-mci-e1-q52",
+      "stem": "A company is evaluating Nutanix DR to protect some business-crit",
+      "reason": "content: same question + same contradictory option-2 note as a1q52 (inherited verbatim) — same ruling pending"
+    },
+    {
+      "src": "a1q1",
+      "stem": "An administrator sees the alert shown in the exhibit. What shoul",
+      "reason": "dup-stem (also ncp-mci-e1-q1)"
+    },
+    {
+      "src": "a1q2",
+      "stem": "How many copies of the metadata are maintained within a Redundan",
+      "reason": "dup-stem (also ncp-mci-e1-q2)"
+    },
+    {
+      "src": "a1q3",
+      "stem": "Which update in LCM can an administrator apply on a per-node bas",
+      "reason": "dup-stem (also ncp-mci-e1-q3)"
+    },
+    {
+      "src": "a1q4",
+      "stem": "What is the default admin session log out time?",
+      "reason": "dup-stem (also ncp-mci-e1-q4)"
+    },
+    {
+      "src": "a1q5",
+      "stem": "When configuring a physical network switch in Prism Element, wha",
+      "reason": "dup-stem (also ncp-mci-e1-q5)"
+    },
+    {
+      "src": "a1q6",
+      "stem": "After deploying a cluster, time is not synchronizing properly. W",
+      "reason": "dup-stem (also ncp-mci-e1-q6)"
+    },
+    {
+      "src": "a1q7",
+      "stem": "In an RF2 Nutanix cluster, what is the minimum number of nodes r",
+      "reason": "dup-stem (also ncp-mci-e1-q7)"
+    },
+    {
+      "src": "a1q8",
+      "stem": "An administrator has been tasked with increasing security on a N",
+      "reason": "dup-stem (also ncp-mci-e1-q8)"
+    },
+    {
+      "src": "a1q9",
+      "stem": "An administrator needs to make sure that a VM is powered on befo",
+      "reason": "dup-stem (also ncp-mci-e1-q9)"
+    },
+    {
+      "src": "a1q10",
+      "stem": "When expanding a Nutanix cluster, what is required to automatica",
+      "reason": "dup-stem (also ncp-mci-e1-q10)"
+    },
+    {
+      "src": "a1q11",
+      "stem": "An administrator has been asked to calculate baseline Capacity R",
+      "reason": "dup-stem (also ncp-mci-e1-q11)"
+    },
+    {
+      "src": "a1q12",
+      "stem": "An administrator is responsible for resource planning and needs ",
+      "reason": "dup-stem (also ncp-mci-e1-q12)"
+    },
     {
       "src": "a1q13",
       "stem": "An administrator has tasked to configured AHV Metro Availability",
       "reason": "key-unverified: Metro+Witness, medium confidence, portal table gated (review_notes.md)"
+    },
+    {
+      "src": "a1q15",
+      "stem": "A user created a report in the prism central Intelligent Operati",
+      "reason": "dup-stem (also ncp-mci-e1-q15)"
+    },
+    {
+      "src": "a1q16",
+      "stem": "An administrator receives complaints about VM performance. After",
+      "reason": "dup-stem (also ncp-mci-e1-q16)"
+    },
+    {
+      "src": "a1q18",
+      "stem": "After upgrading Prism Central from PC2022.1 to PC2024.1, an admi",
+      "reason": "dup-stem (also ncp-mci-e1-q18)"
+    },
+    {
+      "src": "a1q19",
+      "stem": "Refer to the exhibit. The customer expects to maintain a cluster",
+      "reason": "dup-stem (also ncp-mci-e1-q19)"
+    },
+    {
+      "src": "a1q20",
+      "stem": "A DR administrator has set up a Protection Policy for 50 workloa",
+      "reason": "dup-stem (also ncp-mci-e1-q20)"
+    },
+    {
+      "src": "a1q21",
+      "stem": "An administrator needs to create 2 virtual machines: VM4 and VM5",
+      "reason": "dup-stem (also ncp-mci-e1-q21)"
+    },
+    {
+      "src": "a1q22",
+      "stem": "The team leads of a dev environment want to limit developer acce",
+      "reason": "dup-stem (also ncp-mci-e1-q22)"
+    },
+    {
+      "src": "a1q23",
+      "stem": "An administrator using a dark site deployment for LCM is attempt",
+      "reason": "dup-stem (also ncp-mci-e1-q23)"
+    },
+    {
+      "src": "a1q24",
+      "stem": "An administrator needs to create a single chart showing multiple",
+      "reason": "dup-stem (also ncp-mci-e1-q24)"
+    },
+    {
+      "src": "a1q26",
+      "stem": "An administrator wants to make sure that VMs can be migrated and",
+      "reason": "dup-stem (also ncp-mci-e1-q26)"
     },
     {
       "src": "a1q27",
@@ -36,9 +209,139 @@
       "reason": "key-unverified: App-Discovery prereqs not verifiable from open sources (review_notes.md)"
     },
     {
+      "src": "a1q28",
+      "stem": "An administrator wants to enable Windows Defender Credential Gua",
+      "reason": "dup-stem (also ncp-mci-e1-q28)"
+    },
+    {
+      "src": "a1q29",
+      "stem": "An administrator attempted to enable Data-in-Transit Encryption ",
+      "reason": "dup-stem (also ncp-mci-e1-q29)"
+    },
+    {
+      "src": "a1q30",
+      "stem": "In a scale-out Prism Central deployment, what additional functio",
+      "reason": "dup-stem (also ncp-mci-e1-q30)"
+    },
+    {
+      "src": "a1q31",
+      "stem": "How can a VM or Volume Group (VG) be associated with a Storage P",
+      "reason": "dup-stem (also ncp-mci-e1-q31)"
+    },
+    {
+      "src": "a1q32",
+      "stem": "An administrator is managing a 4-node Nutanix cluster, based on ",
+      "reason": "dup-stem (also ncp-mci-e1-q32)"
+    },
+    {
+      "src": "a1q33",
+      "stem": "Due to application requirements, an administrator needs to modif",
+      "reason": "dup-stem (also ncp-mci-e1-q33)"
+    },
+    {
+      "src": "a1q34",
+      "stem": "A consultant is configuring syslog monitoring and wants to recei",
+      "reason": "dup-stem (also ncp-mci-e1-q34)"
+    },
+    {
+      "src": "a1q35",
+      "stem": "An administrator is configuring Erasure Coding on a Redundancy F",
+      "reason": "dup-stem (also ncp-mci-e1-q35)"
+    },
+    {
+      "src": "a1q36",
+      "stem": "An administrator needs to perform an LCM upgrade on an AHV host ",
+      "reason": "dup-stem (also ncp-mci-e1-q36)"
+    },
+    {
+      "src": "a1q37",
+      "stem": "An administrator is looking at the memory cluster runway diagram",
+      "reason": "dup-stem (also ncp-mci-e1-q37)"
+    },
+    {
+      "src": "a1q38",
+      "stem": "An administrator wants to change a cluster from Redundancy Facto",
+      "reason": "dup-stem (also ncp-mci-e1-q38)"
+    },
+    {
+      "src": "a1q39",
+      "stem": "Which storage container option reduces the available storage to ",
+      "reason": "dup-stem (also ncp-mci-e1-q39)"
+    },
+    {
+      "src": "a1q40",
+      "stem": "An administrator wants to collect log files that have been reque",
+      "reason": "dup-stem (also ncp-mci-e1-q40)"
+    },
+    {
+      "src": "a1q41",
+      "stem": "An administrator receives an alert: \"A node cannot enter mainten",
+      "reason": "dup-stem (also ncp-mci-e1-q41)"
+    },
+    {
+      "src": "a1q42",
+      "stem": "An administrator is conducting LCM updates in a Nutanix cluster ",
+      "reason": "dup-stem (also ncp-mci-e1-q42)"
+    },
+    {
+      "src": "a1q43",
+      "stem": "When is deduplication recommended?",
+      "reason": "dup-stem (also ncp-mci-e1-q43)"
+    },
+    {
+      "src": "a1q44",
+      "stem": "Within Prism Central, which Compute and Storage section will all",
+      "reason": "dup-stem (also ncp-mci-e1-q44)"
+    },
+    {
+      "src": "a1q45",
+      "stem": "An administrator needs to create a VM Template from an existing ",
+      "reason": "dup-stem (also ncp-mci-e1-q45)"
+    },
+    {
+      "src": "a1q46",
+      "stem": "An administrator has spent time correcting specific issues that ",
+      "reason": "dup-stem (also ncp-mci-e1-q46)"
+    },
+    {
+      "src": "a1q47",
+      "stem": "What is the purpose of the OpLog?",
+      "reason": "dup-stem (also ncp-mci-e1-q47)"
+    },
+    {
+      "src": "a1q49",
+      "stem": "An administrator observes an alert in Prism for a hybrid SSD/HDD",
+      "reason": "dup-stem (also ncp-mci-e1-q49)"
+    },
+    {
       "src": "a1q52",
       "stem": "A company is evaluating Nutanix DR to protect some business-crit",
       "reason": "content: option-2 note contradicts the key (claims the incorrect option meets the stem's criteria) — needs Jason's wording ruling"
+    },
+    {
+      "src": "a1q53",
+      "stem": "Which predefined view should be leveraged in Prism Central Intel",
+      "reason": "dup-stem (also ncp-mci-e1-q53)"
+    },
+    {
+      "src": "a1q55",
+      "stem": "An administrator has been tasked by the company's leadership to ",
+      "reason": "dup-stem (also ncp-mci-e1-q55)"
+    },
+    {
+      "src": "a1q56",
+      "stem": "An administrator has been tasked with creating a new storage con",
+      "reason": "dup-stem (also ncp-mci-e1-q56)"
+    },
+    {
+      "src": "a1q58",
+      "stem": "A new employee has inherited a partially configured Disaster Rec",
+      "reason": "dup-stem (also ncp-mci-e1-q58)"
+    },
+    {
+      "src": "a1q59",
+      "stem": "Within Intelligent Operations, Capacity Configurations have been",
+      "reason": "dup-stem (also ncp-mci-e1-q59)"
     },
     {
       "src": "a3q7",

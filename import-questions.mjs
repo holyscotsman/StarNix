@@ -25,9 +25,43 @@ const REVIEW_HOLD = {
   // problem is CONTENT: the option-2 note praises the wrong option with the stem's exact success
   // criteria ("provides the highest resiliency and lowest RPO" ... marked Incorrect). Jason's call.
   a1q52: "content: option-2 note contradicts the key (claims the incorrect option meets the stem's criteria) — needs Jason's wording ruling",
+  "ncp-mci-e1-q52": "content: same question + same contradictory option-2 note as a1q52 (inherited verbatim) — same ruling pending",
+  "ncp-mci-e1-q14": "content: @overall argues STATIC IP mapping is the best way while the key marks Offset-based — the block argues against its own key (workflow verifier finding) — needs Jason's ruling",
+  "ncp-mci-e1-q25": "content: @overall claims custom/guided scripts are ALSO guest customization options, contradicting the key's rejection of that option (workflow verifier finding) — needs Jason's ruling",
 };
 
 function normStem(s){ return String(s||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim(); }
+
+// (v0.173.0, Jason) the CANONICAL INTERCHANGE format (banks/*.md, e.g. ncp-mci-e1.md):
+// "### <id>" block headers, "  > " per-option explanations, @overall as the explanation,
+// @image with a file extension, @image-alt, @tags/@briefing, and @priority where
+// "omit = 0 (normal), higher = served sooner" (N >= 1 maps to draw weight N+1).
+function parseInterchange(md){
+  const out = [];
+  const parts = md.split(/^### ([a-z0-9][a-z0-9-]*)$/m);   // [pre, id, body, ...]
+  for (let i = 1; i < parts.length; i += 2) {
+    const srcId = parts[i].trim();
+    const body = (parts[i+1] || "").split(/^---$/m)[0];    // a block ends at its --- separator
+    const stemLines=[], opts=[], optNotes=[], meta={}; let correct=[], curOpt=-1;
+    for (const raw of body.split("\n")) {
+      const line = raw.replace(/\s+$/, "");
+      const opt = line.match(/^\s*-\s*\(([ xX])\)\s*(.+)$/);
+      const kv = line.match(/^@([a-zA-Z0-9-]+):\s*(.*)$/);
+      const note = line.match(/^\s{2,}>\s?(.*)$/);
+      if (opt) { if (opt[1].toLowerCase() === "x") correct.push(opts.length); opts.push(opt[2].trim()); optNotes.push(""); curOpt = opts.length - 1; }
+      else if (kv) { meta[kv[1].toLowerCase()] = kv[2].trim(); curOpt = -1; }
+      else if (note && curOpt >= 0) { optNotes[curOpt] = (optNotes[curOpt] ? optNotes[curOpt] + " " : "") + note[1].trim(); }
+      else if (line.trim() && opts.length === 0) { stemLines.push(line.trim()); }
+    }
+    if (!opts.length) continue;                            // prose sections carry no options
+    if (meta.overall && !meta.explain) meta.explain = meta.overall;
+    if (meta.image) meta.image = meta.image.replace(/\.(png|jpe?g|gif|webp|svg)$/i, "");
+    if (meta["image-alt"]) meta.imagealt = meta["image-alt"];
+    if (meta.priority && /^\d+$/.test(meta.priority)) { const pN = parseInt(meta.priority, 10); meta.priority = pN >= 1 ? String(pN + 1) : ""; }
+    out.push({ srcId, corrected: false, stem: stemLines.join(" ").trim(), opts, optNotes, correct, meta });
+  }
+  return out;
+}
 function hash4(s){ let h=5381; const n=normStem(s); for(let i=0;i<n.length;i++) h=((h<<5)+h+n.charCodeAt(i))>>>0; return h.toString(36).padStart(4,"0").slice(-4); }
 
 // ---- parse: split on the id-comment, then read each block ----------------------
@@ -74,6 +108,7 @@ function toQuestion(p){
   else q.correctIndex = (p.correct.length===1 ? p.correct[0] : -1);
   if (p.optNotes.some(n=>n && n.trim())) q.optionNotes = p.optNotes.map(n=>n.trim());
   if (m.image) q.image = m.image.trim();
+  if (m.imagealt) q.imageAlt = m.imagealt;   // (v0.173.0, Jason) exhibit alt text (SR + FE#5)
   if (m.priority) { var pv = m.priority.trim() === "high" ? 2 : (parseInt(m.priority, 10) || 0); if (pv > 1) q.priority = pv; }   // (v0.172.0, Jason) draw-weight boost
   if (m.tags) q.tags = m.tags.split(",").map(t=>t.trim()).filter(Boolean);
   if (m.briefing) q.briefing = m.briefing;
@@ -107,7 +142,13 @@ function schemaErrs(q){
 // (v0.143.0, V1.1 NIT#2) normalize invisible Unicode line/paragraph separators to spaces.
 // Four authored @explain blocks carried U+2028 from a paste; the line-based parser read them
 // as "empty explanation" and silently killed the questions. Never again.
-const parsed = parse(readFileSync(new URL("./"+SRC, import.meta.url), "utf8").replace(/[\u2028\u2029]+/g, " "));
+const INTERCHANGE_BANKS = ["banks/ncp-mci-e1.md"];   // (v0.173.0, Jason) *-review.md files are QUARANTINE — never listed here   // (v0.173.0, Jason) *-review.md files are QUARANTINE — never listed here
+// Interchange banks parse FIRST: on a stem collision the richer canonical version (notes,
+// briefing, tags, image-alt) supersedes the classic pack's copy, which then holds as the dup.
+const parsed = [
+  ...INTERCHANGE_BANKS.flatMap((b) => parseInterchange(readFileSync(new URL("./"+b, import.meta.url), "utf8").replace(/[\u2028\u2029]+/g, " "))),
+  ...parse(readFileSync(new URL("./"+SRC, import.meta.url), "utf8").replace(/[\u2028\u2029]+/g, " ")),
+];
 const all = parsed.map(toQuestion);
 
 // exhibit images actually present on disk (keyed by filename stem, any extension).

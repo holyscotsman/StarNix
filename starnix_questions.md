@@ -629,7 +629,7 @@ An administrator is configuring Erasure Coding on a Redundancy Factor 2 Nutanix 
 ### Q
 
 An administrator needs to perform an LCM upgrade on an AHV host with GPUs.
-What additional step is required for LCM to upgrade an AHV host that has CPUs?
+What additional step is required for LCM to upgrade an AHV host that has GPUs?
 
 - ( ) Create an agent VM on each host that has GPU drivers installed.
     Incorrect: Agent VMs are not required for GPU updates.
