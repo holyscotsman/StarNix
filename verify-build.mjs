@@ -165,6 +165,15 @@ async function runFrames(n = 6) {
       brP.click(); await wait(10);
       ok("Menu#3: the board clicks through to the Codex", shell.screen === "stats");
       shell.showMenu(); await wait(10);
+      // (v0.152.0, V1.1 Menu#4) the cinematic shatter uses the REAL station art when ready
+      {
+        const src = w.document.documentElement.innerHTML;
+        ok("Menu#4: drawShards breaks the real armStation sprite into 4x3 drawImage fragments (rect confetti kept as the fallback)",
+          /FRAG_GX = 4, FRAG_GY = 3/.test(src)
+          && /if \(stationA && stationA\.ready\) \{   \/\/ \(v0\.152\.0, Menu#4\)/.test(src)   // the LIVE gate, not just dead code
+          && /ctx\.drawImage\(stationA\.img, fgx2 \* scw, fgy2 \* sch, scw, sch, -dcw \/ 2, -dch \/ 2, dcw, dch\)/.test(src)
+          && /fillStyle = col; ctx\.fillRect\(-o\.sz \/ 2, -o\.sz \/ 2, o\.sz, o\.sz \* 0\.7\)/.test(src));
+      }
       // (v0.151.0, V1.1 FE#4) toast service: stacking, length-scaled duration, dedupe
       {
         shell._toast("first toast");

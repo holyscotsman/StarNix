@@ -229,6 +229,13 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-CINE-SHATTER — the station art breaks apart (added v0.152.0).** Watch the intro
+  cinematic to the shatter beat (~6.4s, don't skip): the REAL station image must visibly
+  break into a 4×3 grid of tumbling pieces that fly outward and fade — not vanish and get
+  replaced by purple confetti rectangles. Reduced motion: fragments fly without glow. WRONG:
+  the art popping out a frame before the pieces appear, or pieces with hard seams glowing
+  brighter than the art ever did.
+
 - **QA-TOASTS — the toast stack (added v0.151.0).** Trigger several toasts at once (easiest:
   a multi-achievement moment, or claim two dailies fast): pills must stack upward from the
   bottom, never overprint; a repeated message shows "×2" on one pill; long messages linger

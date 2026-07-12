@@ -269,6 +269,14 @@
     var STATION = buildStation();
     var WARSHIP = [[28, 0], [20, -4], [-6, -9], [-26, 0], [-6, 9], [20, 4]];     // dart, nose at +x
 
+    // (v0.152.0, V1.1 Menu#4) the REAL station art shatters: a 4x3 grid of drawImage
+    // source-rect fragments (ARM's proven boss-intro technique), pre-allocated here.
+    var FRAG_GX = 4, FRAG_GY = 3, FRAG_N = FRAG_GX * FRAG_GY, frags = new Array(FRAG_N);
+    for (var f2 = 0; f2 < FRAG_N; f2++) {
+      var fgx = (f2 % FRAG_GX) - (FRAG_GX - 1) / 2, fgy = ((f2 / FRAG_GX) | 0) - (FRAG_GY - 1) / 2;
+      var fsp = 70 + rng.next() * 150;
+      frags[f2] = { vx: fgx * fsp * 0.8 + (rng.next() - 0.5) * 50, vy: fgy * fsp * 1.1 + (rng.next() - 0.5) * 50, spin: (rng.next() - 0.5) * 3.2 };
+    }
     var SHARD_N = 46, shards = new Array(SHARD_N);
     for (var s2 = 0; s2 < SHARD_N; s2++) { var sa = rng.next() * Math.PI * 2, sp = 60 + rng.next() * 240; shards[s2] = { vx: Math.cos(sa) * sp, vy: Math.sin(sa) * sp, rot: rng.next() * 6.28, spin: (rng.next() - 0.5) * 7, sz: 3 + rng.next() * 7, hue: rng.next() }; }
     var CORE_N = 12, cores = new Array(CORE_N);
@@ -357,6 +365,25 @@
       ctx.restore(); ctx.shadowBlur = 0;
     }
     function drawShards(k) {
+      if (stationA && stationA.ready) {   // (v0.152.0, Menu#4) the art itself breaks apart
+        var iw = stationA.img.naturalWidth || 400, ih = stationA.img.naturalHeight || 264;
+        var sw3 = 300 * scale, sh3 = sw3 * (ih / iw || 0.66);
+        var scw = iw / FRAG_GX, sch = ih / FRAG_GY, dcw = sw3 / FRAG_GX, dch = sh3 / FRAG_GY;
+        var fa = clamp(1.15 - k * 0.5, 0, 1);
+        if (fa > 0) {
+          for (var ff2 = 0; ff2 < FRAG_N; ff2++) {
+            var fo = frags[ff2], fgx2 = ff2 % FRAG_GX, fgy2 = (ff2 / FRAG_GX) | 0;
+            var fbx = (fgx2 - (FRAG_GX - 1) / 2) * dcw, fby = (fgy2 - (FRAG_GY - 1) / 2) * dch;
+            var fxp = cx + fbx + fo.vx * k, fyp = cy + fby + fo.vy * k - k * k * 26;
+            ctx.save(); ctx.translate(fxp, fyp); ctx.rotate(fo.spin * k); ctx.globalAlpha = fa;
+            if (!reduced) { ctx.shadowColor = "#1FDDE9"; ctx.shadowBlur = 8; }
+            ctx.drawImage(stationA.img, fgx2 * scw, fgy2 * sch, scw, sch, -dcw / 2, -dch / 2, dcw, dch);
+            ctx.restore();
+          }
+        }
+        ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+        return;
+      }
       for (var s = 0; s < SHARD_N; s++) { var o = shards[s]; var a = clamp(1.2 - k * 0.45, 0, 1); if (a <= 0) continue; var x = cx + o.vx * k, y = cy + o.vy * k; ctx.save(); ctx.translate(x, y); ctx.rotate(o.rot + o.spin * k); ctx.globalAlpha = a; var col = o.hue < 0.5 ? "#7855FA" : "#AC9BFD"; if (!reduced) { ctx.shadowColor = col; ctx.shadowBlur = 8; } ctx.fillStyle = col; ctx.fillRect(-o.sz / 2, -o.sz / 2, o.sz, o.sz * 0.7); ctx.restore(); }
       ctx.globalAlpha = 1; ctx.shadowBlur = 0;
     }
