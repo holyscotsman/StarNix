@@ -229,6 +229,13 @@ help for C1/C2/C6. For audio, game + genre + a few words is enough to find the s
   SHIP DOWN. Let the question TIMER expire with ≤2 shields: feedback still appears (no stuck overlay),
   See results → SHIP DOWN. WRONG: any death that freezes the world with no overlay.
 
+- **QA-CINE-CAPTIONS — the letterboxed cold open (added v0.188.0).** Replay the intro: the
+  frame must wear real letterbox bars (thin top, deeper bottom), each caption TYPES on over
+  about half a second with a soft tick as it starts, and the line sits inside the bottom
+  bar. Reduced motion: lines appear whole, ticks gone, bars stay. WRONG: text overflowing
+  the bar, a caption cut off mid-word at its beat's end, ticks under reduced motion, or the
+  type-on stuttering (it should feel like a signal locking in, not a typewriter bug).
+
 - **QA-TYPE-PASS — steady digits, readable micro-text (added v0.187.0).** Watch CC's
   distance counter run and KBB's HP/energy tick through a battle: digits must change in
   place with ZERO horizontal jitter (same for the rank strip XP line and Codex percentages).

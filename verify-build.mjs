@@ -116,12 +116,19 @@ async function runFrames(n = 6) {
     ok("screen === cinematic", SN.shell.screen === "cinematic");
     ok("cinematic canvas mounted", !!w.document.querySelector(".sx-cine-canvas"));
     ok("mission panel present, starts hidden", (function () { const m = w.document.querySelector(".sx-mission"); return !!m && m.style.opacity === "0"; })());
-    let guard = 0, sawFull = false;
+    let guard = 0, sawFull = false, sawCap = false;
     while (SN.shell.screen === "cinematic" && guard < 240) {
       await runFrames(5);
       if (w.document.querySelectorAll(".sx-mission-list li.on").length === 4) sawFull = true;
+      const ctxt = (w.document.querySelector(".sx-cap") || {}).textContent || "";
+      if (/jumped to the Kuiper Belt\.$|held every concept you need to pass\.$/.test(ctxt)) sawCap = true;   // (Menu#8) a full line landed
       guard++;
     }
+    ok("Menu#8: type-on captions COMPLETE their lines (a full sentence was observed on screen)", sawCap);
+    ok("Menu#8: the type-on machinery, letterbox bars and 5 caption ticks are in the build",
+      html.includes("Math.ceil(((T - capStart) / 0.6) * capNow.length)")
+      && html.includes("ctx.fillRect(0, H * 0.86, W, H * 0.14);")
+      && (html.match(/name: "click", done: false/g) || []).length === 5);
     // (v0.181.0) the stagger CADENCE is pinned structurally, not by sampling: the per-call
     // performance.now stub makes T leap under load (any extra caller advances it), so a
     // sampled partial state is inherently racy. Cadence itself is BROWSER_QA's to eyeball.

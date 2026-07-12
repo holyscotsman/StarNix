@@ -498,9 +498,16 @@
       { at: B.shatter, name: "explode", done: false },
       { at: B.belt, name: "laserhit", done: false },
       { at: B.planet, name: "collect", done: false },
+      // (v0.188.0, Menu#8) a soft tick as each caption starts typing
+      { at: B.station, name: "click", done: false },
+      { at: B.beam, name: "click", done: false },
+      { at: B.shatter + 0.02, name: "click", done: false },
+      { at: B.belt + 0.02, name: "click", done: false },
+      { at: B.planet + 0.02, name: "click", done: false },
       { at: B.mission, name: "correct", done: false }
     ];
     var camZ = 1, lastCap = null, lastMo = null;   // (G3) push-in; (G4) DOM write caches
+    var capStart = 0, capShown = -1;               // (v0.188.0, V1.1 Menu#8) type-on caption state
     function frame(ts) {
       var dt = (ts - last) / 1000; last = ts; if (dt > 0.05) dt = 0.05; T += dt;
       for (var sfb = 0; sfb < SFX_BEATS.length; sfb++) { var fb = SFX_BEATS[sfb]; if (!fb.done && T >= fb.at) { fb.done = true; try { StarNix.core.audio.sfx(fb.name); } catch (eFb) {} } }
@@ -535,10 +542,11 @@
       else { drawPlanetSquad(T - B.planet); }
       ctx.restore();
       // (G3) vignette: cheap depth frame (two edge fills, no gradient allocation)
-      if (!reduced) {
-        ctx.fillStyle = "rgba(4,4,10,0.35)";
-        ctx.fillRect(0, 0, W, H * 0.06); ctx.fillRect(0, H * 0.94, W, H * 0.06);
-      }
+      // (v0.188.0, V1.1 Menu#8) proper letterbox bars — a static cinema frame drawn for
+      // everyone (not motion); the bottom bar sits behind the caption line.
+      ctx.fillStyle = "rgba(4,4,10,0.82)";
+      ctx.fillRect(0, 0, W, H * 0.07);
+      ctx.fillRect(0, H * 0.86, W, H * 0.14);
 
       if (T >= B.mission) {
         var mo = String(clamp((T - B.mission) / 0.8, 0, 1)); if (mo !== lastMo) { lastMo = mo; mission.style.opacity = mo; }
@@ -550,7 +558,12 @@
           lastLineN = ln;
         }
       }
-      var capNow = caption(T); if (capNow !== lastCap) { lastCap = capNow; cap.textContent = capNow; }   // (v0.108.0, G4) no per-frame DOM writes
+      // (v0.188.0, V1.1 Menu#8) type-on captions: each line lands over ~0.6s, whole-line
+      // under reduced motion — still guarded, a DOM write only when the substring changes.
+      var capNow = caption(T);
+      if (capNow !== lastCap) { lastCap = capNow; capStart = T; capShown = -1; }
+      var capWant = (reduced || !capNow) ? capNow.length : Math.min(capNow.length, Math.ceil(((T - capStart) / 0.6) * capNow.length));
+      if (capWant !== capShown) { capShown = capWant; cap.textContent = capNow.slice(0, capWant); }
       if (T >= B.end) { self._endCinematic(); return; }
       self._raf = global.requestAnimationFrame(frame);
     }
